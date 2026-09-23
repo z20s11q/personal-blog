@@ -1,0 +1,26 @@
+name: Deploy Astro site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Install and build
+        uses: withastro/action@v6
+      - name: Deploy
+        uses: actions/deploy-pages@v4

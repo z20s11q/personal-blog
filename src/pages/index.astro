@@ -1,0 +1,29 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const [article] = await getCollection('articles');
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+---
+
+<BaseLayout title="价格行为研究笔记" description="从原始资料出发，建立可复核的价格行为学习地图。">
+  <section class="intro">
+    <div class="eyebrow">STOCK / LEARN · PRICE ACTION</div>
+    <h1>价格行为研究笔记</h1>
+    <p>从原始资料、完整案例与交易证据出发，整理价格行为的理论、中文学习资源和验证方法。</p>
+    <div class="intro-links"><a href={`${base}articles/${article.id}/`}>阅读首篇报告 →</a><a href={`${base}resources/`}>资料索引 →</a></div>
+  </section>
+
+  <div class="home-grid">
+    <div class="main-column">
+      <section class="latest"><div class="section-title"><h2>最新研究</h2><span>01 篇文章</span></div><a class="article-row" href={`${base}articles/${article.id}/`}><div><span class="category">研究报告 · 2026.09.23</span><h3>{article.data.title}</h3><p>{article.data.description}</p><small>约 {article.data.readingMinutes} 分钟阅读</small></div><span class="row-arrow" aria-hidden="true">↗</span></a></section>
+      <section class="topics"><div class="section-title"><h2>本期提要</h2><span>从概念到验证</span></div><div class="topic-list"><div><span>01</span><strong>流派边界</strong><p>Brooks、市场结构、Wyckoff 与订单流分别解释什么。</p></div><div><span>02</span><strong>关键理论</strong><p>趋势与区间、信号和跟随、突破失败、风险期望值。</p></div><div><span>03</span><strong>中文资料</strong><p>方方土、太妃、线索c 等候选创作者与原始来源。</p></div><div><span>04</span><strong>实操验证</strong><p>事前规则、失败样本、成本和前瞻交易记录。</p></div></div></section>
+    </div>
+    <aside class="sidebar"><div class="aside-block"><h2>阅读路径</h2><ol><li>先读 Brooks 原始资料</li><li>用中文盘中讲解交叉理解</li><li>只选一个市场和两类情景</li><li>记录全部机会与扣费结果</li></ol></div><div class="aside-block"><h2>筛选说明</h2><p>教学清晰、盘中过程透明与长期盈利，是三件需要分别核验的事。目前没有候选人的长期扣费收益被独立确认。</p></div><div class="aside-block"><h2>资料更新</h2><p>首篇报告复核于 2026 年 9 月 23 日。后续加入订单流专题时，会先标明市场与数据来源。</p></div></aside>
+  </div>
+</BaseLayout>
+
+<style>
+  .intro{margin:0 30px;padding:54px 0 40px;border-bottom:1px solid var(--line)}.intro h1{font-size:clamp(31px,4vw,47px);letter-spacing:-.055em;line-height:1.25;margin:15px 0 8px}.intro p{font-size:14px;color:var(--muted);margin:0;max-width:680px}.intro-links{display:flex;gap:25px;margin-top:22px;font-size:12px;font-weight:700}.intro-links a{border-bottom:1px solid var(--line);padding-bottom:2px}.intro-links a:hover{color:var(--accent);border-color:var(--accent)}.home-grid{margin:0 30px;display:grid;grid-template-columns:minmax(0,1fr) 272px;gap:50px}.main-column{min-width:0}.latest,.topics{padding-top:32px}.section-title{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:12px}.section-title h2,.sidebar h2{font-size:16px;letter-spacing:-.03em;margin:0}.section-title span{color:var(--muted);font-size:11px}.article-row{display:flex;justify-content:space-between;gap:20px;padding:24px 0 27px;border-bottom:1px solid var(--line)}.article-row:hover h3{color:var(--accent)}.category{font-size:11px;color:var(--muted)}.article-row h3{font-size:21px;letter-spacing:-.04em;line-height:1.4;margin:8px 0}.article-row p{font-size:13px;color:var(--muted);margin:0 0 11px}.article-row small{font-size:11px;color:var(--muted)}.row-arrow{color:var(--muted);font-size:18px}.topics{padding-top:33px}.topic-list>div{display:grid;grid-template-columns:30px 105px 1fr;align-items:baseline;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}.topic-list span{font-size:10px;color:var(--muted)}.topic-list strong{font-size:13px}.topic-list p{font-size:12px;color:var(--muted);margin:0}.sidebar{border-left:1px solid var(--line);padding:32px 0 0 27px}.aside-block{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:22px}.aside-block h2{font-size:13px}.aside-block p,.aside-block li{font-size:12px;line-height:1.8;color:var(--muted)}.aside-block p{margin:10px 0 0}.aside-block ol{padding-left:18px;margin:10px 0 0}.aside-block li{padding-left:2px;margin:3px 0}
+  @media(max-width:790px){.home-grid{grid-template-columns:1fr;gap:5px}.sidebar{border-left:0;border-top:1px solid var(--line);padding:23px 0 0;display:grid;grid-template-columns:repeat(2,1fr);gap:20px}.aside-block{margin:0}.aside-block:last-child{display:none}}@media(max-width:600px){.intro,.home-grid{margin-left:18px;margin-right:18px}.intro{padding:38px 0 29px}.intro h1{font-size:30px}.intro p{font-size:13px}.sidebar{grid-template-columns:1fr;gap:0}.aside-block:last-child{display:block}.topic-list>div{grid-template-columns:22px 83px 1fr;gap:7px}.topic-list strong,.topic-list p{font-size:11px}.article-row h3{font-size:18px}}
+</style>

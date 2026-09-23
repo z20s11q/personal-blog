@@ -1,0 +1,34 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const groups = [
+  { name: '原始理论', note: '优先读原作者，再用中文解释交叉理解。', items: [
+    { title: 'Brooks Trading Course', subtitle: 'Al Brooks · 英文 · 原始课程目录与免费文章', href: 'https://www.brookstradingcourse.com/trade-price-action/', tag: '原始来源', detail: '逐根 K 线、市场周期、趋势、区间与突破。付费课程并非起步所必需。' },
+    { title: 'Trading Price Action 三部曲', subtitle: 'Al Brooks · 英文 · 出版书籍', href: 'https://www.brookstradingcourse.com/price-action-trading-books/', tag: '原始来源', detail: '趋势、交易区间、反转。内容密集，建议配合图表练习。' },
+    { title: 'MarketLife / Adam Grimes', subtitle: '英文 · 免费课程与市场结构', href: 'https://www.marketlife.com/', tag: '交叉验证', detail: '强调统计、计划和独立思考；平台也有收费服务。' },
+    { title: 'YourTradingCoach', subtitle: 'Lance Beggs · 英文 · 原创文章', href: 'https://yourtradingcoach.org/', tag: '案例复盘', detail: '市场结构、受困交易者和复盘方法；需自行验证可执行性。' },
+  ] },
+  { name: '中文讲解与案例', note: '学习价值与长期盈利能力分开评价。', items: [
+    { title: '方方土 PriceAction', subtitle: '中文 · YouTube 原频道', href: 'https://www.youtube.com/channel/UC-CckeotGQCZigg3nETreCQ', tag: '盘中讲解', detail: 'Brooks 课程翻译者；有盘中视频及课程推广链接。完整净收益未独立核验。' },
+    { title: '方方土 Bilibili 原上传', subtitle: '中文 · Bilibili', href: 'https://www.bilibili.com/video/BV1bs421M7Q5/', tag: '视频案例', detail: '从具体交易视频观察分析过程，勿以单次结果推断长期表现。' },
+    { title: '太妃的市場朗讀', subtitle: '中文 · 作者网站与课程', href: 'https://tefistudio.com/zh', tag: '体系课程', detail: '适合作为第二种中文讲法；有付费内容，连续净收益未核验。' },
+    { title: '线索c @cluec3', subtitle: '中文 · X 原账号', href: 'https://x.com/cluec3', tag: '观察名单', detail: '有加密市场事前情景讨论；存在交易所返佣关系，全部交易未核验。' },
+  ] },
+  { name: '市场机制与后续订单流', note: '先弄清楚数据代表什么，再看工具。', items: [
+    { title: 'CME 期货交易者指南', subtitle: '交易所 · 英文 · 市场深度和订单类型', href: 'https://www.cmegroup.com/education/files/a-traders-guide-to-futures.pdf', tag: '市场机制', detail: '理解期货限价单、市价单、盘口深度与执行边界。' },
+    { title: 'CME 流动性研究', subtitle: '交易所 · 英文 · 订单簿深度限制', href: 'https://www.cmegroup.com/education/articles-and-reports/assessing-liquidity', tag: '研究资料', detail: '提醒不能只用可见挂单量判断真实流动性。' },
+    { title: 'Bookmap Academy', subtitle: '工具商 · 英文 · 订单流基础', href: 'https://bookmap.com/learning-center/en/market-mechanics/platform/default/academy', tag: '工具教程', detail: '可学习成交与流动性可视化；教学材料不构成策略收益证明。' },
+  ] },
+];
+---
+
+<BaseLayout title="资料索引" description="价格行为学原始教材、中文创作者、实战案例和订单流基础资料。">
+  <div class="resources-head"><div class="eyebrow">SOURCE LIBRARY</div><h1>资料索引<span>.</span></h1><p>从来源与证据入手，把值得读的内容放在一起。所有评级针对公开材料的可核验程度，不代表作者的真实盈利能力。</p><div class="legend"><span><b>原始来源</b> 优先建立术语</span><span><b>案例复盘</b> 观察决策过程</span><span><b>观察名单</b> 暂不判断收益</span></div></div>
+  <div class="resource-groups">{groups.map((group, groupIndex) => <section class="resource-group"><div class="group-title"><span>{String(groupIndex+1).padStart(2,'0')}</span><div><h2>{group.name}</h2><p>{group.note}</p></div></div><div class="resource-list">{group.items.map((item) => <a class="resource-card" href={item.href} target="_blank" rel="noopener noreferrer"><div><span class="resource-tag">{item.tag}</span><h3>{item.title}<span aria-hidden="true"> ↗</span></h3><p class="resource-subtitle">{item.subtitle}</p><p class="resource-detail">{item.detail}</p></div><span class="card-arrow" aria-hidden="true">↗</span></a>)}</div></section>)}</div>
+  <div class="resource-caveat"><strong>筛选原则</strong><p>只展示经核对的原始链接。课程营销、翻译搬运、收益截图和社区推荐分别标注。若要宣称“长期有效”，仍需完整交易记录、成本和独立复核。</p></div>
+</BaseLayout>
+
+<style>
+  .resources-head{margin:0 30px;padding:45px 0 30px;border-bottom:1px solid var(--line)}.resources-head h1{font-size:clamp(31px,4vw,46px);line-height:1.2;letter-spacing:-.055em;margin:14px 0 7px}.resources-head h1 span{color:var(--ink)}.resources-head>p{max-width:740px;color:var(--muted);font-size:14px;margin:0;line-height:1.75}.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px;color:var(--muted);font-size:11px}.legend b{color:var(--ink);margin-right:5px}.resource-groups{margin:0 30px}.resource-group{display:grid;grid-template-columns:170px 1fr;gap:30px;padding:29px 0;border-bottom:1px solid var(--line)}.group-title{display:flex;gap:11px;align-items:flex-start}.group-title>span{color:var(--muted);font-size:10px;font-weight:750;margin-top:6px}.group-title h2{font-size:16px;letter-spacing:-.03em;margin:0}.group-title p{font-size:11px;color:var(--muted);line-height:1.6;max-width:140px;margin:5px 0}.resource-list{display:block}.resource-card{background:transparent;border-bottom:1px solid var(--line);padding:12px 0;display:flex;justify-content:space-between;gap:12px}.resource-card:first-child{padding-top:0}.resource-card:last-child{border-bottom:0;padding-bottom:0}.resource-card:hover h3{color:var(--accent)}.resource-tag{font-size:10px;color:var(--muted);font-weight:650}.resource-card h3{font-size:14px;letter-spacing:-.025em;line-height:1.4;margin:3px 0}.resource-card h3 span{display:none}.resource-subtitle{font-size:11px;color:var(--muted);margin:0}.resource-detail{font-size:11px;color:var(--muted);line-height:1.65;margin:3px 0 0}.card-arrow{color:var(--muted);font-size:15px;line-height:1}.resource-caveat{margin:27px 30px 0;background:var(--soft);padding:17px 20px;display:flex;gap:20px;align-items:baseline}.resource-caveat strong{color:var(--ink);white-space:nowrap;font-size:12px}.resource-caveat p{font-size:11px;color:var(--muted);margin:0;line-height:1.7}
+  @media(max-width:720px){.resources-head,.resource-groups,.resource-caveat{margin-left:18px;margin-right:18px}.resources-head{padding:35px 0 25px}.resources-head>p{font-size:13px}.legend{gap:7px 15px}.resource-group{grid-template-columns:1fr;gap:14px;padding:23px 0}.group-title p{max-width:none}.resource-caveat{display:block}.resource-caveat p{margin-top:5px}}
+</style>

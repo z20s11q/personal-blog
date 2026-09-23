@@ -1,0 +1,34 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const articles = await getCollection('articles');
+  return articles.map((article) => ({ params: { id: article.id }, props: { article } }));
+}
+
+const { article } = Astro.props;
+const { Content, headings } = await render(article);
+const toc = headings.filter((heading) => heading.depth === 2);
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+const canonical = new URL(`${base}articles/${article.id}/`, Astro.site).href;
+---
+
+<BaseLayout title={article.data.title} description={article.data.description} canonical={canonical}>
+  <div class="article-header">
+    <div class="eyebrow">{article.data.category} / 001</div>
+    <h1>{article.data.title}</h1>
+    <p>{article.data.description}</p>
+    <div class="article-meta"><span>发布于 {article.data.publishedAt.toLocaleDateString('zh-CN')}</span><span>复核于 {article.data.reviewedAt.toLocaleDateString('zh-CN')}</span><span>约 {article.data.readingMinutes} 分钟</span></div>
+  </div>
+  <div class="article-grid">
+    <aside class="toc" aria-label="文章目录"><div class="toc-sticky"><span class="toc-label">本篇目录</span>{toc.map((heading, index) => <a href={`#${heading.slug}`}><span>{String(index+1).padStart(2,'0')}</span>{heading.text}</a>)}<a class="back-link" href={base}>← 返回首页</a></div></aside>
+    <article class="prose"><Content /></article>
+  </div>
+  <section class="article-end"><div class="eyebrow">继续学习</div><h2>从资料出发，建立自己的判断。</h2><p>回到原始来源、记录失败案例，并在下一次复盘里修正假设。</p><a class="button" href={`${base}resources/`}>查看资料索引 <span aria-hidden="true">↗</span></a></section>
+</BaseLayout>
+
+<style>
+  .article-header{margin:0 30px;padding:45px 0 32px;border-bottom:1px solid var(--line)}.article-header h1{font-size:clamp(31px,4vw,46px);max-width:880px;line-height:1.28;letter-spacing:-.055em;margin:15px 0 8px}.article-header>p{max-width:760px;color:var(--muted);font-size:14px;margin:0;line-height:1.75}.article-meta{display:flex;gap:14px;margin-top:17px;color:var(--muted);font-size:11px}.article-meta span+span:before{content:"/";color:var(--line);margin-right:14px}.article-grid{display:grid;grid-template-columns:175px minmax(0,790px);gap:42px;margin:0 30px;padding:32px 0}.toc{font-size:11px}.toc-sticky{position:sticky;top:22px;display:grid;gap:0}.toc-label{color:var(--muted);font-weight:750;letter-spacing:.08em;margin-bottom:11px}.toc a:not(.back-link){display:flex;gap:8px;border-left:1px solid var(--line);padding:6px 0 6px 10px;color:var(--muted);line-height:1.5}.toc a span{color:var(--muted);font-weight:650}.toc a:hover{color:var(--ink);border-left-color:var(--ink)}.back-link{margin-top:15px;color:var(--ink);font-weight:700}.prose{min-width:0;font-size:15px;line-height:1.85;color:var(--ink)}.prose :global(h2){font-size:23px;line-height:1.4;letter-spacing:-.04em;margin:37px 0 14px;padding-top:4px;scroll-margin-top:18px}.prose :global(h2:first-of-type){margin-top:27px}.prose :global(h3){font-size:17px;letter-spacing:-.03em;margin:24px 0 8px}.prose :global(p){margin:0 0 12px}.prose :global(a){color:var(--green);text-decoration:underline;text-decoration-color:var(--muted);text-underline-offset:3px}.prose :global(a:hover){color:var(--accent)}.prose :global(blockquote){margin:0 0 22px;border-left:2px solid var(--line);background:var(--soft);padding:12px 16px;font-size:12px;line-height:1.75}.prose :global(blockquote p){margin:0}.prose :global(table){border-collapse:collapse;width:100%;font-size:12px;line-height:1.65;margin:16px 0 21px}.prose :global(th),.prose :global(td){border-bottom:1px solid var(--line);padding:9px 8px;text-align:left;vertical-align:top}.prose :global(th){background:var(--soft);font-weight:700}.prose :global(ul),.prose :global(ol){padding-left:1.5em;margin:0 0 16px}.prose :global(li){padding-left:3px;margin:5px 0}.prose :global(code){padding:2px 4px;background:var(--soft);color:var(--ink);font-size:.87em;white-space:normal}.article-end{background:var(--soft);margin:0 30px;padding:25px 28px}.article-end h2{font-size:20px;letter-spacing:-.04em;margin:9px 0 2px}.article-end p{color:var(--muted);font-size:12px;margin:0 0 15px}
+  @media(max-width:850px){.article-grid{grid-template-columns:1fr;gap:0}.toc{display:none}.prose{max-width:790px;margin:auto}}@media(max-width:600px){.article-header,.article-grid,.article-end{margin-left:18px;margin-right:18px}.article-header{padding:36px 0 28px}.article-header h1{font-size:30px}.article-header>p{font-size:13px}.article-meta{gap:6px;flex-wrap:wrap}.article-meta span+span:before{margin-right:6px}.article-grid{padding:18px 0}.prose{font-size:14px}.prose :global(h2){font-size:21px;margin-top:32px}.prose :global(table){display:block;overflow-x:auto;white-space:normal}.prose :global(th),.prose :global(td){min-width:140px}.article-end{padding:20px}.article-end h2{font-size:18px}}
+</style>
