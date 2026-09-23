@@ -15,7 +15,7 @@ npm run check
 npm run build
 ```
 
-报告文章位于 `src/content/articles/`。Rust 章节位于 `src/content/rust/`，由 `D:\Work\rust-learn\brief` 的 Markdown 源文件导入；原始项目仍保留在原目录与独立仓库。如需同步本地更新，运行 `node scripts/sync-rust.mjs D:\Work\rust-learn\brief`。在 `main` 分支推送后，`.github/workflows/deploy.yml` 自动构建并发布网站。
+报告文章位于 `src/content/articles/`。Rust 章节位于 `src/content/rust/`，由 `D:\Work\rust-learn\brief` 的 Markdown 源文件导入，并在 `/rust/` 连续展示；单节网址仍可直接访问。原始项目保留在原目录与独立仓库。如需同步本地更新，运行 `node scripts/sync-rust.mjs D:\Work\rust-learn\brief`。在 `main` 分支推送后，`.github/workflows/deploy.yml` 自动构建并发布网站。
 
 - [价格行为资料调研与学习路线](research/price-action-landscape.md)
 - [博客框架与信息架构](research/site-direction.md)
