@@ -5,10 +5,12 @@ interface Props {
   canonical?: string;
 }
 const { title, description, canonical } = Astro.props;
-const pageTitle = title === '价格行为研究笔记' ? title : `${title} · 价格行为研究笔记`;
+const siteName = 'z20s11q 的个人博客';
+const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 const reportUrl = `${base}articles/price-action-field-guide/`;
 const resourcesUrl = `${base}resources/`;
+const rustUrl = `${base}rust/`;
 ---
 
 <!doctype html>
@@ -25,28 +27,28 @@ const resourcesUrl = `${base}resources/`;
   <body>
     <div class="site-shell">
       <header class="site-header">
-        <a class="wordmark" href={base} aria-label="价格行为研究笔记首页">
-          <span class="wordmark-icon" aria-hidden="true"><i></i><i></i><i></i></span>
-          <span>stock<span class="wordmark-sep">/</span>learn</span>
+        <a class="wordmark" href={base} aria-label="个人博客首页">
+          <span>z20s11q<span class="wordmark-sep">/</span>notes</span>
         </a>
         <nav aria-label="主导航">
           <a href={base}>首页</a>
-          <a href={reportUrl}>研究报告</a>
-          <a href={resourcesUrl}>资料索引</a>
+          <a href={reportUrl}>交易研究</a>
+          <a href={rustUrl}>Rust 学习</a>
+          <a href={resourcesUrl}>交易资料</a>
         </nav>
       </header>
       <main><slot /></main>
       <footer class="site-footer">
         <div>
-          <strong>stock / learn</strong>
-          <p>从原始资料出发，记录可以复核的交易研究。</p>
+          <strong>z20s11q / notes</strong>
+          <p>记录交易研究、编程学习与以后值得整理的主题。</p>
         </div>
         <div class="footer-links">
-          <a href={reportUrl}>阅读报告</a>
-          <a href={resourcesUrl}>查看来源</a>
-          <a href="https://github.com/z20s11q/stock-learn" target="_blank" rel="noopener noreferrer">研究仓库 ↗</a>
+          <a href={reportUrl}>交易研究</a>
+          <a href={rustUrl}>Rust 学习</a>
+          <a href="https://github.com/z20s11q/personal-blog" target="_blank" rel="noopener noreferrer">网站源码 ↗</a>
         </div>
-        <small>资料研究，不构成投资建议。更新于 2026 年 9 月。</small>
+        <small>交易相关内容仅供学习研究，不构成投资建议。</small>
       </footer>
     </div>
   </body>
@@ -64,11 +66,6 @@ const resourcesUrl = `${base}resources/`;
   .site-header { height:64px; margin:0 30px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); gap:2rem; }
   .wordmark { display:inline-flex; align-items:center; gap:9px; font-size:16px; font-weight:800; letter-spacing:-.04em; white-space:nowrap; }
   .wordmark-sep { color:var(--accent); padding:0 2px; }
-  .wordmark-icon { display:flex; align-items:flex-end; gap:3px; height:23px; width:28px; }
-  .wordmark-icon i { display:block; width:5px; border:1.7px solid var(--accent); border-radius:1px; position:relative; }
-  .wordmark-icon i:before,.wordmark-icon i:after { content:""; position:absolute; left:1px; width:1px; height:5px; background:var(--accent); }
-  .wordmark-icon i:before { top:-6px; }.wordmark-icon i:after { bottom:-6px; }
-  .wordmark-icon i:nth-child(1){height:9px}.wordmark-icon i:nth-child(2){height:17px}.wordmark-icon i:nth-child(3){height:12px}
   .site-header nav { display:flex; align-items:center; gap:clamp(1.1rem,3vw,2rem); font-size:12px; color:var(--muted); font-weight:650; }
   .site-header nav a:hover,.footer-links a:hover { color:var(--accent); }
   .site-footer { margin:50px 30px 0; padding:25px 0 24px; border-top:1px solid var(--line); display:grid; grid-template-columns:1fr auto; gap:12px; }
@@ -82,5 +79,5 @@ const resourcesUrl = `${base}resources/`;
   .button:hover { opacity:.8; }
   .text-link { color:var(--green); font-size:12px; font-weight:750; border-bottom:1px solid currentColor; padding-bottom:2px; }
   .text-link:hover { color:var(--accent); }
-  @media(max-width:700px) { .site-header{height:58px;margin:0 18px;gap:1rem}.site-header nav{gap:12px;font-size:11px}.site-header nav a:nth-child(3){display:none}.wordmark{font-size:15px}.site-footer{margin:42px 18px 0;display:block}.footer-links{margin:14px 0;flex-wrap:wrap;gap:16px} }
+  @media(max-width:700px) { .site-header{height:58px;margin:0 18px;gap:1rem}.site-header nav{gap:12px;font-size:11px}.site-header nav a:last-child{display:none}.wordmark{font-size:15px}.site-footer{margin:42px 18px 0;display:block}.footer-links{margin:14px 0;flex-wrap:wrap;gap:16px} }
 </style>

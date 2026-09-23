@@ -14,4 +14,13 @@ const articles = defineCollection({
   }),
 });
 
-export const collections = { articles };
+const rust = defineCollection({
+  loader: glob({ base: './src/content/rust', pattern: '**/*.md' }),
+  schema: z.object({
+    title: z.string(),
+    order: z.string(),
+    chapter: z.number().nullable(),
+  }),
+});
+
+export const collections = { articles, rust };

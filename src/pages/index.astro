@@ -6,20 +6,20 @@ const [article] = await getCollection('articles');
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 ---
 
-<BaseLayout title="价格行为研究笔记" description="从原始资料出发，建立可复核的价格行为学习地图。">
+<BaseLayout title="z20s11q 的个人博客" description="交易研究、Rust 编程与持续学习的个人笔记。">
   <section class="intro">
-    <div class="eyebrow">STOCK / LEARN · PRICE ACTION</div>
-    <h1>价格行为研究笔记</h1>
-    <p>从原始资料、完整案例与交易证据出发，整理价格行为的理论、中文学习资源和验证方法。</p>
-    <div class="intro-links"><a href={`${base}articles/${article.id}/`}>阅读首篇报告 →</a><a href={`${base}resources/`}>资料索引 →</a></div>
+    <div class="eyebrow">Z20S11Q / NOTES</div>
+    <h1>个人笔记</h1>
+    <p>整理我正在学习和研究的内容。目前有价格行为研究与 Rust 学习资料，以后也会加入其他主题。</p>
+    <div class="intro-links"><a href={`${base}articles/${article.id}/`}>交易研究 →</a><a href={`${base}rust/`}>Rust 学习 →</a></div>
   </section>
 
   <div class="home-grid">
     <div class="main-column">
-      <section class="latest"><div class="section-title"><h2>最新研究</h2><span>01 篇文章</span></div><a class="article-row" href={`${base}articles/${article.id}/`}><div><span class="category">研究报告 · 2026.09.23</span><h3>{article.data.title}</h3><p>{article.data.description}</p><small>约 {article.data.readingMinutes} 分钟阅读</small></div><span class="row-arrow" aria-hidden="true">↗</span></a></section>
-      <section class="topics"><div class="section-title"><h2>本期提要</h2><span>从概念到验证</span></div><div class="topic-list"><div><span>01</span><strong>流派边界</strong><p>Brooks、市场结构、Wyckoff 与订单流分别解释什么。</p></div><div><span>02</span><strong>关键理论</strong><p>趋势与区间、信号和跟随、突破失败、风险期望值。</p></div><div><span>03</span><strong>中文资料</strong><p>方方土、太妃、线索c 等候选创作者与原始来源。</p></div><div><span>04</span><strong>实操验证</strong><p>事前规则、失败样本、成本和前瞻交易记录。</p></div></div></section>
+      <section class="latest"><div class="section-title"><h2>内容</h2><span>两个主题</span></div><a class="article-row" href={`${base}articles/${article.id}/`}><div><span class="category">交易研究 · 2026.09.23</span><h3>{article.data.title}</h3><p>{article.data.description}</p><small>约 {article.data.readingMinutes} 分钟阅读</small></div><span class="row-arrow" aria-hidden="true">↗</span></a><a class="article-row" href={`${base}rust/`}><div><span class="category">编程学习 · Rust</span><h3>Rust 编程语言（精简版）</h3><p>我此前整理的 Rust 学习网站，按章节阅读语言基础、所有权、类型和常用工具。</p><small>打开完整学习网站</small></div><span class="row-arrow" aria-hidden="true">↗</span></a></section>
+      <section class="topics"><div class="section-title"><h2>关于本站</h2><span>持续整理</span></div><div class="topic-list"><div><span>01</span><strong>交易研究</strong><p>优先核查原始资料、完整案例和可复核证据。</p></div><div><span>02</span><strong>编程学习</strong><p>把已经整理的 Rust 学习资料放在同一个入口。</p></div><div><span>03</span><strong>后续主题</strong><p>有值得长期保存的学习记录，再逐步加入。</p></div></div></section>
     </div>
-    <aside class="sidebar"><div class="aside-block"><h2>阅读路径</h2><ol><li>先读 Brooks 原始资料</li><li>用中文盘中讲解交叉理解</li><li>只选一个市场和两类情景</li><li>记录全部机会与扣费结果</li></ol></div><div class="aside-block"><h2>筛选说明</h2><p>教学清晰、盘中过程透明与长期盈利，是三件需要分别核验的事。目前没有候选人的长期扣费收益被独立确认。</p></div><div class="aside-block"><h2>资料更新</h2><p>首篇报告复核于 2026 年 9 月 23 日。后续加入订单流专题时，会先标明市场与数据来源。</p></div></aside>
+    <aside class="sidebar"><div class="aside-block"><h2>主题入口</h2><ol><li><a href={`${base}articles/${article.id}/`}>价格行为研究报告</a></li><li><a href={`${base}resources/`}>交易资料索引</a></li><li><a href={`${base}rust/`}>Rust 编程语言（精简版）</a></li></ol></div><div class="aside-block"><h2>写作原则</h2><p>交易内容区分理论、教学质量和可验证的实战结果；编程笔记侧重查阅和实践。</p></div><div class="aside-block"><h2>更新</h2><p>本站会随着学习内容增加而调整。当前两个主题均可从首页进入。</p></div></aside>
   </div>
 </BaseLayout>
 
