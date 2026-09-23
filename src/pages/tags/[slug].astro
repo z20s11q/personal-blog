@@ -1,0 +1,71 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import { domains } from '../../data/domains';
+
+export async function getStaticPaths() {
+  const articles = await getCollection('articles');
+  const activeDomains = domains.filter((domain) => domain.slug === 'finance' || domain.slug === 'development' || articles.some((article) => article.data.tags.includes(domain.slug)));
+  return domains
+    .map((domain) => ({ domain, taggedArticles: articles.filter((article) => article.data.tags.includes(domain.slug)) }))
+    .filter(({ domain }) => activeDomains.some((active) => active.slug === domain.slug))
+    .map(({ domain, taggedArticles }) => ({ params: { slug: domain.slug }, props: { domain, taggedArticles, activeDomains } }));
+}
+
+const { domain, taggedArticles, activeDomains } = Astro.props;
+const articles = [...taggedArticles].sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+const canonical = new URL(`${base}tags/${domain.slug}/`, Astro.site).href;
+const formatDate = (date: Date) => date.toLocaleDateString('zh-CN');
+---
+
+<BaseLayout title={`${domain.label} · 领域`} description={domain.description} canonical={canonical}>
+  <header class="page-head">
+    <div class="eyebrow">领域</div>
+    <h1>{domain.label}</h1>
+    <p>{domain.description}</p>
+  </header>
+  <div class="tag-grid">
+    <aside class="tag-nav" aria-label="领域导航">
+      <span>浏览领域</span>
+      <a href={base}>全部内容</a>
+      {activeDomains.map((item) => <a href={`${base}tags/${item.slug}/`} aria-current={item.slug === domain.slug ? 'page' : undefined}>{item.label}</a>)}
+    </aside>
+    <div class="tag-content">
+      {articles.length > 0 && <section>
+        <h2>文章</h2>
+        {articles.map((article) => <a class="tag-entry" href={`${base}articles/${article.id}/`}>
+          <span>{article.data.category} · {formatDate(article.data.publishedAt)}</span>
+          <h3>{article.data.title}</h3>
+          <p>{article.data.description}</p>
+        </a>)}
+      </section>}
+      {domain.slug === 'development' && <section>
+        <h2>学习笔记</h2>
+        <a class="tag-entry" href={`${base}rust/`}><span>Rust · 连续阅读</span><h3>Rust 编程语言（精简版）</h3><p>全部章节在一页连续展开，也可通过目录定位。</p></a>
+      </section>}
+      {domain.slug === 'finance' && <section>
+        <h2>资料</h2>
+        <a class="tag-entry" href={`${base}resources/`}><span>来源索引</span><h3>价格行为资料索引</h3><p>原始教材、中文讲解与案例复盘资料。</p></a>
+      </section>}
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .tag-grid { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 52px; margin: 0 var(--page-x); padding-top: 32px; }
+  .tag-nav { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+  .tag-nav span { margin-bottom: 8px; color: var(--muted); font-size: 13px; font-weight: 700; }
+  .tag-nav a { padding: 6px 10px; border-radius: 4px; color: var(--muted); font-size: 14px; }
+  .tag-nav a:hover, .tag-nav a[aria-current="page"] { color: var(--ink); background: var(--soft); }
+  .tag-nav a[aria-current="page"] { font-weight: 700; }
+  .tag-content { max-width: 780px; min-width: 0; }
+  .tag-content section { margin-bottom: 36px; }
+  .tag-content h2 { margin: 0; padding-bottom: 12px; border-bottom: 1px solid var(--line); font-size: 19px; }
+  .tag-entry { display: block; padding: 20px 0; border-bottom: 1px solid var(--line); }
+  .tag-entry span { color: var(--muted); font-size: 13px; }
+  .tag-entry h3 { margin: 7px 0; font-size: 22px; line-height: 1.4; }
+  .tag-entry p { margin: 0; color: var(--muted); font-size: 15px; }
+  .tag-entry:hover h3 { color: var(--accent); }
+  @media (max-width: 760px) { .tag-grid { grid-template-columns: 1fr; gap: 20px; padding-top: 22px; } .tag-nav { flex-direction: row; flex-wrap: wrap; gap: 6px; } .tag-nav span { width: 100%; margin-bottom: 2px; } .tag-nav a { border: 1px solid var(--line); padding: 4px 9px; } .tag-entry h3 { font-size: 19px; } }
+</style>

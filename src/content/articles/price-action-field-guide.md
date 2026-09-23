@@ -4,6 +4,7 @@ description: "从原始资料到中文创作者，梳理价格行为学的边界
 publishedAt: 2026-09-23
 reviewedAt: 2026-09-23
 category: "研究报告"
+tags: ["finance"]
 readingMinutes: 16
 ---
 

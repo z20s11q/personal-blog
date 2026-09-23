@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
+import { domainLabel } from '../../data/domains';
 
 const articles = (await getCollection('articles')).sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
 const years = [...new Set(articles.map((article) => article.data.publishedAt.getFullYear()))]
@@ -28,7 +29,7 @@ const formatDay = (date: Date) => `${String(date.getMonth() + 1).padStart(2, '0'
                 <div>
                   <h3>{article.data.title}</h3>
                   <p>{article.data.description}</p>
-                  <span class="archive-meta">{article.data.category} · 约 {article.data.readingMinutes} 分钟</span>
+                  <span class="archive-meta">{article.data.tags.map(domainLabel).join(' · ')} · {article.data.category} · 约 {article.data.readingMinutes} 分钟</span>
                 </div>
               </a>
             </li>

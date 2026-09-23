@@ -1,12 +1,18 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
+import { domains, domainLabel } from '../data/domains';
 
 const articles = (await getCollection('articles')).sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
 const rustSections = await getCollection('rust');
 const rustChapters = new Set(rustSections.map((section) => section.data.chapter).filter((chapter) => chapter !== null)).size;
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.');
+const domainCounts = new Map<string, number>(domains.map((domain) => [domain.slug, 0]));
+for (const article of articles) for (const tag of article.data.tags) domainCounts.set(tag, (domainCounts.get(tag) ?? 0) + 1);
+domainCounts.set('development', (domainCounts.get('development') ?? 0) + 1);
+domainCounts.set('finance', (domainCounts.get('finance') ?? 0) + 1);
+const activeDomains = domains.filter((domain) => (domainCounts.get(domain.slug) ?? 0) > 0);
 ---
 
 <BaseLayout title="z20s11q 的个人博客" description="交易研究、Rust 编程与持续学习的个人笔记。">
@@ -17,12 +23,29 @@ const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'num
   </section>
 
   <div class="home-grid">
+    <aside class="sidebar" aria-label="内容分类">
+      <div class="domain-block">
+        <h2>领域</h2>
+        <nav class="domain-list" aria-label="按领域浏览">
+          <a href={base} aria-current="page"><span>全部</span><small>{articles.length + 2}</small></a>
+          {activeDomains.map((domain) => <a href={`${base}tags/${domain.slug}/`}><span>{domain.label}</span><small>{domainCounts.get(domain.slug)}</small></a>)}
+        </nav>
+      </div>
+      <div class="aside-block">
+        <h2>关于本站</h2>
+        <p>记录交易研究、编程学习，以及以后值得长期保存的主题。</p>
+      </div>
+      <div class="aside-block">
+        <h2>查找内容</h2>
+        <p><a class="inline-link" href={`${base}search/`}>站内搜索</a>可以检索文章和 Rust 笔记。</p>
+      </div>
+    </aside>
     <div class="main-column">
       <section class="home-section">
         <div class="section-title"><h2>最新文章</h2><a href={`${base}articles/`}>全部文章 →</a></div>
         {articles.slice(0, 5).map((article) => (
           <a class="entry" href={`${base}articles/${article.id}/`}>
-            <div class="entry-meta"><span>{article.data.category}</span><time datetime={article.data.publishedAt.toISOString()}>{formatDate(article.data.publishedAt)}</time></div>
+            <div class="entry-meta"><span>{article.data.tags.map(domainLabel).join(' · ')}</span><span>{article.data.category}</span><time datetime={article.data.publishedAt.toISOString()}>{formatDate(article.data.publishedAt)}</time></div>
             <h3>{article.data.title}</h3>
             <p>{article.data.description}</p>
             <small>约 {article.data.readingMinutes} 分钟阅读</small>
@@ -33,7 +56,7 @@ const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'num
       <section class="home-section">
         <div class="section-title"><h2>学习笔记</h2><span>连续阅读</span></div>
         <a class="entry" href={`${base}rust/`}>
-          <div class="entry-meta"><span>编程 · Rust</span><span>{rustChapters} 章 · {rustSections.length} 节</span></div>
+          <div class="entry-meta"><span>开发 · Rust</span><span>{rustChapters} 章 · {rustSections.length} 节</span></div>
           <h3>Rust 编程语言（精简版）</h3>
           <p>基于 The Rust Programming Language 整理的中文学习笔记，全部章节在一页连续展开，目录会跟随阅读位置。</p>
         </a>
@@ -42,24 +65,13 @@ const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'num
       <section class="home-section">
         <div class="section-title"><h2>资料</h2><span>持续核对</span></div>
         <a class="entry" href={`${base}resources/`}>
-          <div class="entry-meta"><span>交易研究</span><span>原始来源优先</span></div>
+          <div class="entry-meta"><span>金融 · 交易研究</span><span>原始来源优先</span></div>
           <h3>价格行为资料索引</h3>
           <p>原始教材、中文讲解、案例复盘与市场机制资料，按可核验程度分别标注。</p>
         </a>
       </section>
     </div>
 
-    <aside class="sidebar">
-      <div class="aside-block">
-        <h2>关于本站</h2>
-        <p>交易内容区分理论、教学质量和可验证的实战结果，优先核查原始资料与完整案例。编程笔记侧重查阅和实践。</p>
-        <p>有值得长期保存的学习记录，会再逐步加入新的主题。</p>
-      </div>
-      <div class="aside-block">
-        <h2>快速查找</h2>
-        <p>全站文章和 Rust 笔记都可以通过<a class="inline-link" href={`${base}search/`}>站内搜索</a>按关键词定位。</p>
-      </div>
-    </aside>
   </div>
 </BaseLayout>
 
@@ -67,8 +79,8 @@ const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'num
   .intro { padding-bottom: 40px; }
   .home-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 280px;
-    gap: 56px;
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: 52px;
     margin: 0 var(--page-x);
   }
   .main-column { min-width: 0; }
@@ -94,15 +106,24 @@ const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'num
   .entry small { display: block; margin-top: 10px; color: var(--muted); font-size: 14px; }
 
   .sidebar { padding-top: 40px; }
-  .aside-block { padding: 20px 22px; margin-bottom: 20px; border-radius: 8px; background: var(--soft); }
-  .aside-block h2 { margin: 0 0 8px; font-size: 16px; letter-spacing: -.01em; }
-  .aside-block p { margin: 0 0 8px; color: var(--muted); font-size: 15px; line-height: 1.8; }
-  .aside-block p:last-child { margin-bottom: 0; }
+  .domain-block { margin-bottom: 32px; }
+  .sidebar h2 { margin: 0 0 11px; font-size: 15px; letter-spacing: -.01em; }
+  .domain-list { display: flex; flex-direction: column; gap: 2px; }
+  .domain-list a { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: 4px; color: var(--muted); font-size: 14px; }
+  .domain-list a:hover { color: var(--ink); background: var(--soft); }
+  .domain-list a[aria-current="page"] { color: var(--ink); background: var(--soft); font-weight: 700; }
+  .domain-list small { color: var(--muted); font-size: 12px; }
+  .aside-block { padding-top: 18px; margin-bottom: 22px; border-top: 1px solid var(--line); }
+  .aside-block p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.75; }
   .inline-link { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 
   @media (max-width: 860px) {
     .home-grid { grid-template-columns: 1fr; gap: 0; }
     .sidebar { padding-top: 24px; }
+    .domain-block { margin-bottom: 0; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+    .domain-list { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+    .domain-list a { gap: 7px; border: 1px solid var(--line); padding: 4px 9px; }
+    .aside-block { display: none; }
   }
   @media (max-width: 760px) {
     .home-section { padding-top: 32px; }
