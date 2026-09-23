@@ -1,0 +1,105 @@
+---
+export interface TocItem {
+  id: string;
+  text: string;
+  depth: number;
+}
+
+interface Props {
+  items: TocItem[];
+  label?: string;
+  back?: { href: string; text: string };
+  namespaceSections?: boolean;
+}
+
+const { items, label = '本篇目录', back, namespaceSections = false } = Astro.props;
+---
+
+<nav class="reading-toc" aria-label={label} data-reading-toc data-namespace-sections={namespaceSections ? '' : undefined}>
+  <details open>
+    <summary><span class="toc-label">{label}</span><span class="toc-current" data-current>{items[0]?.text ?? '目录'}</span></summary>
+    <div class="toc-links">
+      {items.map((item) => <a href={`#${item.id}`} data-toc-target={item.id} data-depth={item.depth}>{item.text}</a>)}
+      {back && <a class="toc-back" href={back.href}>{back.text}</a>}
+    </div>
+  </details>
+</nav>
+
+<script>
+  const mobile = matchMedia('(max-width: 900px)');
+  for (const nav of document.querySelectorAll<HTMLElement>('[data-reading-toc]')) {
+    if (nav.hasAttribute('data-namespace-sections')) {
+      for (const section of document.querySelectorAll<HTMLElement>('.reading-section[id]')) {
+        for (const heading of section.querySelectorAll<HTMLElement>('.prose :is(h2, h3, h4)[id]')) {
+          heading.id = `${section.id}--${heading.id}`;
+        }
+      }
+      if (location.hash.includes('--')) {
+        const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+        if (target) requestAnimationFrame(() => target.scrollIntoView());
+      }
+    }
+
+    const details = nav.querySelector<HTMLDetailsElement>('details')!;
+    const current = nav.querySelector<HTMLElement>('[data-current]')!;
+    const list = nav.querySelector<HTMLElement>('.toc-links')!;
+    const links = [...nav.querySelectorAll<HTMLAnchorElement>('a[data-toc-target]')];
+    const targets = links.map((link) => document.getElementById(link.dataset.tocTarget!));
+    if (mobile.matches) details.open = false;
+
+    let activeIndex = -1;
+    const update = () => {
+      let index = 0;
+      for (let i = 0; i < targets.length; i++) {
+        if (targets[i] && targets[i]!.getBoundingClientRect().top < innerHeight * 0.3) index = i;
+        else break;
+      }
+      if (index === activeIndex) return;
+      activeIndex = index;
+      links.forEach((link, i) => {
+        link.classList.toggle('active', i === index);
+        if (i === index) {
+          link.setAttribute('aria-current', 'location');
+          current.textContent = link.textContent;
+          if (!mobile.matches) list.scrollTop = Math.max(0, link.offsetTop - list.offsetTop - list.clientHeight / 2);
+        } else link.removeAttribute('aria-current');
+      });
+    };
+
+    let queued = false;
+    addEventListener('scroll', () => {
+      if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; update(); }); }
+    }, { passive: true });
+    update();
+    list.addEventListener('click', (event) => {
+      if (mobile.matches && (event.target as HTMLElement).closest('a')) details.open = false;
+    });
+    mobile.addEventListener('change', (event) => { details.open = !event.matches; });
+  }
+</script>
+
+<style>
+  .reading-toc { position: sticky; top: 28px; align-self: start; min-width: 0; }
+  details summary { list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  .toc-label { color: var(--muted); font-size: 13px; font-weight: 700; letter-spacing: .06em; }
+  .toc-current { display: none; }
+  .toc-links { display: flex; flex-direction: column; max-height: calc(100vh - 90px); margin-top: 12px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+  .toc-links a { padding: 6px 8px 6px 14px; border-left: 2px solid var(--line); color: var(--muted); font-size: 14px; line-height: 1.5; transition: color .15s, border-color .15s; }
+  .toc-links a[data-depth="3"] { padding-left: 27px; font-size: 13.5px; }
+  .toc-links a[data-depth="4"] { padding-left: 39px; font-size: 13px; }
+  .toc-links a[data-depth="5"], .toc-links a[data-depth="6"] { padding-left: 48px; font-size: 12.5px; }
+  .toc-links a:hover { color: var(--ink); }
+  .toc-links a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+  .toc-links a.toc-back { margin-top: 14px; padding-left: 0; border: 0; color: var(--ink); font-weight: 700; }
+
+  @media (max-width: 900px) {
+    .reading-toc { top: 0; z-index: 20; margin: 0 calc(-1 * var(--page-x)) 24px; padding: 0 var(--page-x); border-bottom: 1px solid var(--line); background: var(--bg); }
+    details summary { display: flex; align-items: center; gap: 12px; min-height: 50px; cursor: pointer; }
+    details summary::after { content: ""; width: 8px; height: 8px; margin-left: auto; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-2px) rotate(45deg); transition: transform .15s; }
+    details[open] summary::after { transform: translateY(2px) rotate(-135deg); }
+    .toc-current { display: block; overflow: hidden; color: var(--ink); font-size: 15px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .toc-links { max-height: 60vh; margin: 0; padding-bottom: 12px; }
+    .toc-links a { padding-top: 9px; padding-bottom: 9px; font-size: 15px; }
+  }
+</style>

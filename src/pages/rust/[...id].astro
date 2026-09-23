@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection, render } from 'astro:content';
+import ReadingToc from '../../components/ReadingToc.astro';
 
 export async function getStaticPaths() {
   const sections = (await getCollection('rust')).sort((a, b) => a.data.order.localeCompare(b.data.order));
@@ -12,7 +13,7 @@ export async function getStaticPaths() {
 
 const { section, previous, next } = Astro.props;
 const { Content, headings } = await render(section);
-const toc = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
+const toc = headings.filter((heading) => heading.depth >= 2 && heading.depth <= 4).map((heading) => ({ id: heading.slug, text: heading.text, depth: heading.depth }));
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 const rustBase = `${base}rust/`;
 const canonical = new URL(`${rustBase}${section.id}/`, Astro.site).href;
@@ -29,13 +30,7 @@ const canonical = new URL(`${rustBase}${section.id}/`, Astro.site).href;
     </div>
   </header>
   <div class="reading-grid">
-    <aside class="toc" aria-label="本节目录">
-      <div class="toc-inner">
-        <span class="toc-label">本节目录</span>
-        {toc.length ? toc.map((heading) => <a href={`#${heading.slug}`} class:list={{ sub: heading.depth === 3 }}>{heading.text}</a>) : <p>本节是章节导言。</p>}
-        <a class="all-chapters" href={rustBase}>全部章节 →</a>
-      </div>
-    </aside>
+    <ReadingToc items={toc} label="本节目录" back={{ href: rustBase, text: '全部章节 →' }} />
     <article class="prose"><Content /></article>
   </div>
   <nav class="page-nav" aria-label="相邻章节">
@@ -53,14 +48,6 @@ const canonical = new URL(`${rustBase}${section.id}/`, Astro.site).href;
     margin: 0 var(--page-x);
     padding: 40px 0;
   }
-  .toc-inner { position: sticky; top: 28px; display: flex; flex-direction: column; max-height: calc(100vh - 56px); overflow-y: auto; }
-  .toc-label { margin-bottom: 12px; color: var(--muted); font-size: 13px; font-weight: 700; letter-spacing: .06em; }
-  .toc a { padding: 6px 8px 6px 14px; border-left: 2px solid var(--line); color: var(--muted); font-size: 14px; line-height: 1.5; }
-  .toc a.sub { padding-left: 26px; font-size: 13.5px; }
-  .toc a:hover { color: var(--ink); border-left-color: var(--ink); }
-  .toc p { margin: 0; color: var(--muted); font-size: 14px; }
-  .toc .all-chapters { margin-top: 16px; padding-left: 0; border: 0; color: var(--ink); font-weight: 700; }
-
   .page-nav {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -77,7 +64,6 @@ const canonical = new URL(`${rustBase}${section.id}/`, Astro.site).href;
 
   @media (max-width: 900px) {
     .reading-grid { grid-template-columns: 1fr; gap: 0; }
-    .toc { display: none; }
   }
   @media (max-width: 760px) {
     .reading-grid { padding: 28px 0; }

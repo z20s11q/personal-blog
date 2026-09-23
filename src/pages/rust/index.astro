@@ -1,19 +1,34 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection, render } from 'astro:content';
+import ReadingToc from '../../components/ReadingToc.astro';
+import type { TocItem } from '../../components/ReadingToc.astro';
 
 const sections = (await getCollection('rust')).sort((a, b) => a.data.order.localeCompare(b.data.order));
-const rendered = await Promise.all(sections.map(async (section) => ({ section, Content: (await render(section)).Content })));
+const rendered = await Promise.all(sections.map(async (section) => ({ section, ...await render(section) })));
 const chapters = [...new Set(sections.filter((section) => section.data.chapter !== null).map((section) => section.data.chapter!))]
   .map((number) => ({
     number,
     items: rendered.filter(({ section }) => section.data.chapter === number),
   }));
 const appendices = rendered.filter(({ section }) => section.data.chapter === null);
-const navItems = [
-  ...chapters.map(({ number, items }) => ({ id: `chapter-${number}`, label: `${String(number).padStart(2, '0')} · ${items[0].section.data.title}` })),
-  { id: 'appendices', label: 'A · 附录' },
-];
+const toc: TocItem[] = [];
+for (const { number, items } of chapters) {
+  toc.push({ id: `chapter-${number}`, text: number === 0 ? '引言' : `第 ${number} 章 ${items[0].section.data.title}`, depth: 2 });
+  for (const { section, headings } of items) {
+    if (section.id !== items[0].section.id) toc.push({ id: `section-${section.id}`, text: section.data.title, depth: 3 });
+    for (const heading of headings.filter((item) => item.depth >= 2 && item.depth <= 4)) {
+      toc.push({ id: `section-${section.id}--${heading.slug}`, text: heading.text, depth: Math.min(6, heading.depth + 2) });
+    }
+  }
+}
+toc.push({ id: 'appendices', text: '附录', depth: 2 });
+for (const { section, headings } of appendices) {
+  toc.push({ id: `section-${section.id}`, text: section.data.title, depth: 3 });
+  for (const heading of headings.filter((item) => item.depth >= 2 && item.depth <= 4)) {
+    toc.push({ id: `section-${section.id}--${heading.slug}`, text: heading.text, depth: Math.min(6, heading.depth + 2) });
+  }
+}
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 const rustBase = `${base}rust/`;
 const canonical = new URL(rustBase, Astro.site).href;
@@ -28,17 +43,7 @@ const canonical = new URL(rustBase, Astro.site).href;
     <div class="page-links"><a href="#chapter-0">开始阅读 ↓</a><a href="https://github.com/z20s11q/rust-book-web" target="_blank" rel="noopener noreferrer">原项目 ↗</a></div>
   </header>
   <div class="rust-layout">
-    <nav class="chapter-nav" aria-label="页内目录">
-      <details class="chapter-details" open>
-        <summary><span class="summary-label">目录</span><span class="summary-current" data-current>{navItems[0].label}</span></summary>
-        <div class="chapter-links">
-          {navItems.map((item) => <a href={`#${item.id}`} data-target={item.id}>{item.label}</a>)}
-        </div>
-      </details>
-      <script is:inline>
-        if (matchMedia('(max-width: 900px)').matches) document.currentScript.previousElementSibling.open = false;
-      </script>
-    </nav>
+    <ReadingToc items={toc} label="目录" namespaceSections />
     <div class="reading-column" data-pagefind-body>
       {chapters.map(({ number, items }) => <section class="chapter" id={`chapter-${number}`}>
         <div class="chapter-heading"><span>{String(number).padStart(2, '0')}</span><h2>{items[0].section.data.title}</h2></div>
@@ -59,48 +64,6 @@ const canonical = new URL(rustBase, Astro.site).href;
   </div>
 </BaseLayout>
 
-<script>
-  const nav = document.querySelector<HTMLElement>('.chapter-nav')!;
-  const details = nav.querySelector<HTMLDetailsElement>('details')!;
-  const current = nav.querySelector<HTMLElement>('[data-current]')!;
-  const linkList = nav.querySelector<HTMLElement>('.chapter-links')!;
-  const links = [...nav.querySelectorAll<HTMLAnchorElement>('a[data-target]')];
-  const chapters = links
-    .map((link) => document.getElementById(link.dataset.target!))
-    .filter((el): el is HTMLElement => !!el);
-  const mobile = matchMedia('(max-width: 900px)');
-
-  let activeId = '';
-  const setActive = () => {
-    const chapter = chapters.filter((el) => el.getBoundingClientRect().top < innerHeight * 0.25).at(-1) ?? chapters[0];
-    if (!chapter || chapter.id === activeId) return;
-    activeId = chapter.id;
-    for (const link of links) {
-      const isActive = link.dataset.target === activeId;
-      link.classList.toggle('active', isActive);
-      if (isActive) {
-        link.setAttribute('aria-current', 'location');
-        current.textContent = link.textContent;
-        const top = link.offsetTop - linkList.clientHeight / 2;
-        linkList.scrollTo({ top, behavior: 'smooth' });
-      } else {
-        link.removeAttribute('aria-current');
-      }
-    }
-  };
-
-  let queued = false;
-  addEventListener('scroll', () => {
-    if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; setActive(); }); }
-  }, { passive: true });
-  setActive();
-
-  linkList.addEventListener('click', (event) => {
-    if (mobile.matches && (event.target as HTMLElement).closest('a')) details.open = false;
-  });
-  mobile.addEventListener('change', (event) => { details.open = !event.matches; });
-</script>
-
 <style>
   .rust-layout {
     display: grid;
@@ -109,31 +72,6 @@ const canonical = new URL(rustBase, Astro.site).href;
     margin: 0 var(--page-x);
     padding: 40px 0;
   }
-
-  .chapter-nav { position: sticky; top: 28px; align-self: start; }
-  .chapter-details summary { list-style: none; }
-  .chapter-details summary::-webkit-details-marker { display: none; }
-  .summary-label { color: var(--muted); font-size: 13px; font-weight: 700; letter-spacing: .06em; }
-  .summary-current { display: none; }
-  .chapter-links {
-    display: flex;
-    flex-direction: column;
-    max-height: calc(100vh - 90px);
-    margin-top: 12px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-  }
-  .chapter-links a {
-    padding: 6px 8px 6px 14px;
-    border-left: 2px solid var(--line);
-    color: var(--muted);
-    font-size: 14px;
-    line-height: 1.5;
-    transition: color .15s, border-color .15s;
-  }
-  .chapter-links a:hover { color: var(--ink); }
-  .chapter-links a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
 
   .reading-column { min-width: 0; }
   .chapter { padding: 8px 0 32px; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
@@ -172,43 +110,6 @@ const canonical = new URL(rustBase, Astro.site).href;
 
   @media (max-width: 900px) {
     .rust-layout { grid-template-columns: 1fr; gap: 0; padding-top: 0; }
-    .chapter-nav {
-      top: 0;
-      z-index: 20;
-      margin: 0 calc(-1 * var(--page-x)) 24px;
-      padding: 0 var(--page-x);
-      border-bottom: 1px solid var(--line);
-      background: var(--bg);
-    }
-    .chapter-details summary {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-height: 50px;
-      cursor: pointer;
-    }
-    .chapter-details summary::after {
-      content: "";
-      width: 8px;
-      height: 8px;
-      margin-left: auto;
-      border-right: 2px solid var(--muted);
-      border-bottom: 2px solid var(--muted);
-      transform: translateY(-2px) rotate(45deg);
-      transition: transform .15s;
-    }
-    .chapter-details[open] summary::after { transform: translateY(2px) rotate(-135deg); }
-    .summary-current {
-      display: block;
-      overflow: hidden;
-      color: var(--ink);
-      font-size: 15px;
-      font-weight: 600;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .chapter-links { max-height: 60vh; margin: 0; padding-bottom: 12px; }
-    .chapter-links a { font-size: 15px; padding: 9px 12px; }
     .chapter { scroll-margin-top: 64px; }
     .reading-section, .reading-column .prose :global(:is(h2, h3, h4)[id]) { scroll-margin-top: 64px; }
   }
