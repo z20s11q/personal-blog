@@ -1,0 +1,65 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+const canonical = new URL(`${base}search/`, Astro.site).href;
+---
+
+<BaseLayout title="搜索" description="搜索全站文章、Rust 笔记与资料索引。" canonical={canonical}>
+  <header class="page-head">
+    <div class="eyebrow">Search</div>
+    <h1>站内搜索</h1>
+    <p>搜索文章、Rust 笔记与资料索引。结果会定位到具体小节。</p>
+  </header>
+  <div class="search-wrap">
+    <div id="search" data-base={base}></div>
+    <p class="search-fallback" hidden>搜索索引在构建时生成。本地请运行 <code>npm run build</code> 后用 <code>npm run preview</code> 预览。</p>
+  </div>
+  <link rel="stylesheet" href={`${base}pagefind/pagefind-ui.css`} />
+</BaseLayout>
+
+<script>
+  const container = document.getElementById('search')!;
+  const base = container.dataset.base!;
+  const script = document.createElement('script');
+  script.src = `${base}pagefind/pagefind-ui.js`;
+  script.onload = () => {
+    // @ts-expect-error PagefindUI is provided by the build-time bundle.
+    const ui = new PagefindUI({
+      element: container,
+      baseUrl: base,
+      showSubResults: true,
+      showImages: false,
+      resetStyles: false,
+      autofocus: true,
+    });
+    const query = new URLSearchParams(location.search).get('q');
+    if (query) ui.triggerSearch(query);
+  };
+  script.onerror = () => {
+    container.remove();
+    document.querySelector<HTMLElement>('.search-fallback')!.hidden = false;
+  };
+  document.head.append(script);
+</script>
+
+<style>
+  .search-wrap { max-width: 800px; margin: 0 var(--page-x); padding: 36px 0 12px; }
+  .search-fallback { padding: 18px 20px; border-radius: 8px; background: var(--soft); color: var(--muted); font-size: 15px; }
+  .search-fallback code { font-family: var(--font-mono); font-size: .9em; color: var(--ink); }
+  .search-wrap :global(#search) {
+    --pagefind-ui-scale: .9;
+    --pagefind-ui-primary: var(--accent);
+    --pagefind-ui-text: var(--text);
+    --pagefind-ui-background: var(--surface);
+    --pagefind-ui-border: var(--line);
+    --pagefind-ui-tag: var(--soft);
+    --pagefind-ui-border-width: 1px;
+    --pagefind-ui-border-radius: 8px;
+    --pagefind-ui-font: var(--font-sans);
+  }
+  .search-wrap :global(.pagefind-ui__result-link) { color: var(--ink); }
+  .search-wrap :global(.pagefind-ui__result-excerpt),
+  .search-wrap :global(.pagefind-ui__message) { color: var(--muted); }
+  .search-wrap :global(mark) { background: var(--accent-soft); color: var(--ink); border-radius: 2px; }
+</style>

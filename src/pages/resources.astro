@@ -23,12 +23,76 @@ const groups = [
 ---
 
 <BaseLayout title="资料索引" description="价格行为学原始教材、中文创作者、实战案例和订单流基础资料。">
-  <div class="resources-head"><div class="eyebrow">SOURCE LIBRARY</div><h1>资料索引<span>.</span></h1><p>从来源与证据入手，把值得读的内容放在一起。所有评级针对公开材料的可核验程度，不代表作者的真实盈利能力。</p><div class="legend"><span><b>原始来源</b> 优先建立术语</span><span><b>案例复盘</b> 观察决策过程</span><span><b>观察名单</b> 暂不判断收益</span></div></div>
-  <div class="resource-groups">{groups.map((group, groupIndex) => <section class="resource-group"><div class="group-title"><span>{String(groupIndex+1).padStart(2,'0')}</span><div><h2>{group.name}</h2><p>{group.note}</p></div></div><div class="resource-list">{group.items.map((item) => <a class="resource-card" href={item.href} target="_blank" rel="noopener noreferrer"><div><span class="resource-tag">{item.tag}</span><h3>{item.title}<span aria-hidden="true"> ↗</span></h3><p class="resource-subtitle">{item.subtitle}</p><p class="resource-detail">{item.detail}</p></div><span class="card-arrow" aria-hidden="true">↗</span></a>)}</div></section>)}</div>
+  <header class="page-head">
+    <div class="eyebrow">Source library</div>
+    <h1>资料索引</h1>
+    <p>从来源与证据入手，把值得读的内容放在一起。所有评级针对公开材料的可核验程度，不代表作者的真实盈利能力。</p>
+    <div class="legend"><span><b>原始来源</b>优先建立术语</span><span><b>案例复盘</b>观察决策过程</span><span><b>观察名单</b>暂不判断收益</span></div>
+  </header>
+  <div class="resource-groups" data-pagefind-body>
+    {groups.map((group, groupIndex) => (
+      <section class="resource-group">
+        <div class="group-title">
+          <span>{String(groupIndex + 1).padStart(2, '0')}</span>
+          <div><h2>{group.name}</h2><p>{group.note}</p></div>
+        </div>
+        <div class="resource-list">
+          {group.items.map((item) => (
+            <a class="resource-card" href={item.href} target="_blank" rel="noopener noreferrer">
+              <div class="resource-top"><span class="resource-tag">{item.tag}</span><span class="card-arrow" aria-hidden="true">↗</span></div>
+              <h3>{item.title}</h3>
+              <p class="resource-subtitle">{item.subtitle}</p>
+              <p class="resource-detail">{item.detail}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+    ))}
+  </div>
   <div class="resource-caveat"><strong>筛选原则</strong><p>只展示经核对的原始链接。课程营销、翻译搬运、收益截图和社区推荐分别标注。若要宣称“长期有效”，仍需完整交易记录、成本和独立复核。</p></div>
 </BaseLayout>
 
 <style>
-  .resources-head{margin:0 30px;padding:45px 0 30px;border-bottom:1px solid var(--line)}.resources-head h1{font-size:clamp(31px,4vw,46px);line-height:1.2;letter-spacing:-.055em;margin:14px 0 7px}.resources-head h1 span{color:var(--ink)}.resources-head>p{max-width:740px;color:var(--muted);font-size:14px;margin:0;line-height:1.75}.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px;color:var(--muted);font-size:11px}.legend b{color:var(--ink);margin-right:5px}.resource-groups{margin:0 30px}.resource-group{display:grid;grid-template-columns:170px 1fr;gap:30px;padding:29px 0;border-bottom:1px solid var(--line)}.group-title{display:flex;gap:11px;align-items:flex-start}.group-title>span{color:var(--muted);font-size:10px;font-weight:750;margin-top:6px}.group-title h2{font-size:16px;letter-spacing:-.03em;margin:0}.group-title p{font-size:11px;color:var(--muted);line-height:1.6;max-width:140px;margin:5px 0}.resource-list{display:block}.resource-card{background:transparent;border-bottom:1px solid var(--line);padding:12px 0;display:flex;justify-content:space-between;gap:12px}.resource-card:first-child{padding-top:0}.resource-card:last-child{border-bottom:0;padding-bottom:0}.resource-card:hover h3{color:var(--accent)}.resource-tag{font-size:10px;color:var(--muted);font-weight:650}.resource-card h3{font-size:14px;letter-spacing:-.025em;line-height:1.4;margin:3px 0}.resource-card h3 span{display:none}.resource-subtitle{font-size:11px;color:var(--muted);margin:0}.resource-detail{font-size:11px;color:var(--muted);line-height:1.65;margin:3px 0 0}.card-arrow{color:var(--muted);font-size:15px;line-height:1}.resource-caveat{margin:27px 30px 0;background:var(--soft);padding:17px 20px;display:flex;gap:20px;align-items:baseline}.resource-caveat strong{color:var(--ink);white-space:nowrap;font-size:12px}.resource-caveat p{font-size:11px;color:var(--muted);margin:0;line-height:1.7}
-  @media(max-width:720px){.resources-head,.resource-groups,.resource-caveat{margin-left:18px;margin-right:18px}.resources-head{padding:35px 0 25px}.resources-head>p{font-size:13px}.legend{gap:7px 15px}.resource-group{grid-template-columns:1fr;gap:14px;padding:23px 0}.group-title p{max-width:none}.resource-caveat{display:block}.resource-caveat p{margin-top:5px}}
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 20px; color: var(--muted); font-size: 14px; }
+  .legend b { margin-right: 6px; color: var(--ink); }
+
+  .resource-groups { margin: 0 var(--page-x); }
+  .resource-group { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 40px; padding: 36px 0; border-bottom: 1px solid var(--line); }
+  .group-title { display: flex; gap: 12px; align-items: flex-start; }
+  .group-title > span { margin-top: 4px; color: var(--accent); font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .group-title h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
+  .group-title p { margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+
+  .resource-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .resource-card {
+    display: flex;
+    flex-direction: column;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    transition: border-color .15s, transform .15s;
+  }
+  .resource-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .resource-top { display: flex; justify-content: space-between; align-items: center; }
+  .resource-tag { padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 600; }
+  .card-arrow { color: var(--muted); font-size: 16px; }
+  .resource-card:hover .card-arrow { color: var(--accent); }
+  .resource-card h3 { margin: 12px 0 4px; font-size: 17px; line-height: 1.45; letter-spacing: -.015em; }
+  .resource-subtitle { margin: 0 0 8px; color: var(--muted); font-size: 13.5px; }
+  .resource-detail { margin: 0; color: var(--text); font-size: 15px; line-height: 1.7; }
+
+  .resource-caveat { display: flex; gap: 20px; align-items: baseline; margin: 32px var(--page-x) 0; padding: 20px 24px; border-radius: 8px; background: var(--soft); }
+  .resource-caveat strong { white-space: nowrap; font-size: 15px; }
+  .resource-caveat p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.75; }
+
+  @media (max-width: 960px) {
+    .resource-group { grid-template-columns: 1fr; gap: 18px; }
+  }
+  @media (max-width: 640px) {
+    .resource-group { padding: 28px 0; }
+    .resource-list { grid-template-columns: 1fr; gap: 12px; }
+    .resource-caveat { display: block; padding: 18px 20px; }
+    .resource-caveat p { margin-top: 6px; }
+  }
 </style>

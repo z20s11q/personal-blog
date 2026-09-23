@@ -2,28 +2,111 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 
-const [article] = await getCollection('articles');
+const articles = (await getCollection('articles')).sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+const rustSections = await getCollection('rust');
+const rustChapters = new Set(rustSections.map((section) => section.data.chapter).filter((chapter) => chapter !== null)).size;
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.');
 ---
 
 <BaseLayout title="z20s11q 的个人博客" description="交易研究、Rust 编程与持续学习的个人笔记。">
-  <section class="intro">
-    <div class="eyebrow">Z20S11Q / NOTES</div>
+  <section class="page-head intro">
+    <div class="eyebrow">z20s11q / notes</div>
     <h1>个人笔记</h1>
     <p>整理我正在学习和研究的内容。目前有价格行为研究与 Rust 学习资料，以后也会加入其他主题。</p>
-    <div class="intro-links"><a href={`${base}articles/${article.id}/`}>交易研究 →</a><a href={`${base}rust/`}>Rust 学习 →</a></div>
   </section>
 
   <div class="home-grid">
     <div class="main-column">
-      <section class="latest"><div class="section-title"><h2>内容</h2><span>两个主题</span></div><a class="article-row" href={`${base}articles/${article.id}/`}><div><span class="category">交易研究 · 2026.09.23</span><h3>{article.data.title}</h3><p>{article.data.description}</p><small>约 {article.data.readingMinutes} 分钟阅读</small></div><span class="row-arrow" aria-hidden="true">↗</span></a><a class="article-row" href={`${base}rust/`}><div><span class="category">编程学习 · Rust</span><h3>Rust 编程语言（精简版）</h3><p>我此前整理的 Rust 学习笔记，全部章节在一页连续展开，可从上到下阅读。</p><small>打开连续阅读页</small></div><span class="row-arrow" aria-hidden="true">↗</span></a></section>
-      <section class="topics"><div class="section-title"><h2>关于本站</h2><span>持续整理</span></div><div class="topic-list"><div><span>01</span><strong>交易研究</strong><p>优先核查原始资料、完整案例和可复核证据。</p></div><div><span>02</span><strong>编程学习</strong><p>把已经整理的 Rust 学习资料放在同一个入口。</p></div><div><span>03</span><strong>后续主题</strong><p>有值得长期保存的学习记录，再逐步加入。</p></div></div></section>
+      <section class="home-section">
+        <div class="section-title"><h2>最新文章</h2><a href={`${base}articles/`}>全部文章 →</a></div>
+        {articles.slice(0, 5).map((article) => (
+          <a class="entry" href={`${base}articles/${article.id}/`}>
+            <div class="entry-meta"><span>{article.data.category}</span><time datetime={article.data.publishedAt.toISOString()}>{formatDate(article.data.publishedAt)}</time></div>
+            <h3>{article.data.title}</h3>
+            <p>{article.data.description}</p>
+            <small>约 {article.data.readingMinutes} 分钟阅读</small>
+          </a>
+        ))}
+      </section>
+
+      <section class="home-section">
+        <div class="section-title"><h2>学习笔记</h2><span>连续阅读</span></div>
+        <a class="entry" href={`${base}rust/`}>
+          <div class="entry-meta"><span>编程 · Rust</span><span>{rustChapters} 章 · {rustSections.length} 节</span></div>
+          <h3>Rust 编程语言（精简版）</h3>
+          <p>基于 The Rust Programming Language 整理的中文学习笔记，全部章节在一页连续展开，目录会跟随阅读位置。</p>
+        </a>
+      </section>
+
+      <section class="home-section">
+        <div class="section-title"><h2>资料</h2><span>持续核对</span></div>
+        <a class="entry" href={`${base}resources/`}>
+          <div class="entry-meta"><span>交易研究</span><span>原始来源优先</span></div>
+          <h3>价格行为资料索引</h3>
+          <p>原始教材、中文讲解、案例复盘与市场机制资料，按可核验程度分别标注。</p>
+        </a>
+      </section>
     </div>
-    <aside class="sidebar"><div class="aside-block"><h2>主题入口</h2><ol><li><a href={`${base}articles/${article.id}/`}>价格行为研究报告</a></li><li><a href={`${base}resources/`}>交易资料索引</a></li><li><a href={`${base}rust/`}>Rust 编程语言（精简版）</a></li></ol></div><div class="aside-block"><h2>写作原则</h2><p>交易内容区分理论、教学质量和可验证的实战结果；编程笔记侧重查阅和实践。</p></div><div class="aside-block"><h2>更新</h2><p>本站会随着学习内容增加而调整。当前两个主题均可从首页进入。</p></div></aside>
+
+    <aside class="sidebar">
+      <div class="aside-block">
+        <h2>关于本站</h2>
+        <p>交易内容区分理论、教学质量和可验证的实战结果，优先核查原始资料与完整案例。编程笔记侧重查阅和实践。</p>
+        <p>有值得长期保存的学习记录，会再逐步加入新的主题。</p>
+      </div>
+      <div class="aside-block">
+        <h2>快速查找</h2>
+        <p>全站文章和 Rust 笔记都可以通过<a class="inline-link" href={`${base}search/`}>站内搜索</a>按关键词定位。</p>
+      </div>
+    </aside>
   </div>
 </BaseLayout>
 
 <style>
-  .intro{margin:0 30px;padding:54px 0 40px;border-bottom:1px solid var(--line)}.intro h1{font-size:clamp(31px,4vw,47px);letter-spacing:-.055em;line-height:1.25;margin:15px 0 8px}.intro p{font-size:14px;color:var(--muted);margin:0;max-width:680px}.intro-links{display:flex;gap:25px;margin-top:22px;font-size:12px;font-weight:700}.intro-links a{border-bottom:1px solid var(--line);padding-bottom:2px}.intro-links a:hover{color:var(--accent);border-color:var(--accent)}.home-grid{margin:0 30px;display:grid;grid-template-columns:minmax(0,1fr) 272px;gap:50px}.main-column{min-width:0}.latest,.topics{padding-top:32px}.section-title{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:12px}.section-title h2,.sidebar h2{font-size:16px;letter-spacing:-.03em;margin:0}.section-title span{color:var(--muted);font-size:11px}.article-row{display:flex;justify-content:space-between;gap:20px;padding:24px 0 27px;border-bottom:1px solid var(--line)}.article-row:hover h3{color:var(--accent)}.category{font-size:11px;color:var(--muted)}.article-row h3{font-size:21px;letter-spacing:-.04em;line-height:1.4;margin:8px 0}.article-row p{font-size:13px;color:var(--muted);margin:0 0 11px}.article-row small{font-size:11px;color:var(--muted)}.row-arrow{color:var(--muted);font-size:18px}.topics{padding-top:33px}.topic-list>div{display:grid;grid-template-columns:30px 105px 1fr;align-items:baseline;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}.topic-list span{font-size:10px;color:var(--muted)}.topic-list strong{font-size:13px}.topic-list p{font-size:12px;color:var(--muted);margin:0}.sidebar{border-left:1px solid var(--line);padding:32px 0 0 27px}.aside-block{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:22px}.aside-block h2{font-size:13px}.aside-block p,.aside-block li{font-size:12px;line-height:1.8;color:var(--muted)}.aside-block p{margin:10px 0 0}.aside-block ol{padding-left:18px;margin:10px 0 0}.aside-block li{padding-left:2px;margin:3px 0}
-  @media(max-width:790px){.home-grid{grid-template-columns:1fr;gap:5px}.sidebar{border-left:0;border-top:1px solid var(--line);padding:23px 0 0;display:grid;grid-template-columns:repeat(2,1fr);gap:20px}.aside-block{margin:0}.aside-block:last-child{display:none}}@media(max-width:600px){.intro,.home-grid{margin-left:18px;margin-right:18px}.intro{padding:38px 0 29px}.intro h1{font-size:30px}.intro p{font-size:13px}.sidebar{grid-template-columns:1fr;gap:0}.aside-block:last-child{display:block}.topic-list>div{grid-template-columns:22px 83px 1fr;gap:7px}.topic-list strong,.topic-list p{font-size:11px}.article-row h3{font-size:18px}}
+  .intro { padding-bottom: 40px; }
+  .home-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 56px;
+    margin: 0 var(--page-x);
+  }
+  .main-column { min-width: 0; }
+  .home-section { padding-top: 40px; }
+
+  .entry {
+    display: block;
+    padding: 24px 0 26px;
+    border-bottom: 1px solid var(--line);
+  }
+  .entry:last-child { border-bottom: 0; }
+  .entry-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 14px; }
+  .entry-meta > * + *::before { content: "·"; margin-right: 12px; color: var(--line); }
+  .entry h3 {
+    margin: 8px 0 8px;
+    font-size: 23px;
+    line-height: 1.4;
+    letter-spacing: -.025em;
+    transition: color .15s;
+  }
+  .entry:hover h3 { color: var(--accent); }
+  .entry p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.75; }
+  .entry small { display: block; margin-top: 10px; color: var(--muted); font-size: 14px; }
+
+  .sidebar { padding-top: 40px; }
+  .aside-block { padding: 20px 22px; margin-bottom: 20px; border-radius: 8px; background: var(--soft); }
+  .aside-block h2 { margin: 0 0 8px; font-size: 16px; letter-spacing: -.01em; }
+  .aside-block p { margin: 0 0 8px; color: var(--muted); font-size: 15px; line-height: 1.8; }
+  .aside-block p:last-child { margin-bottom: 0; }
+  .inline-link { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
+  @media (max-width: 860px) {
+    .home-grid { grid-template-columns: 1fr; gap: 0; }
+    .sidebar { padding-top: 24px; }
+  }
+  @media (max-width: 760px) {
+    .home-section { padding-top: 32px; }
+    .entry h3 { font-size: 20px; }
+    .entry p { font-size: 15px; }
+  }
 </style>

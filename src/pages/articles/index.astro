@@ -1,0 +1,60 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const articles = (await getCollection('articles')).sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+const years = [...new Set(articles.map((article) => article.data.publishedAt.getFullYear()))]
+  .map((year) => ({ year, items: articles.filter((article) => article.data.publishedAt.getFullYear() === year) }));
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+const canonical = new URL(`${base}articles/`, Astro.site).href;
+const formatDay = (date: Date) => `${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+---
+
+<BaseLayout title="文章" description="全部文章，按发布时间排列。" canonical={canonical}>
+  <header class="page-head">
+    <div class="eyebrow">Archive</div>
+    <h1>文章</h1>
+    <p>按发布时间排列的全部文章，共 {articles.length} 篇。</p>
+  </header>
+  <div class="archive">
+    {years.map(({ year, items }) => (
+      <section class="archive-year">
+        <h2>{year}</h2>
+        <ol>
+          {items.map((article) => (
+            <li>
+              <a href={`${base}articles/${article.id}/`}>
+                <time datetime={article.data.publishedAt.toISOString()}>{formatDay(article.data.publishedAt)}</time>
+                <div>
+                  <h3>{article.data.title}</h3>
+                  <p>{article.data.description}</p>
+                  <span class="archive-meta">{article.data.category} · 约 {article.data.readingMinutes} 分钟</span>
+                </div>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))}
+  </div>
+</BaseLayout>
+
+<style>
+  .archive { max-width: 860px; margin: 0 var(--page-x); }
+  .archive-year { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 24px; padding: 36px 0; border-bottom: 1px solid var(--line); }
+  .archive-year h2 { margin: 22px 0 0; font-size: 20px; color: var(--muted); letter-spacing: -.02em; }
+  ol { margin: 0; padding: 0; list-style: none; }
+  li a { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+  li:last-child a { border-bottom: 0; }
+  time { padding-top: 5px; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+  h3 { margin: 0 0 6px; font-size: 21px; line-height: 1.45; letter-spacing: -.02em; transition: color .15s; }
+  li a:hover h3 { color: var(--accent); }
+  p { margin: 0 0 8px; color: var(--muted); font-size: 16px; }
+  .archive-meta { color: var(--muted); font-size: 14px; }
+  @media (max-width: 760px) {
+    .archive-year { grid-template-columns: 1fr; gap: 0; padding: 28px 0; }
+    .archive-year h2 { margin: 0; }
+    li a { grid-template-columns: 1fr; gap: 4px; }
+    h3 { font-size: 19px; }
+  }
+</style>
