@@ -1,0 +1,622 @@
+{
+    "schema_version":  1,
+    "diagram_type":  "architecture",
+    "meta":  {
+                 "title":  "Codex 组件总览：从客户端到执行环境",
+                 "output":  ".archify/architecture-codex-components-20260928-1910/codex-components.html",
+                 "locale":  "zh-CN",
+                 "quality_profile":  "showcase",
+                 "repository":  {
+                                    "url":  "https://github.com/openai/codex.git",
+                                    "provider":  "github",
+                                    "link_mode":  "web",
+                                    "revision":  "44fe510ce3ee61c8ef623adcbf89b901c73ddd61"
+                                }
+             },
+    "components":  [
+                       {
+                           "id":  "clients",
+                           "type":  "frontend",
+                           "label":  "客户端",
+                           "sublabel":  "终端 UI · exec · IDE · SDK",
+                           "pos":  [
+                                       40,
+                                       260
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/app-server/src/in_process.rs",
+                                               "label":  "终端与 exec 进程内嵌入协议服务"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "protocol",
+                           "type":  "backend",
+                           "label":  "会话协议服务",
+                           "sublabel":  "Thread / Turn / Item",
+                           "pos":  [
+                                       250,
+                                       260
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/app-server/src/message_processor.rs",
+                                               "line":  625,
+                                               "label":  "客户端请求入口"
+                                           },
+                                           {
+                                               "path":  "codex-rs/app-server/src/bespoke_event_handling.rs",
+                                               "line":  141,
+                                               "label":  "引擎事件转协议通知"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "opdisp",
+                           "type":  "backend",
+                           "label":  "Op 分发器",
+                           "sublabel":  "串行处理外部操作",
+                           "pos":  [
+                                       460,
+                                       260
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/core/src/session/handlers.rs",
+                                               "line":  420,
+                                               "end_line":  694,
+                                               "label":  "Op 分发循环"
+                                           },
+                                           {
+                                               "path":  "codex-rs/core/src/session/handlers.rs",
+                                               "line":  174,
+                                               "label":  "审批回执唤醒等待中的工具"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "tasks",
+                           "type":  "backend",
+                           "label":  "任务管理",
+                           "sublabel":  "同一时刻一个活跃 turn",
+                           "pos":  [
+                                       670,
+                                       260
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/core/src/tasks/mod.rs",
+                                               "line":  179,
+                                               "label":  "任务接口"
+                                           },
+                                           {
+                                               "path":  "codex-rs/core/src/tasks/mod.rs",
+                                               "line":  271,
+                                               "label":  "开启或替换任务"
+                                           },
+                                           {
+                                               "path":  "codex-rs/core/src/tasks/mod.rs",
+                                               "line":  920,
+                                               "end_line":  1020,
+                                               "label":  "先落盘再通知完成"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "turnloop",
+                           "type":  "backend",
+                           "label":  "Turn 循环",
+                           "sublabel":  "继续判定 · 三处压缩",
+                           "pos":  [
+                                       880,
+                                       260
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/core/src/session/turn.rs",
+                                               "line":  163,
+                                               "end_line":  820,
+                                               "label":  "run_turn"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "sampler",
+                           "type":  "backend",
+                           "label":  "采样器",
+                           "sublabel":  "重试 · 边流边派发",
+                           "pos":  [
+                                       1090,
+                                       260
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/core/src/session/turn.rs",
+                                               "line":  1592,
+                                               "label":  "请求级重试"
+                                           },
+                                           {
+                                               "path":  "codex-rs/core/src/session/turn.rs",
+                                               "line":  2499,
+                                               "end_line":  3152,
+                                               "label":  "流事件循环"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "store",
+                           "type":  "database",
+                           "label":  "线程存储",
+                           "sublabel":  "只追加日志 + 元数据",
+                           "pos":  [
+                                       670,
+                                       100
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/rollout/src/recorder.rs",
+                                               "label":  "日志写入者"
+                                           },
+                                           {
+                                               "path":  "codex-rs/core/src/session/rollout_reconstruction.rs",
+                                               "label":  "从日志恢复"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "context",
+                           "type":  "database",
+                           "label":  "上下文管理",
+                           "sublabel":  "历史 · 世界状态 · 压缩",
+                           "pos":  [
+                                       880,
+                                       100
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/core/src/context_manager/history.rs",
+                                               "line":  485,
+                                               "label":  "写入历史"
+                                           },
+                                           {
+                                               "path":  "codex-rs/core/src/context/world_state/mod.rs",
+                                               "line":  207,
+                                               "end_line":  260,
+                                               "label":  "世界状态差异"
+                                           },
+                                           {
+                                               "path":  "codex-rs/core/src/compact.rs",
+                                               "line":  313,
+                                               "label":  "压缩保前缀"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "model",
+                           "type":  "cloud",
+                           "label":  "模型客户端",
+                           "sublabel":  "turn 级会话 · 传输降级",
+                           "pos":  [
+                                       1090,
+                                       100
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/core/src/client.rs",
+                                               "line":  603,
+                                               "label":  "turn 级会话"
+                                           },
+                                           {
+                                               "path":  "codex-rs/core/src/client.rs",
+                                               "line":  2218,
+                                               "label":  "流式请求"
+                                           },
+                                           {
+                                               "path":  "codex-rs/core/src/responses_retry.rs",
+                                               "line":  52,
+                                               "label":  "错误分类"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "ext",
+                           "type":  "messagebus",
+                           "label":  "扩展",
+                           "sublabel":  "hooks · MCP · skills",
+                           "pos":  [
+                                       880,
+                                       420
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/hooks/src/lib.rs",
+                                               "label":  "hooks"
+                                           },
+                                           {
+                                               "path":  "codex-rs/codex-mcp/src/tools.rs",
+                                               "line":  197,
+                                               "end_line":  262,
+                                               "label":  "MCP 工具确定性命名"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "tools",
+                           "type":  "backend",
+                           "label":  "工具运行时",
+                           "sublabel":  "并行门 · 取消 · 合成结果",
+                           "pos":  [
+                                       1090,
+                                       420
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/core/src/tools/parallel.rs",
+                                               "line":  125,
+                                               "end_line":  282,
+                                               "label":  "派发、并行门与取消"
+                                           },
+                                           {
+                                               "path":  "codex-rs/core/src/tools/router.rs",
+                                               "label":  "工具路由"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "agents",
+                           "type":  "backend",
+                           "label":  "子 agent 控制",
+                           "sublabel":  "派生 · 邮箱 · 驻留",
+                           "pos":  [
+                                       880,
+                                       580
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/core/src/tools/handlers/multi_agents/spawn.rs",
+                                               "label":  "派生子 agent 的工具"
+                                           },
+                                           {
+                                               "path":  "codex-rs/core/src/agent/control/spawn.rs",
+                                               "label":  "派生实现"
+                                           },
+                                           {
+                                               "path":  "codex-rs/core/src/agent/control/residency.rs",
+                                               "line":  100,
+                                               "end_line":  216,
+                                               "label":  "驻留上限"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "orch",
+                           "type":  "security",
+                           "label":  "工具编排器",
+                           "sublabel":  "审批 → 沙箱 → 升级",
+                           "pos":  [
+                                       1090,
+                                       580
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/core/src/tools/orchestrator.rs",
+                                               "line":  122,
+                                               "end_line":  537,
+                                               "label":  "编排流程"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "guardian",
+                           "type":  "security",
+                           "label":  "Guardian",
+                           "sublabel":  "自动审查 · 熔断",
+                           "pos":  [
+                                       1300,
+                                       580
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/core/src/tools/approvals.rs",
+                                               "line":  554,
+                                               "end_line":  570,
+                                               "label":  "先 Guardian 否则问用户"
+                                           },
+                                           {
+                                               "path":  "codex-rs/ext/guardian-reviewer/src/circuit_breaker.rs",
+                                               "line":  3,
+                                               "end_line":  7,
+                                               "label":  "连续拒绝熔断阈值"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "sandbox",
+                           "type":  "security",
+                           "label":  "隔离执行",
+                           "sublabel":  "平台沙箱 · 命令策略 · 网络代理",
+                           "pos":  [
+                                       1080,
+                                       740
+                                   ],
+                           "size":  [
+                                        180,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/sandboxing/src/lib.rs",
+                                               "label":  "沙箱选择"
+                                           },
+                                           {
+                                               "path":  "codex-rs/execpolicy/src/lib.rs",
+                                               "label":  "命令策略"
+                                           },
+                                           {
+                                               "path":  "codex-rs/network-proxy/src/lib.rs",
+                                               "label":  "网络代理"
+                                           }
+                                       ]
+                       },
+                       {
+                           "id":  "env",
+                           "type":  "external",
+                           "label":  "执行环境",
+                           "sublabel":  "本地或远程",
+                           "pos":  [
+                                       860,
+                                       740
+                                   ],
+                           "size":  [
+                                        160,
+                                        64
+                                    ],
+                           "sources":  [
+                                           {
+                                               "path":  "codex-rs/exec-server/src/lib.rs",
+                                               "label":  "执行服务"
+                                           }
+                                       ]
+                       }
+                   ],
+    "boundaries":  [
+                       {
+                           "kind":  "region",
+                           "label":  "会话引擎",
+                           "wraps":  [
+                                         "opdisp",
+                                         "tasks",
+                                         "turnloop",
+                                         "sampler"
+                                     ]
+                       },
+                       {
+                           "kind":  "security-group",
+                           "label":  "安全边界",
+                           "wraps":  [
+                                         "orch",
+                                         "guardian",
+                                         "sandbox"
+                                     ]
+                       }
+                   ],
+    "connections":  [
+                        {
+                            "id":  "c-clients-protocol",
+                            "from":  "clients",
+                            "to":  "protocol",
+                            "label":  "请求",
+                            "variant":  "emphasis"
+                        },
+                        {
+                            "id":  "c-protocol-op",
+                            "from":  "protocol",
+                            "to":  "opdisp",
+                            "label":  "Op",
+                            "variant":  "emphasis"
+                        },
+                        {
+                            "id":  "c-op-tasks",
+                            "from":  "opdisp",
+                            "to":  "tasks",
+                            "label":  "调度",
+                            "variant":  "emphasis"
+                        },
+                        {
+                            "id":  "c-tasks-turn",
+                            "from":  "tasks",
+                            "to":  "turnloop",
+                            "label":  "运行 turn",
+                            "variant":  "emphasis"
+                        },
+                        {
+                            "id":  "c-turn-sampler",
+                            "from":  "turnloop",
+                            "to":  "sampler",
+                            "label":  "每步一次",
+                            "variant":  "emphasis"
+                        },
+                        {
+                            "id":  "c-sampler-model",
+                            "from":  "sampler",
+                            "to":  "model",
+                            "label":  "流式请求",
+                            "fromSide":  "top",
+                            "toSide":  "bottom"
+                        },
+                        {
+                            "id":  "c-turn-context",
+                            "from":  "turnloop",
+                            "to":  "context",
+                            "label":  "构建请求 · 压缩",
+                            "fromSide":  "top",
+                            "toSide":  "bottom"
+                        },
+                        {
+                            "id":  "c-tasks-store",
+                            "from":  "tasks",
+                            "to":  "store",
+                            "label":  "落盘后才发完成",
+                            "variant":  "dashed",
+                            "fromSide":  "top",
+                            "toSide":  "bottom"
+                        },
+                        {
+                            "id":  "c-sampler-tools",
+                            "from":  "sampler",
+                            "to":  "tools",
+                            "label":  "派发工具调用",
+                            "variant":  "emphasis",
+                            "fromSide":  "bottom",
+                            "toSide":  "top"
+                        },
+                        {
+                            "id":  "c-turn-ext",
+                            "from":  "turnloop",
+                            "to":  "ext",
+                            "label":  "hooks",
+                            "variant":  "dashed",
+                            "fromSide":  "bottom",
+                            "toSide":  "top"
+                        },
+                        {
+                            "id":  "c-tools-ext",
+                            "from":  "tools",
+                            "to":  "ext",
+                            "label":  "MCP 工具",
+                            "variant":  "dashed",
+                            "fromSide":  "left",
+                            "toSide":  "right"
+                        },
+                        {
+                            "id":  "c-tools-orch",
+                            "from":  "tools",
+                            "to":  "orch",
+                            "label":  "需隔离的工具",
+                            "variant":  "security",
+                            "fromSide":  "bottom",
+                            "toSide":  "top"
+                        },
+                        {
+                            "id":  "c-tools-agents",
+                            "from":  "tools",
+                            "to":  "agents",
+                            "label":  "多 agent 工具",
+                            "variant":  "dashed"
+                        },
+                        {
+                            "id":  "c-orch-guardian",
+                            "from":  "orch",
+                            "to":  "guardian",
+                            "label":  "自动审查",
+                            "variant":  "security",
+                            "fromSide":  "right",
+                            "toSide":  "left"
+                        },
+                        {
+                            "id":  "c-orch-sandbox",
+                            "from":  "orch",
+                            "to":  "sandbox",
+                            "label":  "选沙箱执行",
+                            "variant":  "security",
+                            "fromSide":  "bottom",
+                            "toSide":  "top"
+                        },
+                        {
+                            "id":  "c-sandbox-env",
+                            "from":  "sandbox",
+                            "to":  "env",
+                            "label":  "受限进程",
+                            "variant":  "security",
+                            "fromSide":  "left",
+                            "toSide":  "right"
+                        }
+                    ],
+    "cards":  [
+                  {
+                      "dot":  "cyan",
+                      "title":  "所有前端共用一套协议",
+                      "items":  [
+                                    "终端 UI 和非交互执行也走会话协议，只是协议服务嵌在同一进程里",
+                                    "引擎事件经协议服务变成 Thread / Turn / Item 通知；需要用户审批时，引擎通过协议向客户端发起请求",
+                                    "审批回复作为 Op 回到分发器，唤醒正在等待的工具"
+                                ]
+                  },
+                  {
+                      "dot":  "emerald",
+                      "title":  "会话引擎的四层",
+                      "items":  [
+                                    "Op 分发器：串行处理外部操作，不等待 turn 完成",
+                                    "任务管理：开启、替换、中止 turn，把插话写入活跃 turn；同一时刻一个活跃 turn；每个 turn 向子 agent 控制申请准入",
+                                    "Turn 循环：决定是否继续、何时压缩、处理 Stop hook",
+                                    "采样器：一次模型请求，负责重试、消费流事件、写入输出项、派发工具"
+                                ]
+                  },
+                  {
+                      "dot":  "rose",
+                      "title":  "安全边界",
+                      "items":  [
+                                    "编排器只关心审批、沙箱与升级，不关心工具语义",
+                                    "Guardian 按 turn 计数拒绝：连续拒绝 3 次，或最近 50 次中拒绝 10 次，就请求中断 turn（网络安全专用模型两个阈值都是 1）",
+                                    "隔离执行按平台选沙箱，并叠加命令策略与网络代理"
+                                ]
+                  }
+              ]
+}

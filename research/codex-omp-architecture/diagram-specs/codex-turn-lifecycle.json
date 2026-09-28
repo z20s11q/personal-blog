@@ -1,0 +1,162 @@
+{
+  "schema_version": 2,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Codex Turn 循环状态机（run_turn）",
+    "output": ".archify/lifecycle-codex-turn-20260928-1840/codex-turn-lifecycle.html",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/openai/codex.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "44fe510ce3ee61c8ef623adcbf89b901c73ddd61"
+    }
+  },
+  "lanes": [
+    { "id": "main", "label": "每一步的主路径" },
+    { "id": "compact", "label": "turn 中途压缩" },
+    { "id": "stop", "label": "准备结束" },
+    { "id": "terminal", "label": "turn 结束" }
+  ],
+  "states": [
+    {
+      "id": "prepare", "type": "start", "label": "turn 前准备", "sublabel": "预压缩 · 首个步上下文",
+      "lane": "main", "col": 0, "step": "01",
+      "sources": [
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 163, "end_line": 280, "label": "run_turn 开头" },
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 1278, "end_line": 1345, "label": "turn 前压缩" },
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 1346, "end_line": 1450, "label": "换模型先用旧模型压缩" }
+      ]
+    },
+    {
+      "id": "drain", "type": "active", "label": "并入输入", "sublabel": "待并入输入 + 输入 hook",
+      "lane": "main", "col": 1, "step": "02",
+      "sources": [
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 415, "end_line": 447, "label": "延迟并入与输入 hook" }
+      ]
+    },
+    {
+      "id": "freeze", "type": "active", "label": "冻结步上下文", "sublabel": "工具视图 · 世界状态差异",
+      "lane": "main", "col": 2, "step": "03",
+      "sources": [
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 459, "end_line": 495, "label": "声明与执行共用一份快照" },
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 505, "end_line": 511, "label": "世界状态差异注入" }
+      ]
+    },
+    {
+      "id": "sample", "type": "active", "label": "采样", "sublabel": "流式输出 · 边流边执行工具",
+      "lane": "main", "col": 3, "step": "04",
+      "sources": [
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 513, "end_line": 531, "label": "从历史构建请求" },
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 1592, "end_line": 1718, "label": "请求级重试" },
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 2499, "end_line": 3152, "label": "流事件循环" }
+      ]
+    },
+    {
+      "id": "decide", "type": "decision", "label": "判定是否继续", "sublabel": "模型需要继续 ∨ 有待并入输入",
+      "lane": "main", "col": 4, "step": "05",
+      "sources": [
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 534, "end_line": 564, "label": "继续条件" },
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 599, "end_line": 600, "label": "是否需要新窗口" }
+      ]
+    },
+    {
+      "id": "midcompact", "type": "waiting", "label": "turn 中途压缩", "sublabel": "重新注入初始上下文",
+      "lane": "compact", "col": 3,
+      "sources": [
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 611, "end_line": 645, "label": "需要新窗口时压缩" },
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 743, "end_line": 775, "label": "超窗时压缩一次再试" }
+      ]
+    },
+    {
+      "id": "stophook", "type": "decision", "label": "Stop hooks", "sublabel": "阻止 = 续跑",
+      "lane": "stop", "col": 4,
+      "sources": [
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 647, "end_line": 695, "label": "Stop hook 结果处理" }
+      ]
+    },
+    {
+      "id": "prefail", "type": "failure", "label": "预压缩失败", "sublabel": "保留输入，发错误事件",
+      "lane": "terminal", "col": 0,
+      "sources": [
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 183, "end_line": 222, "label": "预压缩失败分支" }
+      ]
+    },
+    {
+      "id": "blocked", "type": "failure", "label": "输入被 hook 阻止", "sublabel": "turn 直接结束",
+      "lane": "terminal", "col": 1,
+      "sources": [
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 437, "end_line": 447, "label": "hook 阻止则 break" }
+      ]
+    },
+    {
+      "id": "failed", "type": "failure", "label": "出错或被中止", "sublabel": "发错误事件，可继续对话",
+      "lane": "terminal", "col": 2,
+      "sources": [
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 776, "end_line": 815, "label": "错误分支" },
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 625, "end_line": 633, "label": "中途压缩失败" }
+      ]
+    },
+    {
+      "id": "done", "type": "success", "label": "turn 完成", "sublabel": "可选 turn 后压缩",
+      "lane": "terminal", "col": 4,
+      "sources": [
+        { "path": "codex-rs/core/src/session/turn.rs", "line": 693, "end_line": 739, "label": "停止与 turn 后压缩" }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "prepare", "to": "drain", "label": "准备完成" },
+    { "from": "drain", "to": "freeze" },
+    { "from": "freeze", "to": "sample" },
+    { "from": "sample", "to": "decide", "label": "成功" },
+    { "from": "decide", "to": "drain", "label": "需要继续", "variant": "emphasis", "route": "top-channel" },
+    { "from": "decide", "to": "midcompact", "label": "且需新窗口", "variant": "dashed" },
+    { "from": "sample", "to": "midcompact", "label": "超窗（每步一次）", "variant": "dashed" },
+    { "from": "midcompact", "to": "drain", "label": "压缩后继续", "variant": "dashed" },
+    { "from": "decide", "to": "stophook", "label": "不需要继续" },
+    { "from": "stophook", "to": "drain", "label": "阻止且有续跑内容", "variant": "emphasis" },
+    { "from": "stophook", "to": "done", "label": "放行 / 要求停止", "variant": "emphasis" },
+    { "from": "prepare", "to": "prefail", "label": "失败", "variant": "security" },
+    { "from": "drain", "to": "blocked", "label": "hook 阻止", "variant": "security" },
+    { "from": "sample", "to": "failed", "label": "其他错误", "variant": "security" },
+    { "from": "midcompact", "to": "failed", "label": "压缩失败", "variant": "security" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan", "title": "继续条件只有一条",
+      "items": [
+        "需要继续 = 模型需要继续 ∨ 有待并入输入",
+        "模型需要继续：发出了工具调用、工具要求直接回复模型、响应声明回合未结束、流被用户输入抢占",
+        "工具续跑与用户插话走同一条回边"
+      ]
+    },
+    {
+      "dot": "amber", "title": "turn 中途压缩的两个入口",
+      "items": [
+        "需要继续，且模型请求了新窗口或 token 到达上限",
+        "采样报上下文超窗，且自动审查预算已耗尽；每步最多压缩一次",
+        "两者都把指令、环境、世界状态重新注入到最后一条用户消息之前",
+        "压缩刚结束时不急于并入插话，除非这一步是被抢占的"
+      ]
+    },
+    {
+      "dot": "violet", "title": "Stop hook 的三种结果",
+      "items": [
+        "阻止且给出续跑内容：记为一条用户消息，回到并入输入",
+        "阻止但没有续跑内容：发警告并忽略这次阻止",
+        "要求停止：直接结束，不做 turn 后压缩；放行时才检查 turn 后压缩阈值",
+        "记忆整理这类无人值守会话被 Stop hook 拦下时直接报错"
+      ]
+    },
+    {
+      "dot": "rose", "title": "图中未单独画出的结束方式",
+      "items": [
+        "turn 被中止（例如用户中断）时，任何阶段都直接向上返回",
+        "旧版 after-agent hook 可以在放行后结束 turn",
+        "中途压缩后若 session-start hook 要求停止，turn 结束"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "oh-my-pi 组件总览：会话层 → Agent → Agent Loop",
+    "output": ".archify/architecture-omp-components-20260928-1930/omp-components.html",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/can1357/oh-my-pi.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "df731d516c0c722f658312187ae84c6d23e216fb"
+    }
+  },
+  "components": [
+    {
+      "id": "modes", "type": "frontend", "label": "运行模式", "sublabel": "交互 · 单次 · RPC · ACP", "pos": [40, 260], "size": [160, 64],
+      "sources": [
+        { "path": "packages/coding-agent/src/modes/interactive-mode.ts", "label": "交互模式" },
+        { "path": "packages/coding-agent/src/modes/print-mode.ts", "label": "单次输出模式" }
+      ]
+    },
+    {
+      "id": "tui", "type": "frontend", "label": "界面层", "sublabel": "差分渲染 · 工具渲染器", "pos": [40, 100], "size": [160, 64],
+      "sources": [
+        { "path": "packages/tui/src/index.ts", "label": "界面层入口" }
+      ]
+    },
+    {
+      "id": "factory", "type": "backend", "label": "会话工厂", "sublabel": "模型 · 工具 · 设置", "pos": [250, 260], "size": [160, 64],
+      "sources": [
+        { "path": "packages/coding-agent/src/sdk.ts", "line": 1611, "label": "createAgentSession" }
+      ]
+    },
+    {
+      "id": "session", "type": "backend", "label": "会话层", "sublabel": "重试 · 压缩 · 流式规则", "pos": [460, 260], "size": [160, 64],
+      "sources": [
+        { "path": "packages/coding-agent/src/session/agent-session.ts", "line": 670, "label": "AgentSession" },
+        { "path": "packages/coding-agent/src/session/agent-session.ts", "line": 1716, "end_line": 1729, "label": "turn 结束钩子" },
+        { "path": "packages/coding-agent/src/session/ttsr-coordinator.ts", "line": 64, "label": "流式规则" }
+      ]
+    },
+    {
+      "id": "store", "type": "database", "label": "会话存储", "sublabel": "JSONL 会话树", "pos": [460, 100], "size": [160, 64],
+      "sources": [
+        { "path": "packages/coding-agent/src/session/session-manager.ts", "line": 725, "label": "SessionManager" }
+      ]
+    },
+    {
+      "id": "agent", "type": "backend", "label": "Agent", "sublabel": "状态 · 插话与续话队列", "pos": [670, 260], "size": [160, 64],
+      "sources": [
+        { "path": "packages/agent/src/agent.ts", "line": 392, "end_line": 404, "label": "Agent 状态" },
+        { "path": "packages/agent/src/agent.ts", "line": 934, "end_line": 1060, "label": "插话与续话队列" },
+        { "path": "packages/agent/src/agent.ts", "line": 1869, "end_line": 1980, "label": "中断后修复记录" }
+      ]
+    },
+    {
+      "id": "loop", "type": "backend", "label": "Agent Loop", "sublabel": "单次运行的状态机", "pos": [880, 260], "size": [160, 64],
+      "sources": [
+        { "path": "packages/agent/src/agent-loop.ts", "line": 604, "label": "agentLoop 入口" },
+        { "path": "packages/agent/src/agent-loop.ts", "line": 1163, "end_line": 1777, "label": "runLoopBody" }
+      ]
+    },
+    {
+      "id": "provider", "type": "cloud", "label": "Provider 层", "sublabel": "统一流事件 · 方言", "pos": [1090, 260], "size": [160, 64],
+      "sources": [
+        { "path": "packages/ai/src/stream.ts", "line": 961, "label": "统一的流式入口" },
+        { "path": "packages/ai/src/dialect/factory.ts", "line": 32, "label": "文本内工具调用方言" },
+        { "path": "packages/ai/src/utils/schema/normalize.ts", "label": "schema 归一化" }
+      ]
+    },
+    {
+      "id": "subagent", "type": "backend", "label": "子 agent", "sublabel": "新建一个会话实例", "pos": [670, 420], "size": [160, 64],
+      "sources": [
+        { "path": "packages/coding-agent/src/task/executor.ts", "line": 3477, "label": "运行子 agent" },
+        { "path": "packages/coding-agent/src/task/executor.ts", "line": 4047, "label": "用会话工厂建会话" }
+      ]
+    },
+    {
+      "id": "tools", "type": "backend", "label": "工具", "sublabel": "read · edit · bash · task", "pos": [880, 420], "size": [160, 64],
+      "sources": [
+        { "path": "packages/coding-agent/src/tools/index.ts", "line": 563, "end_line": 600, "label": "内置工具表" },
+        { "path": "packages/coding-agent/src/tools/index.ts", "line": 628, "label": "按会话决定启用哪些工具" }
+      ]
+    },
+    {
+      "id": "mcp", "type": "external", "label": "MCP", "sublabel": "延迟连接的外部工具", "pos": [1090, 420], "size": [160, 64],
+      "sources": [
+        { "path": "packages/coding-agent/src/mcp/manager.ts", "line": 245, "label": "MCPManager" },
+        { "path": "packages/coding-agent/src/mcp/manager.ts", "line": 917, "end_line": 920, "label": "连接前先用缓存的工具定义" }
+      ]
+    },
+    {
+      "id": "natives", "type": "security", "label": "原生加速层", "sublabel": "搜索 · shell · 编辑 · 隔离", "pos": [880, 580], "size": [160, 64],
+      "sources": [
+        { "path": "crates/pi-natives/src/lib.rs", "label": "原生模块入口" },
+        { "path": "crates/pi-edit/src/modes/hashline/patcher.rs", "line": 188, "end_line": 263, "label": "hashline 编辑" },
+        { "path": "crates/pi-iso/src/lib.rs", "label": "工作区隔离" }
+      ]
+    }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Agent 内核（与会话无关）", "wraps": ["agent", "loop"] }
+  ],
+  "connections": [
+    { "id": "c-modes-factory", "from": "modes", "to": "factory", "label": "创建", "variant": "emphasis" },
+    { "id": "c-factory-session", "from": "factory", "to": "session", "label": "装配", "variant": "emphasis" },
+    { "id": "c-session-agent", "from": "session", "to": "agent", "label": "调用", "variant": "emphasis" },
+    { "id": "c-agent-loop", "from": "agent", "to": "loop", "label": "启动运行", "variant": "emphasis" },
+    { "id": "c-loop-provider", "from": "loop", "to": "provider", "label": "流式调用", "variant": "emphasis" },
+    { "id": "c-modes-tui", "from": "modes", "to": "tui", "label": "交互模式渲染", "variant": "dashed", "fromSide": "top", "toSide": "bottom" },
+    { "id": "c-session-store", "from": "session", "to": "store", "label": "逐条追加", "variant": "dashed", "fromSide": "top", "toSide": "bottom" },
+    { "id": "c-loop-tools", "from": "loop", "to": "tools", "label": "调度工具批", "variant": "emphasis", "fromSide": "bottom", "toSide": "top" },
+    { "id": "c-tools-natives", "from": "tools", "to": "natives", "label": "原生实现", "fromSide": "bottom", "toSide": "top" },
+    { "id": "c-tools-mcp", "from": "tools", "to": "mcp", "label": "MCP 工具", "variant": "dashed", "fromSide": "right", "toSide": "left" },
+    { "id": "c-tools-subagent", "from": "tools", "to": "subagent", "label": "task", "variant": "dashed", "fromSide": "left", "toSide": "right" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan", "title": "三层分工",
+      "items": [
+        "Agent Loop：组装请求、流式采样、调度工具、处理插话，只输出事件流；不持有状态、不持久化、不重试、不压缩",
+        "Agent：持有消息等状态，把事件归约成状态，管理插话与续话队列，中断后修复记录",
+        "会话层：持久化、重试与凭证轮换、自动压缩、流式规则、顾问、工具注册"
+      ]
+    },
+    {
+      "dot": "violet", "title": "会话层怎么影响 loop",
+      "items": [
+        "loop 的可变配置都以取值函数传入，每次调用模型前重读，所以换模型、换凭证在下一次调用时生效",
+        "会话层向 Agent 注册调用前钩子、turn 结束钩子、停止前回调等；turn 结束钩子里做回退、循环守卫、顾问和中途压缩",
+        "UI、持久化、遥测都只是事件流的订阅者"
+      ]
+    },
+    {
+      "dot": "amber", "title": "工具与子 agent",
+      "items": [
+        "内置工具按会话配置启用；MCP 工具在连接完成前先用缓存的定义占位",
+        "task 工具派生的子 agent 是用同一个会话工厂新建的会话，会话文件嵌在父会话目录下",
+        "CPU 密集的搜索、shell、编辑、工作区隔离放在原生加速层"
+      ]
+    }
+  ]
+}

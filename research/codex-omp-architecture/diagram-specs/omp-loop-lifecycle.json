@@ -1,0 +1,378 @@
+{
+    "schema_version":  2,
+    "diagram_type":  "lifecycle",
+    "meta":  {
+                 "title":  "oh-my-pi 主循环状态机（runLoopBody）",
+                 "output":  ".archify/lifecycle-omp-loop-20260928-1920/omp-loop-lifecycle.html",
+                 "locale":  "zh-CN",
+                 "quality_profile":  "showcase",
+                 "repository":  {
+                                    "url":  "https://github.com/can1357/oh-my-pi.git",
+                                    "provider":  "github",
+                                    "link_mode":  "web",
+                                    "revision":  "df731d516c0c722f658312187ae84c6d23e216fb"
+                                }
+             },
+    "lanes":  [
+                  {
+                      "id":  "main",
+                      "label":  "内层循环：一轮"
+                  },
+                  {
+                      "id":  "tools",
+                      "label":  "执行工具"
+                  },
+                  {
+                      "id":  "stop",
+                      "label":  "外层循环：将停止"
+                  },
+                  {
+                      "id":  "terminal",
+                      "label":  "运行结束"
+                  }
+              ],
+    "states":  [
+                   {
+                       "id":  "start",
+                       "type":  "start",
+                       "label":  "启动",
+                       "sublabel":  "取插话 · 检查未配对尾巴",
+                       "lane":  "main",
+                       "col":  0,
+                       "step":  "01",
+                       "sources":  [
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1175,
+                                           "end_line":  1214,
+                                           "label":  "截止时间与启动时取插话"
+                                       },
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1229,
+                                           "end_line":  1273,
+                                           "label":  "先重跑未配对的工具调用"
+                                       },
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  645,
+                                           "label":  "未配对尾巴判定"
+                                       }
+                                   ]
+                   },
+                   {
+                       "id":  "prepare",
+                       "type":  "active",
+                       "label":  "准备一轮",
+                       "sublabel":  "并入消息 · 调用前闸门",
+                       "lane":  "main",
+                       "col":  1,
+                       "step":  "02",
+                       "sources":  [
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1280,
+                                           "end_line":  1307,
+                                           "label":  "暂停闸门与并入待投递消息"
+                                       },
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1309,
+                                           "end_line":  1344,
+                                           "label":  "同步上下文、工具选择、准备调用"
+                                       },
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1867,
+                                           "end_line":  1921,
+                                           "label":  "每次调用前重读配置"
+                                       }
+                                   ]
+                   },
+                   {
+                       "id":  "sample",
+                       "type":  "active",
+                       "label":  "流式采样",
+                       "sublabel":  "实时插话通道",
+                       "lane":  "main",
+                       "col":  2,
+                       "step":  "03",
+                       "sources":  [
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1400,
+                                           "end_line":  1491,
+                                           "label":  "采样与 Harmony 泄漏恢复"
+                                       },
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1927,
+                                           "end_line":  2528,
+                                           "label":  "流式响应"
+                                       },
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1834,
+                                           "label":  "实时插话通道"
+                                       }
+                                   ]
+                   },
+                   {
+                       "id":  "decide",
+                       "type":  "decision",
+                       "label":  "按停止原因分支",
+                       "sublabel":  "能否执行这些调用",
+                       "lane":  "main",
+                       "col":  3,
+                       "step":  "04",
+                       "sources":  [
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1537,
+                                           "end_line":  1579,
+                                           "label":  "可执行条件与软要求判定"
+                                       },
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1580,
+                                           "end_line":  1613,
+                                           "label":  "软要求未满足：跳过并强制"
+                                       },
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1638,
+                                           "end_line":  1662,
+                                           "label":  "截断或超时：占位结果"
+                                       }
+                                   ]
+                   },
+                   {
+                       "id":  "turnend",
+                       "type":  "decision",
+                       "label":  "turn 结束",
+                       "sublabel":  "决定下一批待投递消息",
+                       "lane":  "main",
+                       "col":  4,
+                       "step":  "05",
+                       "sources":  [
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1670,
+                                           "end_line":  1691,
+                                           "label":  "暂停型停止续跑与 turn_end"
+                                       },
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1697,
+                                           "end_line":  1733,
+                                           "label":  "插话去向"
+                                       },
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  737,
+                                           "end_line":  759,
+                                           "label":  "emitTurnEnd"
+                                       }
+                                   ]
+                   },
+                   {
+                       "id":  "execute",
+                       "type":  "active",
+                       "label":  "执行工具批",
+                       "sublabel":  "结果写回上下文",
+                       "lane":  "tools",
+                       "col":  3,
+                       "sources":  [
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1614,
+                                           "end_line":  1637,
+                                           "label":  "执行并写回结果"
+                                       },
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  3031,
+                                           "end_line":  3662,
+                                           "label":  "工具批调度与中断"
+                                       }
+                                   ]
+                   },
+                   {
+                       "id":  "drain",
+                       "type":  "decision",
+                       "label":  "停止前排空",
+                       "sublabel":  "迟到插话 · 旁白 · 后续消息",
+                       "lane":  "stop",
+                       "col":  4,
+                       "sources":  [
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1741,
+                                           "end_line":  1762,
+                                           "label":  "停止前再取一次三类队列"
+                                       }
+                                   ]
+                   },
+                   {
+                       "id":  "gatestop",
+                       "type":  "failure",
+                       "label":  "闸门停止",
+                       "sublabel":  "记录停止消息",
+                       "lane":  "terminal",
+                       "col":  1,
+                       "sources":  [
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1353,
+                                           "end_line":  1392,
+                                           "label":  "调用前闸门要求停止"
+                                       }
+                                   ]
+                   },
+                   {
+                       "id":  "failed",
+                       "type":  "failure",
+                       "label":  "出错或中止",
+                       "sublabel":  "为调用补占位结果",
+                       "lane":  "terminal",
+                       "col":  2,
+                       "sources":  [
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1493,
+                                           "end_line":  1535,
+                                           "label":  "出错或中止时补齐配对"
+                                       }
+                                   ]
+                   },
+                   {
+                       "id":  "done",
+                       "type":  "success",
+                       "label":  "正常结束",
+                       "sublabel":  "发出 agent_end",
+                       "lane":  "terminal",
+                       "col":  4,
+                       "sources":  [
+                                       {
+                                           "path":  "packages/agent/src/agent-loop.ts",
+                                           "line":  1760,
+                                           "end_line":  1765,
+                                           "label":  "无消息则退出"
+                                       }
+                                   ]
+                   }
+               ],
+    "transitions":  [
+                        {
+                            "from":  "start",
+                            "to":  "prepare"
+                        },
+                        {
+                            "from":  "start",
+                            "to":  "execute",
+                            "label":  "有未配对的调用尾巴",
+                            "variant":  "dashed"
+                        },
+                        {
+                            "from":  "prepare",
+                            "to":  "sample",
+                            "label":  "闸门放行"
+                        },
+                        {
+                            "from":  "sample",
+                            "to":  "decide"
+                        },
+                        {
+                            "from":  "decide",
+                            "to":  "execute",
+                            "label":  "可执行",
+                            "variant":  "emphasis"
+                        },
+                        {
+                            "from":  "execute",
+                            "to":  "turnend",
+                            "label":  "结果写回",
+                            "variant":  "emphasis"
+                        },
+                        {
+                            "from":  "decide",
+                            "to":  "turnend",
+                            "label":  "不执行工具"
+                        },
+                        {
+                            "from":  "turnend",
+                            "to":  "prepare",
+                            "label":  "还要续跑或有待投递消息",
+                            "variant":  "emphasis",
+                            "route":  "top-channel"
+                        },
+                        {
+                            "from":  "turnend",
+                            "to":  "drain",
+                            "label":  "否"
+                        },
+                        {
+                            "from":  "drain",
+                            "to":  "prepare",
+                            "label":  "取到任一消息",
+                            "variant":  "dashed"
+                        },
+                        {
+                            "from":  "drain",
+                            "to":  "done",
+                            "label":  "都没有",
+                            "variant":  "emphasis"
+                        },
+                        {
+                            "from":  "prepare",
+                            "to":  "gatestop",
+                            "label":  "闸门要求停止",
+                            "variant":  "security"
+                        },
+                        {
+                            "from":  "sample",
+                            "to":  "failed",
+                            "label":  "停止原因为出错 / 中止",
+                            "variant":  "security"
+                        }
+                    ],
+    "cards":  [
+                  {
+                      "dot":  "cyan",
+                      "title":  "一轮的主路径",
+                      "items":  [
+                                    "每轮开始先把待投递消息写入上下文，再重读配置、构造调用、过调用前闸门",
+                                    "停止原因为“工具调用”或“正常停止”时都执行工具；只有“输出被截断”不执行",
+                                    "模型给出暂停型停止（回合未结束）且没有工具调用时，最多续跑 8 次"
+                                ]
+                  },
+                  {
+                      "dot":  "amber",
+                      "title":  "“不执行工具”的四种情况",
+                      "items":  [
+                                    "没有工具调用",
+                                    "软要求未满足：调用都配“跳过”结果，下一轮强制调用必需工具；强制 3 次仍不满足就报错",
+                                    "输出被截断：调用配占位结果，然后重采样",
+                                    "已过截止时间：调用配“中止”结果，运行随即结束"
+                                ]
+                  },
+                  {
+                      "dot":  "violet",
+                      "title":  "插话怎么进入下一轮",
+                      "items":  [
+                                    "采样期间经实时通道被模型收下的插话：下一轮只投递它们，其他排队消息等下一个边界",
+                                    "否则：未被收下的实时插话 + 重新从队列取的插话；还在干活时再附上旁白",
+                                    "外部中止时不从队列取消息，留给后续运行投递"
+                                ]
+                  },
+                  {
+                      "dot":  "rose",
+                      "title":  "图中未单独画出的结束方式",
+                      "items":  [
+                                    "截止时间在各个检查点都会让运行直接结束",
+                                    "工具把结果标为终止（例如子 agent 让出）时，不再发起下一次模型调用",
+                                    "Harmony 泄漏：可截断恢复就续用，否则重采样；各最多 2 次，超过即报错"
+                                ]
+                  }
+              ]
+}

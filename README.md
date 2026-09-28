@@ -17,6 +17,8 @@ npm run build
 
 报告文章位于 `src/content/articles/`。Rust 章节位于 `src/content/rust/`，由 `D:\Work\rust-learn\brief` 的 Markdown 源文件导入，并在 `/rust/` 连续展示；单节网址仍可直接访问。原始项目保留在原目录与独立仓库。如需同步本地更新，运行 `node scripts/sync-rust.mjs D:\Work\rust-learn\brief`。在 `main` 分支推送后，`.github/workflows/deploy.yml` 自动构建并发布网站。
 
+Codex / oh-my-pi 架构调研系列（6 篇文章）和交互式架构图由 `D:\Work\hy\research\codex-omp-architecture` 导入：运行 `node scripts/sync-codex-omp.mjs D:\Work\hy\research\codex-omp-architecture`，脚本把 Markdown 转成 `src/content/articles/` 下的文章（本机路径换成固定提交的 GitHub 链接，文档间引用换成文章链接），把 archify 生成的 HTML 复制到 `public/diagrams/codex-omp/`，图的源数据（archify JSON IR）归档到 `research/codex-omp-architecture/diagram-specs/`。图的标题和说明在 `src/data/diagrams.ts` 中维护，`/diagrams/` 页面从这里生成。文章中语言标记为 `mermaid` 的代码块由 `src/plugins/mermaid-block.mjs` 转换，在浏览器端按需加载 mermaid 渲染。
+
 文章的 `tags` 字段使用领域代号，如 `finance`、`development`、`ai`；显示名称和说明在 `src/data/domains.ts` 中维护。首页左侧只显示当前有内容的领域，并自动生成对应分类页。
 
 - [价格行为资料调研与学习路线](research/price-action-landscape.md)

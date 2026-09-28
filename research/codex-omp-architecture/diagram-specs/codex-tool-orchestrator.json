@@ -1,0 +1,421 @@
+{
+    "schema_version":  2,
+    "diagram_type":  "workflow",
+    "meta":  {
+                 "title":  "Codex 工具编排：审批 → 沙箱 → 执行 → 被拒后升级",
+                 "output":  ".archify/workflow-codex-tool-orchestrator-20260928-1900/codex-tool-orchestrator.html",
+                 "locale":  "zh-CN",
+                 "quality_profile":  "showcase",
+                 "repository":  {
+                                    "url":  "https://github.com/openai/codex.git",
+                                    "provider":  "github",
+                                    "link_mode":  "web",
+                                    "revision":  "44fe510ce3ee61c8ef623adcbf89b901c73ddd61"
+                                }
+             },
+    "lanes":  [
+                  {
+                      "id":  "approval",
+                      "label":  "审批"
+                  },
+                  {
+                      "id":  "main",
+                      "label":  "执行主路径"
+                  },
+                  {
+                      "id":  "escalate",
+                      "label":  "被拒后升级",
+                      "variant":  "exception"
+                  },
+                  {
+                      "id":  "fail",
+                      "label":  "失败出口",
+                      "variant":  "exception"
+                  }
+              ],
+    "phases":  [
+                   {
+                       "id":  "p-approve",
+                       "label":  "1 审批",
+                       "fromCol":  0,
+                       "toCol":  1
+                   },
+                   {
+                       "id":  "p-run",
+                       "label":  "2 首次尝试",
+                       "fromCol":  2,
+                       "toCol":  3,
+                       "variant":  "emphasis"
+                   },
+                   {
+                       "id":  "p-escalate",
+                       "label":  "3 升级重试",
+                       "fromCol":  4,
+                       "toCol":  5,
+                       "variant":  "dashed"
+                   }
+               ],
+    "mainPath":  [
+                     "req",
+                     "approve",
+                     "sandbox",
+                     "first",
+                     "result"
+                 ],
+    "nodes":  [
+                  {
+                      "id":  "req",
+                      "lane":  "main",
+                      "col":  0,
+                      "type":  "backend",
+                      "label":  "审批要求",
+                      "sublabel":  "跳过 · 需审批 · 禁止",
+                      "width":  140,
+                      "sources":  [
+                                      {
+                                          "path":  "codex-rs/core/src/tools/orchestrator.rs",
+                                          "line":  161,
+                                          "end_line":  221,
+                                          "label":  "按要求分三种处理"
+                                      },
+                                      {
+                                          "path":  "codex-rs/core/src/tools/sandboxing.rs",
+                                          "line":  195,
+                                          "end_line":  231,
+                                          "label":  "按审批策略推导默认要求"
+                                      }
+                                  ]
+                  },
+                  {
+                      "id":  "approve",
+                      "lane":  "approval",
+                      "col":  1,
+                      "type":  "security",
+                      "label":  "请求审批",
+                      "sublabel":  "hook → Guardian / 用户",
+                      "width":  150,
+                      "sources":  [
+                                      {
+                                          "path":  "codex-rs/core/src/tools/approvals.rs",
+                                          "line":  479,
+                                          "end_line":  552,
+                                          "label":  "审批来源优先级"
+                                      },
+                                      {
+                                          "path":  "codex-rs/core/src/tools/approvals.rs",
+                                          "line":  554,
+                                          "end_line":  570,
+                                          "label":  "Guardian 否则问用户"
+                                      }
+                                  ]
+                  },
+                  {
+                      "id":  "sandbox",
+                      "lane":  "main",
+                      "col":  2,
+                      "type":  "security",
+                      "label":  "选择沙箱",
+                      "sublabel":  "按权限与网络需求",
+                      "width":  140,
+                      "sources":  [
+                                      {
+                                          "path":  "codex-rs/core/src/tools/orchestrator.rs",
+                                          "line":  223,
+                                          "end_line":  287,
+                                          "label":  "首次尝试的沙箱"
+                                      },
+                                      {
+                                          "path":  "codex-rs/core/src/tools/sandboxing.rs",
+                                          "line":  239,
+                                          "end_line":  280,
+                                          "label":  "何时首次就不带沙箱"
+                                      }
+                                  ]
+                  },
+                  {
+                      "id":  "first",
+                      "lane":  "main",
+                      "col":  3,
+                      "type":  "backend",
+                      "label":  "首次尝试",
+                      "sublabel":  "在所选沙箱内执行",
+                      "width":  140,
+                      "sources":  [
+                                      {
+                                          "path":  "codex-rs/core/src/tools/orchestrator.rs",
+                                          "line":  52,
+                                          "end_line":  120,
+                                          "label":  "单次尝试含网络审批"
+                                      },
+                                      {
+                                          "path":  "codex-rs/core/src/tools/orchestrator.rs",
+                                          "line":  315,
+                                          "end_line":  326,
+                                          "label":  "首次尝试与成功返回"
+                                      }
+                                  ]
+                  },
+                  {
+                      "id":  "result",
+                      "lane":  "main",
+                      "col":  5,
+                      "type":  "backend",
+                      "label":  "返回结果",
+                      "sublabel":  "交回工具运行时",
+                      "width":  140,
+                      "sources":  [
+                                      {
+                                          "path":  "codex-rs/core/src/tools/orchestrator.rs",
+                                          "line":  496,
+                                          "end_line":  509,
+                                          "label":  "升级重试成功"
+                                      }
+                                  ]
+                  },
+                  {
+                      "id":  "classify",
+                      "lane":  "escalate",
+                      "col":  3,
+                      "type":  "security",
+                      "label":  "失败分类",
+                      "sublabel":  "是否沙箱拒绝、能否升级",
+                      "width":  150,
+                      "sources":  [
+                                      {
+                                          "path":  "codex-rs/core/src/tools/orchestrator.rs",
+                                          "line":  327,
+                                          "end_line":  406,
+                                          "label":  "不可升级的五种情况"
+                                      }
+                                  ]
+                  },
+                  {
+                      "id":  "reapprove",
+                      "lane":  "escalate",
+                      "col":  4,
+                      "type":  "security",
+                      "label":  "升级前审批",
+                      "sublabel":  "附带被拒原因",
+                      "width":  140,
+                      "sources":  [
+                                      {
+                                          "path":  "codex-rs/core/src/tools/orchestrator.rs",
+                                          "line":  407,
+                                          "end_line":  448,
+                                          "label":  "再审批与免审条件"
+                                      },
+                                      {
+                                          "path":  "codex-rs/core/src/tools/sandboxing.rs",
+                                          "line":  316,
+                                          "end_line":  338,
+                                          "label":  "默认免审与无沙箱审批"
+                                      }
+                                  ]
+                  },
+                  {
+                      "id":  "retry",
+                      "lane":  "escalate",
+                      "col":  5,
+                      "type":  "backend",
+                      "label":  "升级重试",
+                      "sublabel":  "可脱离沙箱时不带沙箱",
+                      "width":  150,
+                      "sources":  [
+                                      {
+                                          "path":  "codex-rs/core/src/tools/orchestrator.rs",
+                                          "line":  450,
+                                          "end_line":  495,
+                                          "label":  "第二次尝试"
+                                      }
+                                  ]
+                  },
+                  {
+                      "id":  "reject",
+                      "lane":  "approval",
+                      "col":  0,
+                      "type":  "security",
+                      "label":  "拒绝执行",
+                      "sublabel":  "命令没有运行",
+                      "width":  140,
+                      "sources":  [
+                                      {
+                                          "path":  "codex-rs/core/src/tools/orchestrator.rs",
+                                          "line":  196,
+                                          "end_line":  198,
+                                          "label":  "禁止"
+                                      }
+                                  ]
+                  },
+                  {
+                      "id":  "fail",
+                      "lane":  "fail",
+                      "col":  4,
+                      "type":  "security",
+                      "label":  "执行失败",
+                      "sublabel":  "错误作为工具结果",
+                      "width":  140,
+                      "sources":  [
+                                      {
+                                          "path":  "codex-rs/core/src/tools/orchestrator.rs",
+                                          "line":  510,
+                                          "end_line":  535,
+                                          "label":  "失败返回"
+                                      }
+                                  ]
+                  }
+              ],
+    "edges":  [
+                  {
+                      "id":  "req-approve",
+                      "from":  "req",
+                      "to":  "approve",
+                      "label":  "需审批",
+                      "variant":  "security",
+                      "role":  "branch"
+                  },
+                  {
+                      "id":  "req-sandbox",
+                      "from":  "req",
+                      "to":  "sandbox",
+                      "label":  "跳过",
+                      "variant":  "default",
+                      "role":  "main"
+                  },
+                  {
+                      "id":  "approve-sandbox",
+                      "from":  "approve",
+                      "to":  "sandbox",
+                      "label":  "批准",
+                      "variant":  "emphasis",
+                      "role":  "main"
+                  },
+                  {
+                      "id":  "req-reject",
+                      "from":  "req",
+                      "to":  "reject",
+                      "label":  "禁止",
+                      "variant":  "security",
+                      "role":  "error"
+                  },
+                  {
+                      "id":  "approve-reject",
+                      "from":  "approve",
+                      "to":  "reject",
+                      "label":  "拒绝",
+                      "variant":  "security",
+                      "role":  "error"
+                  },
+                  {
+                      "id":  "sandbox-first",
+                      "from":  "sandbox",
+                      "to":  "first",
+                      "variant":  "emphasis",
+                      "role":  "main"
+                  },
+                  {
+                      "id":  "first-result",
+                      "from":  "first",
+                      "to":  "result",
+                      "label":  "成功",
+                      "variant":  "emphasis",
+                      "role":  "main"
+                  },
+                  {
+                      "id":  "first-classify",
+                      "from":  "first",
+                      "to":  "classify",
+                      "label":  "失败",
+                      "variant":  "security",
+                      "role":  "branch"
+                  },
+                  {
+                      "id":  "classify-fail",
+                      "from":  "classify",
+                      "to":  "fail",
+                      "label":  "不可升级",
+                      "variant":  "security",
+                      "role":  "error"
+                  },
+                  {
+                      "id":  "classify-reapprove",
+                      "from":  "classify",
+                      "to":  "reapprove",
+                      "label":  "可升级",
+                      "variant":  "dashed",
+                      "role":  "branch"
+                  },
+                  {
+                      "id":  "reapprove-retry",
+                      "from":  "reapprove",
+                      "to":  "retry",
+                      "label":  "批准或免审",
+                      "variant":  "dashed",
+                      "role":  "branch"
+                  },
+                  {
+                      "id":  "reapprove-fail",
+                      "from":  "reapprove",
+                      "to":  "fail",
+                      "label":  "拒绝",
+                      "variant":  "security",
+                      "role":  "error"
+                  },
+                  {
+                      "id":  "retry-result",
+                      "from":  "retry",
+                      "to":  "result",
+                      "label":  "成功",
+                      "variant":  "emphasis",
+                      "role":  "return"
+                  },
+                  {
+                      "id":  "retry-fail",
+                      "from":  "retry",
+                      "to":  "fail",
+                      "label":  "仍失败",
+                      "variant":  "security",
+                      "role":  "error"
+                  }
+              ],
+    "cards":  [
+                  {
+                      "dot":  "violet",
+                      "title":  "审批要求与来源",
+                      "items":  [
+                                    "工具可以自定审批要求；否则按审批策略推导：从不询问 → 跳过；按需 → 文件系统受限时要审批；除非可信 → 总是审批",
+                                    "细粒度策略关闭了沙箱审批时，“要审批”直接变成“禁止”",
+                                    "开启严格自动审查时，“跳过”也会送审",
+                                    "审批来源依次为：权限请求 hook → Guardian 自动审查 → 用户"
+                                ]
+                  },
+                  {
+                      "dot":  "cyan",
+                      "title":  "沙箱选择",
+                      "items":  [
+                                    "命令规则判定完全可信，或工具请求提升权限时，首次尝试就不带沙箱",
+                                    "存在“禁止读取”路径时永远不脱离沙箱，否则这些限制会失效",
+                                    "由执行端自己施加沙箱的工具，编排器不再套一层"
+                                ]
+                  },
+                  {
+                      "dot":  "rose",
+                      "title":  "不升级、直接失败的情况",
+                      "items":  [
+                                    "失败原因不是沙箱拒绝",
+                                    "被网络策略拒绝，但无法转成一次网络审批",
+                                    "工具声明失败时不升级",
+                                    "审批策略不允许请求无沙箱执行（按需策略下可审批的网络拒绝除外）",
+                                    "存在禁止读取路径，且不是网络拒绝"
+                                ]
+                  },
+                  {
+                      "dot":  "amber",
+                      "title":  "升级前能否免审",
+                      "items":  [
+                                    "免审条件：未开启严格自动审查，且（本次已经批准过或策略为从不询问），且不是网络拒绝",
+                                    "严格自动审查的批准只覆盖沙箱内那次尝试，脱离沙箱必须重新审查",
+                                    "网络拒绝的重试原因写明被拦的主机"
+                                ]
+                  }
+              ]
+}

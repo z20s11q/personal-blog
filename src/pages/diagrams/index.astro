@@ -1,0 +1,82 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { diagramDir, diagramGroups } from '../../data/diagrams';
+
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+---
+
+<BaseLayout title="交互式架构图" description="Codex 与 oh-my-pi 的交互式架构图：组件总览、Agent Loop 状态机、采样与插话时序、工具编排流程。">
+  <header class="page-head">
+    <div class="eyebrow">Interactive diagrams</div>
+    <h1>交互式架构图</h1>
+    <p>Codex 与 oh-my-pi 的组件关系、Agent Loop 状态机和关键时序。每张图都是独立页面：点击节点可查看源码文件与行号（链接固定在具体提交上），点击连线可高亮这条关系，右下角可以缩放和追踪路径。</p>
+    <div class="legend">
+      <span>用 <a href="https://github.com/tt-a1i/archify" target="_blank" rel="noopener noreferrer">archify</a> 生成，经过结构校验与浏览器检查</span>
+      <span>文字说明见 <a href={`${base}articles/codex-architecture/`}>Codex 架构设计</a>、<a href={`${base}articles/omp-architecture/`}>oh-my-pi 架构设计</a></span>
+    </div>
+  </header>
+  <div class="diagram-groups">
+    {diagramGroups.map((group) => (
+      <section class="diagram-group">
+        <div class="group-title">
+          <h2>{group.project}</h2>
+          <p>源码版本 <a href={group.repo} target="_blank" rel="noopener noreferrer"><code>{group.revision}</code></a></p>
+          <p><a href={`${base}articles/${group.article}/`}>阅读架构文章 →</a></p>
+        </div>
+        <div class="diagram-list">
+          {group.items.map((item) => (
+            <a class="diagram-card" href={`${base}${diagramDir}${item.file}`}>
+              <div class="diagram-top"><span class="diagram-kind">{item.kind}</span><span class="card-arrow" aria-hidden="true">→</span></div>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+    ))}
+  </div>
+  <div class="diagram-note"><strong>阅读建议</strong><p>图是桌面宽度设计的，手机上可以横向拖动。先看组件总览建立整体印象，再看状态机理解循环何时继续、何时结束，最后看时序图里的边界细节。</p></div>
+</BaseLayout>
+
+<style>
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 20px; color: var(--muted); font-size: 14px; }
+  .legend a, .group-title a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
+  .diagram-groups { margin: 0 var(--page-x); }
+  .diagram-group { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 40px; padding: 36px 0; border-bottom: 1px solid var(--line); }
+  .group-title h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
+  .group-title p { margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+  .group-title code { font-family: var(--font-mono); font-size: 13px; }
+
+  .diagram-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .diagram-card {
+    display: flex;
+    flex-direction: column;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    transition: border-color .15s, transform .15s;
+  }
+  .diagram-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .diagram-top { display: flex; justify-content: space-between; align-items: center; }
+  .diagram-kind { padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 600; }
+  .card-arrow { color: var(--muted); font-size: 16px; }
+  .diagram-card:hover .card-arrow { color: var(--accent); }
+  .diagram-card h3 { margin: 12px 0 6px; font-size: 17px; line-height: 1.45; letter-spacing: -.015em; }
+  .diagram-card p { margin: 0; color: var(--text); font-size: 15px; line-height: 1.7; }
+
+  .diagram-note { display: flex; gap: 20px; align-items: baseline; margin: 32px var(--page-x) 0; padding: 20px 24px; border-radius: 8px; background: var(--soft); }
+  .diagram-note strong { white-space: nowrap; font-size: 15px; }
+  .diagram-note p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.75; }
+
+  @media (max-width: 960px) {
+    .diagram-group { grid-template-columns: 1fr; gap: 18px; }
+  }
+  @media (max-width: 640px) {
+    .diagram-group { padding: 28px 0; }
+    .diagram-list { grid-template-columns: 1fr; gap: 12px; }
+    .diagram-note { display: block; padding: 18px 20px; }
+    .diagram-note p { margin-top: 6px; }
+  }
+</style>

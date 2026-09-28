@@ -1,0 +1,329 @@
+{
+    "schema_version":  1,
+    "diagram_type":  "sequence",
+    "meta":  {
+                 "title":  "Codex 一次采样：边流边派发工具，按派发顺序收割",
+                 "output":  ".archify/sequence-codex-sampling-20260928-1850/codex-sampling-sequence.html",
+                 "locale":  "zh-CN",
+                 "quality_profile":  "showcase",
+                 "column_fit":  "spread",
+                 "repository":  {
+                                    "url":  "https://github.com/openai/codex.git",
+                                    "provider":  "github",
+                                    "link_mode":  "web",
+                                    "revision":  "44fe510ce3ee61c8ef623adcbf89b901c73ddd61"
+                                }
+             },
+    "participants":  [
+                         {
+                             "id":  "client",
+                             "type":  "frontend",
+                             "label":  "客户端",
+                             "sublabel":  "事件订阅方"
+                         },
+                         {
+                             "id":  "sampler",
+                             "type":  "backend",
+                             "label":  "采样器",
+                             "sublabel":  "一次模型请求",
+                             "sources":  [
+                                             {
+                                                 "path":  "codex-rs/core/src/session/turn.rs",
+                                                 "line":  2499,
+                                                 "end_line":  2557,
+                                                 "label":  "发起流与有序队列"
+                                             },
+                                             {
+                                                 "path":  "codex-rs/core/src/session/turn.rs",
+                                                 "line":  2746,
+                                                 "end_line":  2774,
+                                                 "label":  "输出项完成后派发"
+                                             },
+                                             {
+                                                 "path":  "codex-rs/core/src/session/turn.rs",
+                                                 "line":  3110,
+                                                 "end_line":  3152,
+                                                 "label":  "流结束后收割与进度事件"
+                                             }
+                                         ]
+                         },
+                         {
+                             "id":  "model",
+                             "type":  "external",
+                             "label":  "模型流",
+                             "sublabel":  "流式响应"
+                         },
+                         {
+                             "id":  "history",
+                             "type":  "database",
+                             "label":  "会话历史",
+                             "sublabel":  "上下文管理器",
+                             "sources":  [
+                                             {
+                                                 "path":  "codex-rs/core/src/stream_events_utils.rs",
+                                                 "line":  323,
+                                                 "end_line":  357,
+                                                 "label":  "先写调用再排队执行"
+                                             },
+                                             {
+                                                 "path":  "codex-rs/core/src/session/turn.rs",
+                                                 "line":  2446,
+                                                 "end_line":  2474,
+                                                 "label":  "按序写入工具结果"
+                                             }
+                                         ]
+                         },
+                         {
+                             "id":  "tools",
+                             "type":  "backend",
+                             "label":  "工具运行时",
+                             "sublabel":  "并行门 · 取消",
+                             "sources":  [
+                                             {
+                                                 "path":  "codex-rs/core/src/tools/parallel.rs",
+                                                 "line":  195,
+                                                 "end_line":  228,
+                                                 "label":  "派发即执行，读写锁准入"
+                                             },
+                                             {
+                                                 "path":  "codex-rs/core/src/tools/parallel.rs",
+                                                 "line":  247,
+                                                 "end_line":  282,
+                                                 "label":  "取消时合成中止结果"
+                                             }
+                                         ]
+                         },
+                         {
+                             "id":  "queue",
+                             "type":  "messagebus",
+                             "label":  "输入队列",
+                             "sublabel":  "用户插话 · 邮箱",
+                             "sources":  [
+                                             {
+                                                 "path":  "codex-rs/core/src/session/turn.rs",
+                                                 "line":  2601,
+                                                 "end_line":  2630,
+                                                 "label":  "用户输入抢占读流"
+                                             },
+                                             {
+                                                 "path":  "codex-rs/core/src/session/turn.rs",
+                                                 "line":  2723,
+                                                 "end_line":  2774,
+                                                 "label":  "邮箱抢占时机"
+                                             }
+                                         ]
+                         }
+                     ],
+    "segments":  [
+                     {
+                         "label":  "流式接收",
+                         "from":  150,
+                         "to":  250
+                     },
+                     {
+                         "label":  "工具调用边流边派发",
+                         "from":  265,
+                         "to":  485
+                     },
+                     {
+                         "label":  "可选：抢占",
+                         "from":  490,
+                         "to":  525
+                     },
+                     {
+                         "label":  "流结束后收割",
+                         "from":  535,
+                         "to":  740
+                     }
+                 ],
+    "messages":  [
+                     {
+                         "id":  "stream-open",
+                         "from":  "sampler",
+                         "to":  "model",
+                         "y":  165,
+                         "label":  "发起流式请求（冻结的 prompt）",
+                         "variant":  "emphasis"
+                     },
+                     {
+                         "id":  "delta",
+                         "from":  "model",
+                         "to":  "sampler",
+                         "y":  200,
+                         "label":  "输出项开始 / 文本增量",
+                         "variant":  "return"
+                     },
+                     {
+                         "id":  "delta-forward",
+                         "from":  "sampler",
+                         "to":  "client",
+                         "y":  235,
+                         "label":  "转发开始与增量事件",
+                         "variant":  "dashed"
+                     },
+                     {
+                         "id":  "call-a",
+                         "from":  "model",
+                         "to":  "sampler",
+                         "y":  280,
+                         "label":  "输出项完成：工具调用 A",
+                         "variant":  "return"
+                     },
+                     {
+                         "id":  "record-a",
+                         "from":  "sampler",
+                         "to":  "history",
+                         "y":  315,
+                         "label":  "先把调用 A 写入历史"
+                     },
+                     {
+                         "id":  "dispatch-a",
+                         "from":  "sampler",
+                         "to":  "tools",
+                         "y":  350,
+                         "label":  "立即派发 A，排入有序队列",
+                         "variant":  "emphasis",
+                         "note":  "可并行工具取读锁，否则取写锁"
+                     },
+                     {
+                         "id":  "call-b",
+                         "from":  "model",
+                         "to":  "sampler",
+                         "y":  395,
+                         "label":  "输出项完成：工具调用 B",
+                         "variant":  "return"
+                     },
+                     {
+                         "id":  "record-b",
+                         "from":  "sampler",
+                         "to":  "history",
+                         "y":  430,
+                         "label":  "写入调用 B"
+                     },
+                     {
+                         "id":  "dispatch-b",
+                         "from":  "sampler",
+                         "to":  "tools",
+                         "y":  465,
+                         "label":  "派发 B，与 A 同时在跑",
+                         "variant":  "emphasis",
+                         "note":  "B 不可并行时要等 A 释放锁"
+                     },
+                     {
+                         "id":  "preempt",
+                         "from":  "queue",
+                         "to":  "sampler",
+                         "y":  505,
+                         "label":  "有插话或来信：提前结束本次采样",
+                         "variant":  "security",
+                         "note":  "用户插话：可中断的流先读完剩余响应；邮箱：只在评论或推理项完成后"
+                     },
+                     {
+                         "id":  "completed",
+                         "from":  "model",
+                         "to":  "sampler",
+                         "y":  550,
+                         "label":  "响应完成（用量、是否结束回合）",
+                         "variant":  "return"
+                     },
+                     {
+                         "id":  "result-a",
+                         "from":  "tools",
+                         "to":  "sampler",
+                         "y":  585,
+                         "label":  "A 的结果（先于 B 收割）",
+                         "variant":  "return"
+                     },
+                     {
+                         "id":  "write-a",
+                         "from":  "sampler",
+                         "to":  "history",
+                         "y":  620,
+                         "label":  "写入 A 的结果"
+                     },
+                     {
+                         "id":  "result-b",
+                         "from":  "tools",
+                         "to":  "sampler",
+                         "y":  655,
+                         "label":  "B 的结果",
+                         "variant":  "return"
+                     },
+                     {
+                         "id":  "write-b",
+                         "from":  "sampler",
+                         "to":  "history",
+                         "y":  690,
+                         "label":  "写入 B 的结果"
+                     },
+                     {
+                         "id":  "progress",
+                         "from":  "sampler",
+                         "to":  "client",
+                         "y":  728,
+                         "label":  "token 计数 + 本 turn 的 diff",
+                         "variant":  "dashed",
+                         "note":  "工具全部结束后才发，避免等待用户时误报进度"
+                     }
+                 ],
+    "activations":  [
+                        {
+                            "from":  160,
+                            "to":  733,
+                            "type":  "backend",
+                            "participant":  "sampler"
+                        },
+                        {
+                            "from":  165,
+                            "to":  555,
+                            "type":  "external",
+                            "participant":  "model"
+                        },
+                        {
+                            "from":  350,
+                            "to":  660,
+                            "type":  "backend",
+                            "participant":  "tools"
+                        },
+                        {
+                            "from":  310,
+                            "to":  435,
+                            "type":  "database",
+                            "participant":  "history"
+                        },
+                        {
+                            "from":  615,
+                            "to":  695,
+                            "type":  "database",
+                            "participant":  "history"
+                        }
+                    ],
+    "cards":  [
+                  {
+                      "dot":  "cyan",
+                      "title":  "为什么先写调用再执行",
+                      "items":  [
+                                    "调用项在派发前已写入历史，任何时刻中断，历史里都能找到这次调用",
+                                    "工具在派发那一刻就开始执行，不等整个响应结束",
+                                    "收割严格按派发顺序，工具结果在历史中的顺序是确定的"
+                                ]
+                  },
+                  {
+                      "dot":  "rose",
+                      "title":  "抢占与取消",
+                      "items":  [
+                                    "被抢占时本次采样返回“需要继续”，由 turn 循环在下一步并入插话",
+                                    "抢占不会丢弃已派发的工具，它们仍会被收割",
+                                    "turn 被取消时，已结束的工具保留真实结果；未结束的中止并合成一条“aborted by user”结果"
+                                ]
+                  },
+                  {
+                      "dot":  "emerald",
+                      "title":  "本次采样的输出",
+                      "items":  [
+                                    "需要继续：有工具调用、工具要求直接回复模型、响应声明回合未结束，或被抢占",
+                                    "最后一条助手消息，交给 Stop hook 和 turn 结果"
+                                ]
+                  }
+              ]
+}

@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "oh-my-pi 插话：出队不等于送达，run 结束时未送达的放回队首",
+    "output": ".archify/sequence-omp-steering-20260928-1940/omp-steering-sequence.html",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/can1357/oh-my-pi.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "df731d516c0c722f658312187ae84c6d23e216fb"
+    }
+  },
+  "participants": [
+    { "id": "user", "type": "external", "label": "用户", "sublabel": "会话层转交" },
+    {
+      "id": "queue", "type": "messagebus", "label": "插话队列", "sublabel": "插话 · 续话",
+      "sources": [
+        { "path": "packages/agent/src/agent.ts", "line": 1219, "end_line": 1234, "label": "插话与续话入队" },
+        { "path": "packages/agent/src/agent.ts", "line": 934, "end_line": 981, "label": "出队时登记投递记录" }
+      ]
+    },
+    {
+      "id": "agent", "type": "backend", "label": "Agent", "sublabel": "消息记录 · 投递记录",
+      "sources": [
+        { "path": "packages/agent/src/agent.ts", "line": 1197, "end_line": 1209, "label": "写入记录即送达" },
+        { "path": "packages/agent/src/agent.ts", "line": 1003, "end_line": 1024, "label": "未送达的放回队首" },
+        { "path": "packages/agent/src/agent.ts", "line": 1981, "end_line": 1983, "label": "run 结束总会执行恢复" }
+      ]
+    },
+    {
+      "id": "loop", "type": "backend", "label": "Agent Loop", "sublabel": "单次运行",
+      "sources": [
+        { "path": "packages/agent/src/agent-loop.ts", "line": 3173, "end_line": 3214, "label": "批执行中只看不取" },
+        { "path": "packages/agent/src/agent-loop.ts", "line": 1697, "end_line": 1733, "label": "turn 边界出队" },
+        { "path": "packages/agent/src/agent-loop.ts", "line": 1296, "end_line": 1307, "label": "下一轮写入上下文" }
+      ]
+    },
+    {
+      "id": "tools", "type": "backend", "label": "工具批", "sublabel": "可中断 / 不可中断",
+      "sources": [
+        { "path": "packages/agent/src/agent-loop.ts", "line": 3067, "end_line": 3088, "label": "两种信号" },
+        { "path": "packages/agent/src/agent-loop.ts", "line": 3257, "end_line": 3269, "label": "不可中断的调用从不跳过" }
+      ]
+    },
+    {
+      "id": "model", "type": "cloud", "label": "模型", "sublabel": "下一次调用",
+      "sources": [
+        { "path": "packages/agent/src/agent-loop.ts", "line": 1834, "label": "实时插话通道" }
+      ]
+    }
+  ],
+  "segments": [
+    { "from": 150, "to": 340, "label": "工具批执行中来了插话" },
+    { "from": 350, "to": 540, "label": "turn 边界：出队与送达" },
+    { "from": 550, "to": 740, "label": "中断：未送达的放回" }
+  ],
+  "messages": [
+    { "id": "steer", "from": "user", "to": "queue", "y": 165, "label": "插话入队" },
+    { "id": "peek", "from": "loop", "to": "queue", "y": 200, "label": "只看不取：有插话吗？" },
+    { "id": "peek-yes", "from": "queue", "to": "loop", "y": 235, "label": "有", "variant": "return" },
+    { "id": "interrupt", "from": "loop", "to": "tools", "y": 270, "label": "中止可中断的等待，其余发协作信号", "variant": "security", "note": "bash 等有副作用的工具不会被杀，可自行转后台" },
+    { "id": "batch-done", "from": "tools", "to": "loop", "y": 310, "label": "批结束：每个调用都有结果", "variant": "return", "note": "未开始的可中断等待配“跳过”结果" },
+    { "id": "dequeue", "from": "loop", "to": "queue", "y": 365, "label": "turn 结束后出队", "variant": "emphasis" },
+    { "id": "record", "from": "queue", "to": "agent", "y": 400, "label": "登记：已出队、未送达", "variant": "dashed" },
+    { "id": "batch", "from": "queue", "to": "loop", "y": 435, "label": "插话批", "variant": "return" },
+    { "id": "delivered", "from": "loop", "to": "agent", "y": 470, "label": "写入上下文，发出 message_end", "variant": "emphasis", "note": "投递记录前进一格，这时才算送达" },
+    { "id": "next-call", "from": "loop", "to": "model", "y": 510, "label": "下一次调用带上插话", "variant": "emphasis" },
+    { "id": "abort", "from": "user", "to": "agent", "y": 565, "label": "中断", "variant": "security" },
+    { "id": "abort-signal", "from": "agent", "to": "loop", "y": 600, "label": "中止信号", "variant": "security" },
+    { "id": "run-end", "from": "loop", "to": "agent", "y": 640, "label": "run 结束，不再出队", "variant": "return", "note": "外部中止时 loop 不从队列取消息" },
+    { "id": "restore", "from": "agent", "to": "queue", "y": 690, "label": "本 run 未送达的放回队首", "variant": "dashed", "note": "包括实时通道已取走但尚未记录的插话" }
+  ],
+  "activations": [
+    { "participant": "loop", "from": 195, "to": 645, "type": "backend" },
+    { "participant": "tools", "from": 265, "to": 315, "type": "backend" },
+    { "participant": "agent", "from": 395, "to": 475, "type": "backend" },
+    { "participant": "agent", "from": 560, "to": 695, "type": "backend" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan", "title": "为什么出队不等于送达",
+      "items": [
+        "出队时只登记一条投递记录；消息写入记录时，这条记录才前进一格",
+        "run 结束时（不论是否中断）检查投递记录，本 run 取走但没送达的消息按原顺序放回队首",
+        "这样中断既不会丢插话，也不会把插话写进一个马上被中止的回合"
+      ]
+    },
+    {
+      "dot": "rose", "title": "中途检测与两种信号",
+      "items": [
+        "工具批执行中途只看队列不出队，出队只发生在 turn 边界",
+        "纯等待类工具是可中断的，会被硬中止；未开始的直接配“跳过”结果",
+        "其他工具只收到协作信号，可以忽略，也可以自行转后台；不可中断的调用从不跳过",
+        "中断模式设为“等待”时不发协作信号，只中止可中断的等待"
+      ]
+    },
+    {
+      "dot": "violet", "title": "实时插话通道",
+      "items": [
+        "流式采样期间，Provider 可以把插话直接放进正在进行的响应",
+        "被模型收下的插话，下一轮只投递它们；未被收下的与重新出队的插话一起投递",
+        "Esc 可在中断前把实时插话撤回到编辑器，此时既不记录也不放回队列"
+      ]
+    }
+  ]
+}

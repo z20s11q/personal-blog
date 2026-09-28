@@ -16,6 +16,7 @@ const path = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.ur
 const nav = [
   { href: base, label: '首页', match: (p: string) => p === base },
   { href: `${base}articles/`, label: '文章', match: (p: string) => p.startsWith(`${base}articles/`) },
+  { href: `${base}diagrams/`, label: '架构图', match: (p: string) => p.startsWith(`${base}diagrams/`) },
   { href: `${base}rust/`, label: 'Rust 笔记', match: (p: string) => p.startsWith(`${base}rust/`) },
 ];
 const searchUrl = `${base}search/`;
@@ -70,6 +71,7 @@ const searchUrl = `${base}search/`;
         </div>
         <div class="footer-links">
           <a href={`${base}articles/`}>文章</a>
+          <a href={`${base}diagrams/`}>架构图</a>
           <a href={`${base}rust/`}>Rust 笔记</a>
           <a href={searchUrl}>搜索</a>
           <a href="https://github.com/z20s11q/personal-blog" target="_blank" rel="noopener noreferrer">网站源码 ↗</a>

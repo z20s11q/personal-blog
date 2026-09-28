@@ -3,12 +3,13 @@ import expressiveCode from 'astro-expressive-code';
 import sitemap from '@astrojs/sitemap';
 import { satteri } from '@astrojs/markdown-satteri';
 import { codeFilename } from './src/plugins/code-filename.mjs';
+import { mermaidBlock } from './src/plugins/mermaid-block.mjs';
 
 export default defineConfig({
   site: 'https://z20s11q.github.io',
   base: '/personal-blog',
   markdown: {
-    processor: satteri({ mdastPlugins: [codeFilename] }),
+    processor: satteri({ mdastPlugins: [codeFilename, mermaidBlock] }),
   },
   integrations: [
     expressiveCode({

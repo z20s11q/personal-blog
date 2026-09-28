@@ -19,7 +19,7 @@ const activeDomains = domains.filter((domain) => (domainCounts.get(domain.slug) 
   <section class="page-head intro">
     <div class="eyebrow">z20s11q / notes</div>
     <h1>个人笔记</h1>
-    <p>整理我正在学习和研究的内容。目前有价格行为研究与 Rust 学习资料，以后也会加入其他主题。</p>
+    <p>整理我正在学习和研究的内容。目前有价格行为研究、Rust 学习资料和 AI Agent 架构解析，以后也会加入其他主题。</p>
   </section>
 
   <div class="home-grid">
@@ -59,6 +59,15 @@ const activeDomains = domains.filter((domain) => (domainCounts.get(domain.slug) 
           <div class="entry-meta"><span>开发 · Rust</span><span>{rustChapters} 章 · {rustSections.length} 节</span></div>
           <h3>Rust 编程语言（精简版）</h3>
           <p>基于 The Rust Programming Language 整理的中文学习笔记，全部章节在一页连续展开，目录会跟随阅读位置。</p>
+        </a>
+      </section>
+
+      <section class="home-section">
+        <div class="section-title"><h2>交互式架构图</h2><a href={`${base}diagrams/`}>全部图表 →</a></div>
+        <a class="entry" href={`${base}diagrams/`}>
+          <div class="entry-meta"><span>AI · 开发</span><span>Codex 4 张 · oh-my-pi 3 张</span></div>
+          <h3>Codex 与 oh-my-pi 架构图</h3>
+          <p>组件总览、Agent Loop 状态机、采样与插话时序、工具编排流程。点击节点可查看固定提交上的源码位置。</p>
         </a>
       </section>
 

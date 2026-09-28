@@ -71,6 +71,9 @@
   line-height: 1.65;
 }
 .prose .expressive-code { margin: 6px 0 24px; }
+.prose pre.mermaid { background: var(--surface); font-family: var(--font-sans); text-align: center; }
+.prose pre.mermaid:not([data-processed]) { color: var(--muted); text-align: left; white-space: pre; }
+.prose pre.mermaid svg { max-width: 100%; height: auto; }
 
 .prose table {
   display: block;

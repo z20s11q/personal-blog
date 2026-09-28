@@ -43,6 +43,25 @@ const formatDate = (date: Date) => date.toLocaleDateString('zh-CN');
   </section>
 </BaseLayout>
 
+<script>
+  const blocks = [...document.querySelectorAll<HTMLElement>('.prose pre.mermaid')];
+  if (blocks.length) {
+    const sources = blocks.map((block) => block.textContent ?? '');
+    const { default: mermaid } = await import('mermaid');
+    const render = async () => {
+      const dark = document.documentElement.dataset.theme === 'dark';
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: dark ? 'dark' : 'neutral' });
+      blocks.forEach((block, index) => {
+        block.removeAttribute('data-processed');
+        block.textContent = sources[index];
+      });
+      await mermaid.run({ nodes: blocks, suppressErrors: true });
+    };
+    await render();
+    new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  }
+</script>
+
 <style>
   .article-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   .article-tags a { padding: 2px 10px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 13px; }
