@@ -26,7 +26,7 @@ const { items, label = '本篇目录', back, namespaceSections = false } = Astro
 </nav>
 
 <script>
-  const mobile = matchMedia('(max-width: 1100px)');
+  const mobile = matchMedia('(max-width: 1360px)');
   for (const nav of document.querySelectorAll<HTMLElement>('[data-reading-toc]')) {
     if (nav.hasAttribute('data-namespace-sections')) {
       for (const section of document.querySelectorAll<HTMLElement>('.reading-section[id]')) {
@@ -93,7 +93,7 @@ const { items, label = '本篇目录', back, namespaceSections = false } = Astro
   .toc-links a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
   .toc-links a.toc-back { margin-top: 14px; padding-left: 0; border: 0; color: var(--ink); font-weight: 700; }
 
-  @media (max-width: 1100px) {
+  @media (max-width: 1360px) {
     .reading-toc { top: 0; z-index: 20; margin: 0 calc(-1 * var(--page-x)) 24px; padding: 0 var(--page-x); border-bottom: 1px solid var(--line); background: var(--bg); }
     details summary { display: flex; align-items: center; gap: 12px; min-height: 50px; cursor: pointer; }
     details summary::after { content: ""; width: 8px; height: 8px; margin-left: auto; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-2px) rotate(45deg); transition: transform .15s; }

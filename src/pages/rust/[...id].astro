@@ -43,8 +43,8 @@ const canonical = new URL(`${rustBase}${section.id}/`, Astro.site).href;
   .page-meta a { color: var(--accent); font-weight: 600; }
   .reading-grid {
     display: grid;
-    grid-template-columns: minmax(0, 760px) 220px;
-    gap: 48px;
+    grid-template-columns: minmax(0, 760px) 250px;
+    gap: 72px;
     margin: 0 var(--page-x);
     padding: 40px 0;
   }
@@ -63,7 +63,7 @@ const canonical = new URL(`${rustBase}${section.id}/`, Astro.site).href;
   .page-nav span { color: var(--muted); font-size: 14px; }
   .page-nav strong { font-size: 16px; }
 
-  @media (max-width: 1100px) {
+  @media (max-width: 1360px) {
     .reading-grid { grid-template-columns: 1fr; gap: 0; }
     .reading-grid > :global(.reading-toc) { grid-column: auto; grid-row: auto; }
   }

@@ -96,8 +96,8 @@ const related = [...sameSeries, ...sameTags].slice(0, 4);
   .article-tags a:hover { color: var(--accent); border-color: var(--accent); }
   .article-grid {
     display: grid;
-    grid-template-columns: minmax(0, 760px) 200px;
-    gap: 48px;
+    grid-template-columns: minmax(0, 760px) 250px;
+    gap: 72px;
     margin: 0 var(--page-x);
     padding: 40px 0;
   }
@@ -120,7 +120,7 @@ const related = [...sameSeries, ...sameTags].slice(0, 4);
   .related-card:hover h3 { color: var(--accent); }
   .related-card p { display: -webkit-box; margin: 0; overflow: hidden; color: var(--muted); font-size: 14.5px; line-height: 1.7; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 
-  @media (max-width: 1100px) {
+  @media (max-width: 1360px) {
     .article-grid { grid-template-columns: 1fr; gap: 0; }
     .article-grid > :global(.reading-toc) { grid-column: auto; grid-row: auto; }
   }

@@ -67,8 +67,8 @@ const canonical = new URL(rustBase, Astro.site).href;
 <style>
   .rust-layout {
     display: grid;
-    grid-template-columns: minmax(0, 760px) 220px;
-    gap: 48px;
+    grid-template-columns: minmax(0, 760px) 250px;
+    gap: 72px;
     margin: 0 var(--page-x);
     padding: 40px 0;
   }
@@ -102,14 +102,14 @@ const canonical = new URL(rustBase, Astro.site).href;
     line-height: 1.4;
     letter-spacing: -.02em;
   }
-  .reading-column .prose :global(h2) { font-size: 21px; margin-top: 36px; }
-  .reading-column .prose :global(h3) { font-size: 18px; }
-  .reading-column .prose { font-size: 16.5px; }
+  .reading-column .prose :global(h2) { font-size: 20px; margin-top: 36px; }
+  .reading-column .prose :global(h3) { font-size: 17px; }
+  .reading-column .prose { font-size: 15.5px; }
 
   .back-top { display: inline-block; margin-top: 28px; color: var(--muted); font-size: 15px; font-weight: 700; }
   .back-top:hover { color: var(--ink); }
 
-  @media (max-width: 1100px) {
+  @media (max-width: 1360px) {
     .rust-layout { grid-template-columns: 1fr; gap: 0; padding-top: 0; }
     .rust-layout > :global(.reading-toc) { grid-column: auto; grid-row: auto; }
     .chapter { scroll-margin-top: 64px; }
@@ -118,6 +118,6 @@ const canonical = new URL(rustBase, Astro.site).href;
   @media (max-width: 760px) {
     .chapter-heading h2 { font-size: 25px; }
     .section-heading { font-size: 21px; }
-    .reading-column .prose { font-size: 16px; }
+    .reading-column .prose { font-size: 15px; }
   }
 </style>
