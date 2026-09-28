@@ -1,21 +1,21 @@
 ---
 title: "Codex 自带文档总结"
 description: "把 Codex 仓库的 crate README 与官方在线文档按主题合并：协议状态模型、安全体系、hooks、上下文、多 agent，以及文档没覆盖、必须读源码的部分。"
-publishedAt: 2026-09-28T03:50:00.000Z
+publishedAt: 2026-09-28T03:40:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
 tags: ["ai", "development"]
 readingMinutes: 29
+parent: "codex-architecture"
+order: 1
 ---
-**本系列**：[00 资料索引](/personal-blog/articles/codex-omp-research-index/) · **01 Codex 自带文档总结** · [02 oh-my-pi 自带文档总结](/personal-blog/articles/omp-bundled-docs/) · [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) · [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) · [05 两者对比与可借鉴点](/personal-blog/articles/codex-vs-omp/) · [06 交互式架构图导览](/personal-blog/articles/codex-omp-diagrams/)
-
 > 源码快照：[openai/codex](https://github.com/openai/codex/tree/44fe510ce3ee61c8ef623adcbf89b901c73ddd61)，HEAD `44fe510c`（2026-09-28）。在线文档于 2026-09-28 下载。
 
 ## 0. 结论先行
 
 - **Codex 没有全局架构文档，也没有可视化架构图。** 知识分散在两处：仓库里各 crate 的开发者 README（面向贡献者，写的是契约和边界情况），以及官方在线文档（面向用户，写的是产品行为语义）。
 - 仓库自带的 `docs/*.md` 基本是百字节级的外链占位页，内容都在在线文档里。`AGENTS.md` 也明确规定“不要把通用产品文档加入 `docs/`”。
-- **agent loop 内部实现（`run_turn` 的循环条件、流式期间提前派发工具、并行工具读写锁、turn 中途压缩等）在任何文档里都没有描述**，只能读源码，见 [03 Codex 架构设计](/personal-blog/articles/codex-architecture/)。文档能告诉你的是 loop 的**外部契约**：协议状态机、hook 挂载点、审批门控顺序、上下文预算。
+- **agent loop 内部实现（`run_turn` 的循环条件、流式期间提前派发工具、并行工具读写锁、turn 中途压缩等）在任何文档里都没有描述**，只能读源码，见 [Codex 架构设计](/personal-blog/articles/codex-architecture/)。文档能告诉你的是 loop 的**外部契约**：协议状态机、hook 挂载点、审批门控顺序、上下文预算。
 
 ## 1. 文档构成与获取方式
 
@@ -262,7 +262,7 @@ codex-http-client   唯一允许直接用 reqwest 的 crate：代理策略（系
 
 ## 11. 文档没覆盖、必须读源码的部分
 
-| 问题 | 文档状态 | 源码位置（详见文档 03） |
+| 问题 | 文档状态 | 源码位置（详见 [Codex 架构设计](/personal-blog/articles/codex-architecture/)） |
 |---|---|---|
 | turn 内部的采样—工具循环何时继续、何时停 | 未描述 | `core/src/session/turn.rs::run_turn` |
 | 工具是否在模型流式输出期间就开始执行 | 未描述 | `stream_events_utils.rs::handle_output_item_done` |

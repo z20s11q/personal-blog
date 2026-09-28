@@ -1,22 +1,20 @@
 ---
 title: "Codex 架构设计：以 Agent Loop 为中心"
 description: "语言无关地拆解 Codex：四层 Agent Loop、并行工具与编排、审批与沙箱升级、上下文管理、编排与扩展，附源码位置映射和交互式架构图。"
-publishedAt: 2026-09-28T03:30:00.000Z
+publishedAt: 2026-09-28T03:45:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
 tags: ["ai", "development"]
 readingMinutes: 38
 ---
-**本系列**：[00 资料索引](/personal-blog/articles/codex-omp-research-index/) · [01 Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/) · [02 oh-my-pi 自带文档总结](/personal-blog/articles/omp-bundled-docs/) · **03 Codex 架构设计** · [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) · [05 两者对比与可借鉴点](/personal-blog/articles/codex-vs-omp/) · [06 交互式架构图导览](/personal-blog/articles/codex-omp-diagrams/)
-
 > 源码快照：[openai/codex](https://github.com/openai/codex/tree/44fe510ce3ee61c8ef623adcbf89b901c73ddd61)，HEAD `44fe510c`（2026-09-28）。路径相对 `codex-rs/`，行号以该快照为准。
-> 产品层的外部契约（协议、hooks、审批模式、配置）见 [01 Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/)。
+> 产品层的外部契约（协议、hooks、审批模式、配置）见 [Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/)。
 >
 > **阅读说明**：本文分两部分。
 > - **第一部分：语言无关的架构设计**。只讲概念、组件、状态机、不变量和设计取舍。凡是为了在某种语言或运行时里实现某个功能而写的代码（锁、异步任务、句柄、宏、类型系统技巧等），这里只写它实现的**语义**，不解释语言层面的做法。拿这一部分，用任何语言都能复刻同样的设计。
 > - **第二部分：实现映射**。把第一部分的每个概念对应到源码位置，只列位置，供核对。
 >
-> 第一部分的章节按 arXiv 2609.00006《Harness Engineering》提出的七个子系统组织（D1 Agent Loop、D2 LLM 集成、D3 工具、D4 上下文与记忆、D5 安全与权限、D6 编排、D7 扩展），再加上持久化与可观测。[04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 用同样的骨架写 oh-my-pi，两篇可以逐节对照。
+> 第一部分的章节按 arXiv 2609.00006《Harness Engineering》提出的七个子系统组织（D1 Agent Loop、D2 LLM 集成、D3 工具、D4 上下文与记忆、D5 安全与权限、D6 编排、D7 扩展），再加上持久化与可观测。[oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 用同样的骨架写 oh-my-pi，两篇可以逐节对照。
 
 ---
 
@@ -530,4 +528,4 @@ sequenceDiagram
 4. `core/src/session/handlers.rs:420`、`core/src/tasks/mod.rs`、`session/turn_input.rs`、`session/input_queue.rs`。
 5. `core/src/responses_retry.rs`、`core/src/compact*.rs`。
 6. `app-server/`（协议）、`app-server-client/`（进程内嵌入）、`thread-store/`。
-7. 配合 [01 Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/) 里的 hooks 表和审批门控顺序图一起看。
+7. 配合 [Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/) 里的 hooks 表和审批门控顺序图一起看。

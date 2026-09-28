@@ -1,30 +1,20 @@
 ---
 title: "Codex / oh-my-pi 架构调研：资料索引"
 description: "近两个月网上关于 Codex 与 oh-my-pi 的解析文章、改写项目、同类架构分析框架与可视化工具，以及调研结论。"
-publishedAt: 2026-09-28T04:00:00.000Z
+publishedAt: 2026-09-28T03:50:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
 tags: ["ai", "development"]
-readingMinutes: 22
+readingMinutes: 20
+parent: "codex-omp-guide"
+order: 2
 ---
-**本系列**：**00 资料索引** · [01 Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/) · [02 oh-my-pi 自带文档总结](/personal-blog/articles/omp-bundled-docs/) · [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) · [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) · [05 两者对比与可借鉴点](/personal-blog/articles/codex-vs-omp/) · [06 交互式架构图导览](/personal-blog/articles/codex-omp-diagrams/)
-
 > 调研日期：2026-09-28。时间窗口：只收录 **2026-07-28 之后**（近两个月）发布或更新的资料；更早的只在末尾“已排除”里列一行，便于溯源。
 > 源码快照：
 > - [openai/codex](https://github.com/openai/codex/tree/44fe510ce3ee61c8ef623adcbf89b901c73ddd61)，HEAD `44fe510c`（2026-09-28 06:30 UTC）
 > - [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi/tree/df731d516c0c722f658312187ae84c6d23e216fb)，HEAD `df731d51`（2026-09-28 10:27 +0200）
 
-## 系列文章
-
-| 篇目 | 内容 |
-|---|---|
-| [00 资料索引](/personal-blog/articles/codex-omp-research-index/) | 近两个月网上关于 Codex 与 oh-my-pi 的解析文章、改写项目、同类架构分析框架与可视化工具，以及调研结论。 |
-| [01 Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/) | 把 Codex 仓库的 crate README 与官方在线文档按主题合并：协议状态模型、安全体系、hooks、上下文、多 agent，以及文档没覆盖、必须读源码的部分。 |
-| [02 oh-my-pi 自带文档总结](/personal-blog/articles/omp-bundled-docs/) | oh-my-pi 自带 134 篇专题文档的主题化提炼：恢复与压缩、TTSR、会话树、工具、LLM 层、扩展体系，以及文档与源码不一致之处。 |
-| [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) | 语言无关地拆解 Codex：四层 Agent Loop、并行工具与编排、审批与沙箱升级、上下文管理、编排与扩展，附源码位置映射和交互式架构图。 |
-| [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) | 按同一骨架拆解 oh-my-pi：三层 Agent Loop、Agent 状态与插话队列、LLM 集成、工具调度、只追加会话树与原生层，附源码位置映射和交互式架构图。 |
-| [05 两者对比与可借鉴点](/personal-blog/articles/codex-vs-omp/) | 只比较设计语义：两套 harness 的 loop 骨架、关键问题的不同解法、各自值得借鉴的设计，以及自己实现 coding agent loop 时的取舍。 |
-| [06 交互式架构图导览](/personal-blog/articles/codex-omp-diagrams/) | 7 张可交互的架构图：两者的组件总览、Agent Loop 状态机、采样与插话时序、工具编排流程。点击节点可查看固定提交上的源码位置。 |
+本系列各篇的阅读顺序与递进关系见 [学习路线导引](/personal-blog/articles/codex-omp-guide/)。
 
 ---
 
@@ -60,7 +50,7 @@ readingMinutes: 22
 
 | 日期 | 资料 | 框架 | 覆盖的 agent | 说明 |
 |---|---|---|---|---|
-| 2026-09 | [arXiv 2609.00006 — Harness Engineering: Anatomy, Architecture, and Evolution of Coding Agents](https://arxiv.org/abs/2609.00006)（Wavestone AI Lab，83 页） | **七个标准子系统**：D1 Agent Loop、D2 LLM 集成、D3 工具与动作、D4 记忆与上下文、D5 安全与权限、D6 编排、D7 扩展；每个子系统给出最小实现和最大实现 | Claude Code、Codex CLI、Gemini CLI、Mistral Vibe、OpenHands、Aider、Mini-SWE-Agent、Hermes、**Pi**、OpenCode、OpenClaw，外加元 harness Omnigent | 快照钉在 2026-07 的版本，并与 2026-04 版做了 90 天纵向对比；归纳 13 条横向观察、29 个反复出现的设计模式、18 条设计建议和一个 90 行的最小 harness。**刻意不引用行号**，并把“结构性结论”（会长期成立）和“清单性结论”（几周就过时）分开标注。**本系列 03、04 的第一部分就按这七个子系统组织** |
+| 2026-09 | [arXiv 2609.00006 — Harness Engineering: Anatomy, Architecture, and Evolution of Coding Agents](https://arxiv.org/abs/2609.00006)（Wavestone AI Lab，83 页） | **七个标准子系统**：D1 Agent Loop、D2 LLM 集成、D3 工具与动作、D4 记忆与上下文、D5 安全与权限、D6 编排、D7 扩展；每个子系统给出最小实现和最大实现 | Claude Code、Codex CLI、Gemini CLI、Mistral Vibe、OpenHands、Aider、Mini-SWE-Agent、Hermes、**Pi**、OpenCode、OpenClaw，外加元 harness Omnigent | 快照钉在 2026-07 的版本，并与 2026-04 版做了 90 天纵向对比；归纳 13 条横向观察、29 个反复出现的设计模式、18 条设计建议和一个 90 行的最小 harness。**刻意不引用行号**，并把“结构性结论”（会长期成立）和“清单性结论”（几周就过时）分开标注。**[Codex 架构设计](/personal-blog/articles/codex-architecture/)、[oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 的第一部分就按这七个子系统组织** |
 | 2026-09-03 | [Codex Knowledge Base — 从 11 个 agent 的源码解剖看 Codex CLI 架构](https://codex.danielvaughan.com/2026/09/03/harness-engineering-anatomy-eleven-coding-agents-codex-cli-architecture/) | 上一篇论文的 Codex 视角解读 | Codex CLI | 要点：Codex 是语料中最大的系统（约 112 万行，126 个 crate，一个季度里从 62 万行、89 个 crate 几乎翻倍）；安全栈是语料中层次最多的四层结构，其中命令策略用一种确定性脚本语言描述，LLM 审查器位于 OS 沙箱之上 |
 | 2026-08 | [arXiv 2608.10934 — Understanding the Architecture of Coding Agents: An Exploratory Study Using a Research Prototype](https://arxiv.org/abs/2608.10934) | 沿用 Rombaut 分类法的三层：控制架构、工具与环境接口、资源管理 | 自研教学原型 Ark，对照 Codex CLI、OpenCode | Ark 本身几乎全部由 Codex 写成。结论：三者控制架构相同（顺序 ReAct、由 LLM 驱动、命令式 while 循环），差异在工具数量、工具发现、隔离、状态表示、压缩和持久记忆 |
 | 2026-04（窗口外） | [arXiv 2604.03515 — Inside the Scaffold: A Source-Code Taxonomy of Coding Agent Architectures](https://arxiv.org/abs/2604.03515)（Rombaut） | **3 层 12 维**分类法；提出 5 种可组合的循环原语（ReAct、生成-测试-修复、计划-执行、多次尝试重试、树搜索） | 13 个开源 scaffold（偏研究型：SWE-agent、Agentless、Moatless Tools 等；Ark 论文里 Codex CLI、OpenCode 两列直接取自这套分类） | 13 个里有 11 个组合了多种循环原语；所有结论都附文件路径和行号 |
@@ -84,7 +74,7 @@ readingMinutes: 22
 
 | 日期 | 资料 | 要点 |
 |---|---|---|
-| 2026-09-01 | [HarrisonSec — Three Agent Harnesses, One Loop](https://harrisonsec.com/blog/three-harnesses-one-loop/) | 对比 Claude Code / Codex / Pi 三个 loop。结论：中间的“组装上下文→调模型→执行工具→追加结果→判断是否继续”五步完全收敛，分歧在**边界**：Claude Code 边界在进程内，Codex 边界在 JSON-RPC 协议（app-server），Pi 边界在扩展宿主。另统计了 Pi 与 Codex core 的源码行数（12.1 万对 12.6 万）。注意：文中把 Codex loop 记为 `codex_thread.rs`（983 行），实际上那是线程门面，真正的循环在 `core/src/session/turn.rs::run_turn`（见 03 文档）；它测的 Pi 是上游 earendil-works/pi，不是 oh-my-pi |
+| 2026-09-01 | [HarrisonSec — Three Agent Harnesses, One Loop](https://harrisonsec.com/blog/three-harnesses-one-loop/) | 对比 Claude Code / Codex / Pi 三个 loop。结论：中间的“组装上下文→调模型→执行工具→追加结果→判断是否继续”五步完全收敛，分歧在**边界**：Claude Code 边界在进程内，Codex 边界在 JSON-RPC 协议（app-server），Pi 边界在扩展宿主。另统计了 Pi 与 Codex core 的源码行数（12.1 万对 12.6 万）。注意：文中把 Codex loop 记为 `codex_thread.rs`（983 行），实际上那是线程门面，真正的循环在 `core/src/session/turn.rs::run_turn`（见 [Codex 架构设计](/personal-blog/articles/codex-architecture/)）；它测的 Pi 是上游 earendil-works/pi，不是 oh-my-pi |
 | 2026-08-26 | [葡萄城/CSDN — Codex 开源 harness 全面了解](https://grapecity.csdn.net/6a8eab25662f9a54cba0aa57.html) | 中文调研：TS→Rust 的时间线、crate 职责表、`requirements.toml` 组织级约束、CI 用法 |
 | 2026-08-24 | [Towards Data Science — Put Your Own Logic Inside the Codex Agentic Loop](https://towardsdatascience.com/put-your-own-logic-inside-the-codex-agentic-loop/) | 讲 hooks 在 loop 中的挂点（SessionStart / PreToolUse / PostToolUse / Stop），用 Stop hook 做结果校验的案例 |
 | 2026-08-24 | [Praveen Vijayan — I Rebuilt the Codex CLI Harness on Bun](https://praveenvijayan.substack.com/p/i-rebuilt-the-codex-cli-harness-on) | 见第 3 节。附带发现：release 版 `codex exec` 每次退出要花约 900 ms 刷 OTel 指标，配置 `[otel] metrics_exporter = "none"` 可去掉 |
@@ -135,7 +125,7 @@ OpenAI 官方《Unrolling the Codex agent loop》《Unlocking the Codex harness:
 
 ## 6. 调研结论
 
-1. 两个仓库都**没有**现成的全局架构文档或可视化图；Codex 的设计知识在 crate README 与官方在线文档里，oh-my-pi 的在 `docs/` 专题里。本系列 03/04 两篇补的就是这块空白。
+1. 两个仓库都**没有**现成的全局架构文档或可视化图；Codex 的设计知识在 crate README 与官方在线文档里，oh-my-pi 的在 `docs/` 专题里。[Codex 架构设计](/personal-blog/articles/codex-architecture/) 和 [oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 两篇补的就是这块空白。
 2. 近两个月的第三方解析主要集中在“边界”层面（app-server 协议、hooks、harness 对比），**逐函数讲清 `run_turn` / `agentLoop` 执行细节的新文章很少**。窗口内唯一的中文源码系列是技术栈的《Codex 源码导读》（2026-09-28 刚发第 1 篇，基线 2026-08-31）；xiaonancs、NeuroStack 等更早的解读基线在 2026-05，函数行号已漂移（例如 `run_turn` 现在在 `turn.rs:163`，不是 `:131`）。
-3. **没有人公开发布过用 archify 解析 Codex 或其他 agent 的架构图**。同类的“架构框架式”解析有，近两个月最重要的是 arXiv 2609.00006 的七子系统解剖（覆盖 Codex CLI 和上游 Pi），以及 arXiv 2608.10934 用 Rombaut 三层分类法对比 Codex CLI 与 OpenCode。本系列 03、04 的第一部分按七子系统组织，可以直接和这篇论文对照。
+3. **没有人公开发布过用 archify 解析 Codex 或其他 agent 的架构图**。同类的“架构框架式”解析有，近两个月最重要的是 arXiv 2609.00006 的七子系统解剖（覆盖 Codex CLI 和上游 Pi），以及 arXiv 2608.10934 用 Rombaut 三层分类法对比 Codex CLI 与 OpenCode。[Codex 架构设计](/personal-blog/articles/codex-architecture/)、[oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 的第一部分按七子系统组织，可以直接和这篇论文对照。
 4. 没有成熟的“Codex 引擎 TS 重写”。社区的共识做法是**保留 Rust 引擎、走 app-server 协议对接**（Bundex、Codapter 都是这个思路）。想要 TS 实现的完整 harness，oh-my-pi / Pi 本身就是现成的参照物。

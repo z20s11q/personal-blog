@@ -1,6 +1,6 @@
 ---
 import { domainLabel } from '../data/domains';
-import { domainCounts, type Entry } from '../data/entries';
+import { domainCounts, filterByTag, flattenEntries, type Entry } from '../data/entries';
 
 interface Props {
   all: Entry[];
@@ -10,7 +10,7 @@ interface Props {
 const { all, active } = Astro.props;
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 const tags = domainCounts(all);
-const entries = active === 'all' ? all : all.filter((entry) => entry.tags.includes(active));
+const entries = active === 'all' ? all : filterByTag(all, active);
 const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.');
 ---
 
@@ -18,19 +18,28 @@ const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'num
   <aside class="sidebar" aria-label="内容分类">
     <h2>分类</h2>
     <nav class="tag-list" aria-label="按领域浏览">
-      <a href={base} aria-current={active === 'all' ? 'page' : undefined}><span>全部</span><small>{all.length}</small></a>
+      <a href={base} aria-current={active === 'all' ? 'page' : undefined}><span>全部</span><small>{flattenEntries(all).length}</small></a>
       {tags.map((tag) => <a href={`${base}tags/${tag.slug}/`} aria-current={active === tag.slug ? 'page' : undefined}><span>{tag.label}</span><small>{tag.count}</small></a>)}
     </nav>
     <p class="aside-note"><a href={`${base}search/`}>站内搜索</a>可以检索全部文章和笔记。</p>
   </aside>
   <div class="entry-list">
     {entries.map((entry) => (
-      <a class="entry" href={entry.href}>
-        <div class="entry-meta"><span>{entry.tags.map(domainLabel).join(' · ')}</span><span>{entry.category}</span><time datetime={entry.date.toISOString()}>{formatDate(entry.date)}</time></div>
-        <h3>{entry.title}</h3>
-        <p>{entry.description}</p>
-        <small>{entry.meta}</small>
-      </a>
+      <div class="entry-group">
+        <a class="entry" href={entry.href}>
+          <div class="entry-meta"><span>{entry.tags.map(domainLabel).join(' · ')}</span><span>{entry.category}</span><time datetime={entry.date.toISOString()}>{formatDate(entry.date)}</time></div>
+          <h3>{entry.title}</h3>
+          <p>{entry.description}</p>
+          <small>{entry.meta}</small>
+        </a>
+        {entry.children.length > 0 && (
+          <ul class="children" aria-label={`${entry.title} 合集`}>
+            {entry.children.map((child) => (
+              <li><a class="child" href={child.href}><h4>{child.title}</h4><p>{child.description}</p></a></li>
+            ))}
+          </ul>
+        )}
+      </div>
     ))}
   </div>
 </div>
@@ -53,14 +62,20 @@ const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'num
   .aside-note a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 
   .entry-list { min-width: 0; max-width: 780px; padding-top: 8px; }
-  .entry { display: block; padding: 22px 0 24px; border-bottom: 1px solid var(--line); }
-  .entry:last-child { border-bottom: 0; }
+  .entry-group { padding: 22px 0 24px; border-bottom: 1px solid var(--line); }
+  .entry-group:last-child { border-bottom: 0; }
+  .entry { display: block; }
   .entry-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 14px; }
   .entry-meta > * + *::before { content: "·"; margin-right: 12px; color: var(--line); }
   .entry h3 { margin: 8px 0; font-size: 22px; line-height: 1.4; letter-spacing: -.025em; transition: color .15s; }
   .entry:hover h3 { color: var(--accent); }
   .entry p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.75; }
   .entry small { display: block; margin-top: 10px; color: var(--muted); font-size: 14px; }
+  .children { margin: 14px 0 0 4px; padding: 0 0 0 18px; border-left: 2px solid var(--line); list-style: none; }
+  .child { display: block; padding: 7px 0; }
+  .child h4 { margin: 0; font-size: 16.5px; line-height: 1.5; letter-spacing: -.01em; transition: color .15s; }
+  .child:hover h4 { color: var(--accent); }
+  .child p { margin: 2px 0 0; overflow: hidden; color: var(--muted); font-size: 14.5px; line-height: 1.65; text-overflow: ellipsis; white-space: nowrap; }
 
   @media (max-width: 860px) {
     .entry-index { grid-template-columns: 1fr; gap: 0; }
@@ -72,5 +87,7 @@ const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'num
   @media (max-width: 760px) {
     .entry h3 { font-size: 19px; }
     .entry p { font-size: 15px; }
+    .children { padding-left: 14px; }
+    .child p { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
   }
 </style>

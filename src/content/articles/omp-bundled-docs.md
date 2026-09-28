@@ -1,21 +1,21 @@
 ---
 title: "oh-my-pi 自带文档总结"
 description: "oh-my-pi 自带 134 篇专题文档的主题化提炼：恢复与压缩、TTSR、会话树、工具、LLM 层、扩展体系，以及文档与源码不一致之处。"
-publishedAt: 2026-09-28T03:40:00.000Z
+publishedAt: 2026-09-28T03:25:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
 tags: ["ai", "development"]
-readingMinutes: 33
+readingMinutes: 32
+parent: "omp-architecture"
+order: 1
 ---
-**本系列**：[00 资料索引](/personal-blog/articles/codex-omp-research-index/) · [01 Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/) · **02 oh-my-pi 自带文档总结** · [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) · [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) · [05 两者对比与可借鉴点](/personal-blog/articles/codex-vs-omp/) · [06 交互式架构图导览](/personal-blog/articles/codex-omp-diagrams/)
-
 > 源码快照：[can1357/oh-my-pi](https://github.com/can1357/oh-my-pi/tree/df731d516c0c722f658312187ae84c6d23e216fb)，HEAD `df731d51`（2026-09-28）。
 
 ## 0. 结论先行
 
 - **oh-my-pi 的文档体量远超 Codex**：`docs/` 下 134 篇 Markdown（根目录 82 篇、`tools/` 34 篇、`toolconv/` 12 篇等），约 2.6 MB，另有各 package 的 README 和 `packages/ai/src/{dialect,judgment}/*.md` 提示词模板。它**是按子系统写的“内部实现文档”**，大量篇目直接描述算法、默认值、边界情况，而且常常自曝缺口（“文档如实指出……”）。
 - **同样没有全局架构图**。最接近总览的是根 `README.md`（特性清单）和 `packages/agent/README.md`（Agent 内核契约）。子系统之间如何拼成一个 loop，需要自己串起来，本文第 2 节做了这件事。
-- **`agentLoop` 本体（`packages/agent/src/agent-loop.ts`）的内部机制基本没有文档**：并发调度（shared/exclusive）、流中推测执行、tool call/result 配对不变式、队列投递记账、软工具要求升级等都只能读源码，见 [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/)。文档覆盖的是 loop **周围**的一切：事件契约、恢复（重试/压缩）、TTSR、会话树、扩展事件时序。
+- **`agentLoop` 本体（`packages/agent/src/agent-loop.ts`）的内部机制基本没有文档**：并发调度（shared/exclusive）、流中推测执行、tool call/result 配对不变式、队列投递记账、软工具要求升级等都只能读源码，见 [oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/)。文档覆盖的是 loop **周围**的一切：事件契约、恢复（重试/压缩）、TTSR、会话树、扩展事件时序。
 - 部分文档与源码不一致，见第 13 节。最重要的一条：`packages/agent/README.md` 对 steering“每个工具调用后检查、immediate 模式中止剩余工具”的描述已经过时。
 
 ## 1. 文档构成与推荐阅读顺序
@@ -43,7 +43,7 @@ readingMinutes: 33
 5. `ttsr-injection-lifecycle.md`：loop 级的“中止—注入—重试”机制。
 6. `session.md` + `session-tree-plan.md`：状态如何持久化、如何从树重建上下文。
 7. `provider-streaming-internals.md`：从 SSE 到 `AssistantMessageEvent` 再到 `message_*` 的链路与取消分层。
-8. 然后再读 `agent-loop.ts` 源码（见 04）。
+8. 然后再读 `agent-loop.ts` 源码（见 [oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/)）。
 
 ---
 
@@ -133,7 +133,7 @@ LLM 只认识 `user`、`assistant`、`toolResult` 三种角色。`compactionSumm
 2. 溢出恢复：先尝试**上下文升级**（换到更大窗口的模型），不行再压缩；**跳过 handoff**（handoff 会复用已溢出的输入）。
 3. 不完整输出恢复（`stopReason === "length"`）：允许 handoff。
 4. 一次成功 turn 后的阈值维护。
-5. **turn 中途阈值维护**：在工具循环的下一次请求发出前检查（`compaction.midTurnEnabled`，默认开；子代理强制开，因为一个任务就是一个 turn）。源码实现是 loop 的 `onTurnEnd` 钩子，见 04 的 2.3 与 4.2 节。
+5. **turn 中途阈值维护**：在工具循环的下一次请求发出前检查（`compaction.midTurnEnabled`，默认开；子代理强制开，因为一个任务就是一个 turn）。源码实现是 loop 的 `onTurnEnd` 钩子，见 [oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 的 4.4 与 8.3 节。
 6. 空闲维护（默认关）。
 
 **方法链** `compaction.methodOrder` 默认 `["remote", "snapcompact", "handoff", "shake", "soft"]`，某个方法不可用或失败就推进到下一个：
@@ -263,7 +263,7 @@ TTSR 是 Time Traveling Stream Rules。规则平时不占上下文；模型输�
 | 主题 | 文档说法 | 源码实际 |
 |---|---|---|
 | steering 时机与 `interruptMode` | `packages/agent/README.md` 与 `agent.ts:142` 注释：`immediate` 下“每个工具调用后检查”；`rpc.md`：`immediate` 下待处理 steering 可以中止本 turn 剩余的工具调用 | `types.ts:171-177` 与 `agent-loop.ts:3067-3070`：`immediate` 截断**可中断的等待**，并对其他运行中的工具发出协作式 `steeringSignal`（工具可以响应，比如自动转后台）；`wait` 让非可中断工具不受打扰，但可中断的等待仍被截断。不可中断的工具不会被跳过，steering 在批次边界注入 |
-| 工具并发 | agent README 未提及 | loop 有 shared/exclusive 调度（见 04 的 2.6 节） |
+| 工具并发 | agent README 未提及 | loop 有 shared/exclusive 调度（见 [oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 的 4.7 节） |
 | 包名 | agent README：`@oh-my-pi/pi-agent` | `packages/agent/package.json` 与根 README 包表都是 `@oh-my-pi/pi-agent-core` |
 | TTSR 全称 | `skills/authoring-hooks.md` 注释为 “too-short response” | 正式定义是 Time Traveling Stream Rules（`ttsr-injection-lifecycle.md`） |
 | computer 前台接管 | `tools/computer.md`：`delivery: "background" \| "foreground"` | `computer-use.md`：`{ takeover: true }`，两篇互相矛盾 |
@@ -272,7 +272,7 @@ TTSR 是 Time Traveling Stream Rules。规则平时不占上下文；模型输�
 
 ## 14. 文档没覆盖、必须读源码的部分
 
-以下都在 `packages/agent/src/agent-loop.ts`，详见 [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/)：
+以下都在 `packages/agent/src/agent-loop.ts`，详见 [oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/)：
 
 - `runLoopBody` 的外层/内层循环结构和续跑条件。
 - 工具调度的 shared/exclusive promise 链，以及 interruptible 与非 interruptible 两种中止信号。

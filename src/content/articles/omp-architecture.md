@@ -1,22 +1,20 @@
 ---
 title: "oh-my-pi（omp）架构设计：以 Agent Loop 为中心"
 description: "按同一骨架拆解 oh-my-pi：三层 Agent Loop、Agent 状态与插话队列、LLM 集成、工具调度、只追加会话树与原生层，附源码位置映射和交互式架构图。"
-publishedAt: 2026-09-28T03:20:00.000Z
+publishedAt: 2026-09-28T03:30:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
 tags: ["ai", "development"]
 readingMinutes: 39
 ---
-**本系列**：[00 资料索引](/personal-blog/articles/codex-omp-research-index/) · [01 Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/) · [02 oh-my-pi 自带文档总结](/personal-blog/articles/omp-bundled-docs/) · [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) · **04 oh-my-pi 架构设计** · [05 两者对比与可借鉴点](/personal-blog/articles/codex-vs-omp/) · [06 交互式架构图导览](/personal-blog/articles/codex-omp-diagrams/)
-
 > 源码快照：[can1357/oh-my-pi](https://github.com/can1357/oh-my-pi/tree/df731d516c0c722f658312187ae84c6d23e216fb)，HEAD `df731d51`（2026-09-28）。路径相对仓库根目录，行号以该快照为准。
 > 标注“（据文档）”的内容只来自 `docs/*.md`，没有在代码里逐行核对；其余均已对照源码。
 >
-> **阅读说明**：与 [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) 相同，本文分两部分。
+> **阅读说明**：与 [Codex 架构设计](/personal-blog/articles/codex-architecture/) 相同，本文分两部分。
 > - **第一部分：语言无关的架构设计**。只讲概念、组件、状态机、不变量和设计取舍。omp 的上层编排和原生加速层用的是两种不同的语言与运行时，凡是为了适配某种语言或运行时而写的代码（单线程调度下的让出、异步原语的组合方式、跨语言调用的包装细节等），这里只写它实现的**语义**，不解释语言层面的做法。
 > - **第二部分：实现映射**。把第一部分的概念对应到源码位置，只列位置，供核对。
 >
-> 第一部分的章节按 arXiv 2609.00006《Harness Engineering》的七个子系统组织（D1–D7），再加上持久化、界面与原生层，可与 [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) 逐节对照。
+> 第一部分的章节按 arXiv 2609.00006《Harness Engineering》的七个子系统组织（D1–D7），再加上持久化、界面与原生层，可与 [Codex 架构设计](/personal-blog/articles/codex-architecture/) 逐节对照。
 
 ---
 

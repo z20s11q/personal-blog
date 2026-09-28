@@ -1,16 +1,16 @@
 ---
 title: "Codex 与 oh-my-pi：Agent Loop 对比与可借鉴点"
 description: "只比较设计语义：两套 harness 的 loop 骨架、关键问题的不同解法、各自值得借鉴的设计，以及自己实现 coding agent loop 时的取舍。"
-publishedAt: 2026-09-28T03:10:00.000Z
+publishedAt: 2026-09-28T03:55:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
 tags: ["ai", "development"]
 readingMinutes: 13
+parent: "codex-omp-guide"
+order: 1
 ---
-**本系列**：[00 资料索引](/personal-blog/articles/codex-omp-research-index/) · [01 Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/) · [02 oh-my-pi 自带文档总结](/personal-blog/articles/omp-bundled-docs/) · [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) · [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) · **05 两者对比与可借鉴点** · [06 交互式架构图导览](/personal-blog/articles/codex-omp-diagrams/)
-
-> 依据 [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) 和 [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 的第一部分（语言无关的架构设计）。快照：Codex `44fe510c`，oh-my-pi `df731d51`。
-> 本文只比较设计语义，不比较两种语言各自的实现手段。源码位置见 03、04 的第二部分。
+> 依据 [Codex 架构设计](/personal-blog/articles/codex-architecture/) 和 [oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 的第一部分（语言无关的架构设计）。快照：Codex `44fe510c`，oh-my-pi `df731d51`。
+> 本文只比较设计语义，不比较两种语言各自的实现手段。源码位置见 [Codex 架构设计](/personal-blog/articles/codex-architecture/) 和 [oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 的第二部分。
 
 ## 0. 核心结论
 
@@ -173,7 +173,7 @@ oh-my-pi 在这方面投入明显更多，可能是因为它的终端交互更�
 
 ## 4. 如果要自己实现一个 coding agent loop
 
-按优先级排的一份清单，每条都能在两个项目里找到对应实现（源码位置见 03、04 第二部分）：
+按优先级排的一份清单，每条都能在两个项目里找到对应实现（源码位置见 [Codex 架构设计](/personal-blog/articles/codex-architecture/) 和 [oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 的第二部分）：
 
 1. **先定不变量**：每个工具调用必须恰好有一个结果；所有中断路径都要合成结果。
 2. **继续条件写成一句**：“有工具结果 ∨ 有待处理的用户输入”。其余都是这条规则的例外处理。

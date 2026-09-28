@@ -12,6 +12,8 @@ const articles = defineCollection({
     category: z.string(),
     tags: z.array(z.string()).default([]),
     readingMinutes: z.number(),
+    parent: z.string().optional(),
+    order: z.number().optional(),
   }),
 });
 

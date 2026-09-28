@@ -19,11 +19,11 @@ const formatDate = (date: Date) => date.toLocaleDateString('zh-CN');
 
 const entries = await getEntries(base);
 const selfHref = `${base}articles/${article.id}/`;
-const series = entries.filter((entry) => entry.category === article.data.category && entry.href.includes('/articles/'));
-const position = series.findIndex((entry) => entry.href === selfHref);
-const seriesNext = [...series.slice(position + 1), ...series.slice(0, position)];
-const sameTags = entries.filter((entry) => entry.href !== selfHref && !seriesNext.includes(entry) && entry.tags.some((tag) => article.data.tags.includes(tag)));
-const related = [...seriesNext, ...sameTags].slice(0, 4);
+const collection = entries.find((entry) => entry.children.length > 0 && (entry.href === selfHref || entry.children.some((child) => child.href === selfHref)));
+const others = entries.filter((entry) => entry !== collection && entry.href !== selfHref);
+const sameSeries = others.filter((entry) => entry.category === article.data.category);
+const sameTags = others.filter((entry) => !sameSeries.includes(entry) && entry.tags.some((tag) => article.data.tags.includes(tag)));
+const related = [...sameSeries, ...sameTags].slice(0, 4);
 ---
 
 <BaseLayout title={article.data.title} description={article.data.description} canonical={canonical} progress>
@@ -40,13 +40,24 @@ const related = [...seriesNext, ...sameTags].slice(0, 4);
   </header>
   <div class="article-grid">
     <ReadingToc items={toc} back={{ href: base, text: '← 返回首页' }} />
-    <article class="prose" data-pagefind-body>
-      <Content />
-    </article>
+    <div class="article-main">
+      {collection && (
+        <nav class="collection" aria-label="所在合集">
+          <div class="collection-label">合集 · 共 {collection.children.length + 1} 篇</div>
+          <a href={collection.href} aria-current={collection.href === selfHref ? 'page' : undefined}>{collection.title}</a>
+          <ol>
+            {collection.children.map((child) => <li><a href={child.href} aria-current={child.href === selfHref ? 'page' : undefined}>{child.title}</a></li>)}
+          </ol>
+        </nav>
+      )}
+      <article class="prose" data-pagefind-body>
+        <Content />
+      </article>
+    </div>
   </div>
   {related.length > 0 && (
     <section class="article-end">
-      <div class="eyebrow">{seriesNext.length > 0 ? `同系列 · ${article.data.category}` : '相关内容'}</div>
+      <div class="eyebrow">{sameSeries.length > 0 ? `同系列 · ${article.data.category}` : '相关内容'}</div>
       <div class="related">
         {related.map((entry) => (
           <a class="related-card" href={entry.href}>
@@ -90,6 +101,15 @@ const related = [...seriesNext, ...sameTags].slice(0, 4);
     margin: 0 var(--page-x);
     padding: 40px 0;
   }
+  .article-main { min-width: 0; }
+  .collection { margin: 0 0 32px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 15px; line-height: 1.6; }
+  .collection-label { margin-bottom: 6px; color: var(--muted); font-size: 13px; }
+  .collection a { color: var(--muted); }
+  .collection a:hover { color: var(--accent); }
+  .collection a[aria-current="page"] { color: var(--ink); font-weight: 700; }
+  .collection > a { display: block; font-weight: 600; }
+  .collection ol { margin: 4px 0 0 4px; padding: 0 0 0 16px; border-left: 2px solid var(--line); list-style: none; }
+  .collection li { padding: 2px 0; }
   .article-end { margin: 0 var(--page-x); padding: 28px 0 0; border-top: 1px solid var(--line); }
   .related { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
   .related-card { display: block; padding: 18px 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); transition: border-color .15s; }
