@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection, render } from 'astro:content';
 import { domainLabel } from '../../data/domains';
 import ReadingToc from '../../components/ReadingToc.astro';
+import { getEntries } from '../../data/entries';
 
 export async function getStaticPaths() {
   const articles = await getCollection('articles');
@@ -15,6 +16,14 @@ const toc = headings.filter((heading) => heading.depth >= 2 && heading.depth <= 
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 const canonical = new URL(`${base}articles/${article.id}/`, Astro.site).href;
 const formatDate = (date: Date) => date.toLocaleDateString('zh-CN');
+
+const entries = await getEntries(base);
+const selfHref = `${base}articles/${article.id}/`;
+const series = entries.filter((entry) => entry.category === article.data.category && entry.href.includes('/articles/'));
+const position = series.findIndex((entry) => entry.href === selfHref);
+const seriesNext = [...series.slice(position + 1), ...series.slice(0, position)];
+const sameTags = entries.filter((entry) => entry.href !== selfHref && !seriesNext.includes(entry) && entry.tags.some((tag) => article.data.tags.includes(tag)));
+const related = [...seriesNext, ...sameTags].slice(0, 4);
 ---
 
 <BaseLayout title={article.data.title} description={article.data.description} canonical={canonical} progress>
@@ -30,17 +39,25 @@ const formatDate = (date: Date) => date.toLocaleDateString('zh-CN');
     </div>
   </header>
   <div class="article-grid">
-    <ReadingToc items={toc} back={{ href: `${base}articles/`, text: '← 全部文章' }} />
+    <ReadingToc items={toc} back={{ href: base, text: '← 返回首页' }} />
     <article class="prose" data-pagefind-body>
       <Content />
     </article>
   </div>
-  <section class="article-end">
-    <div class="eyebrow">继续学习</div>
-    <h2>从资料出发，建立自己的判断。</h2>
-    <p>回到原始来源、记录失败案例，并在下一次复盘里修正假设。</p>
-    <a class="button" href={`${base}resources/`}>查看资料索引 <span aria-hidden="true">↗</span></a>
-  </section>
+  {related.length > 0 && (
+    <section class="article-end">
+      <div class="eyebrow">{seriesNext.length > 0 ? `同系列 · ${article.data.category}` : '相关内容'}</div>
+      <div class="related">
+        {related.map((entry) => (
+          <a class="related-card" href={entry.href}>
+            <span>{entry.category}</span>
+            <h3>{entry.title}</h3>
+            <p>{entry.description}</p>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
 </BaseLayout>
 
 <script>
@@ -73,15 +90,20 @@ const formatDate = (date: Date) => date.toLocaleDateString('zh-CN');
     margin: 0 var(--page-x);
     padding: 40px 0;
   }
-  .article-end { margin: 0 var(--page-x); padding: 28px 32px; border-radius: 8px; background: var(--soft); }
-  .article-end h2 { margin: 10px 0 4px; font-size: 22px; letter-spacing: -.02em; }
-  .article-end p { margin: 0 0 18px; color: var(--muted); font-size: 16px; }
+  .article-end { margin: 0 var(--page-x); padding: 28px 0 0; border-top: 1px solid var(--line); }
+  .related { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+  .related-card { display: block; padding: 18px 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); transition: border-color .15s; }
+  .related-card:hover { border-color: var(--accent); }
+  .related-card span { color: var(--muted); font-size: 13px; }
+  .related-card h3 { margin: 6px 0; font-size: 17px; line-height: 1.45; letter-spacing: -.015em; }
+  .related-card:hover h3 { color: var(--accent); }
+  .related-card p { display: -webkit-box; margin: 0; overflow: hidden; color: var(--muted); font-size: 14.5px; line-height: 1.7; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 
   @media (max-width: 900px) {
     .article-grid { grid-template-columns: 1fr; gap: 0; }
   }
   @media (max-width: 760px) {
     .article-grid { padding: 28px 0; }
-    .article-end { padding: 22px 20px; }
+    .related { grid-template-columns: 1fr; }
   }
 </style>

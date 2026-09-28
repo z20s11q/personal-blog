@@ -12,13 +12,6 @@ const { title, description, canonical, progress = false } = Astro.props;
 const siteName = 'z20s11q 的个人博客';
 const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
-const path = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.url.pathname}/`;
-const nav = [
-  { href: base, label: '首页', match: (p: string) => p === base },
-  { href: `${base}articles/`, label: '文章', match: (p: string) => p.startsWith(`${base}articles/`) },
-  { href: `${base}diagrams/`, label: '架构图', match: (p: string) => p.startsWith(`${base}diagrams/`) },
-  { href: `${base}rust/`, label: 'Rust 笔记', match: (p: string) => p.startsWith(`${base}rust/`) },
-];
 const searchUrl = `${base}search/`;
 ---
 
@@ -50,9 +43,6 @@ const searchUrl = `${base}search/`;
     <div class="site-shell">
       <header class="site-header">
         <a class="wordmark" href={base} aria-label="个人博客首页">z20s11q<span class="wordmark-sep">/</span>notes</a>
-        <nav class="site-nav" aria-label="主导航">
-          {nav.map((item) => <a href={item.href} aria-current={item.match(path) ? 'page' : undefined}>{item.label}</a>)}
-        </nav>
         <div class="header-actions">
           <a class="icon-button" href={searchUrl} aria-label="搜索" title="搜索">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
@@ -67,12 +57,10 @@ const searchUrl = `${base}search/`;
       <footer class="site-footer">
         <div>
           <strong>z20s11q / notes</strong>
-          <p>记录交易研究、编程学习与以后值得整理的主题。</p>
+          <p>记录交易研究、编程学习、AI Agent 架构与以后值得整理的主题。</p>
         </div>
         <div class="footer-links">
-          <a href={`${base}articles/`}>文章</a>
-          <a href={`${base}diagrams/`}>架构图</a>
-          <a href={`${base}rust/`}>Rust 笔记</a>
+          <a href={base}>首页</a>
           <a href={searchUrl}>搜索</a>
           <a href="https://github.com/z20s11q/personal-blog" target="_blank" rel="noopener noreferrer">网站源码 ↗</a>
         </div>

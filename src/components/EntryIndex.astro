@@ -1,0 +1,76 @@
+---
+import { domainLabel } from '../data/domains';
+import { domainCounts, type Entry } from '../data/entries';
+
+interface Props {
+  all: Entry[];
+  active: string;
+}
+
+const { all, active } = Astro.props;
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+const tags = domainCounts(all);
+const entries = active === 'all' ? all : all.filter((entry) => entry.tags.includes(active));
+const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.');
+---
+
+<div class="entry-index">
+  <aside class="sidebar" aria-label="内容分类">
+    <h2>分类</h2>
+    <nav class="tag-list" aria-label="按领域浏览">
+      <a href={base} aria-current={active === 'all' ? 'page' : undefined}><span>全部</span><small>{all.length}</small></a>
+      {tags.map((tag) => <a href={`${base}tags/${tag.slug}/`} aria-current={active === tag.slug ? 'page' : undefined}><span>{tag.label}</span><small>{tag.count}</small></a>)}
+    </nav>
+    <p class="aside-note"><a href={`${base}search/`}>站内搜索</a>可以检索全部文章和笔记。</p>
+  </aside>
+  <div class="entry-list">
+    {entries.map((entry) => (
+      <a class="entry" href={entry.href}>
+        <div class="entry-meta"><span>{entry.tags.map(domainLabel).join(' · ')}</span><span>{entry.category}</span><time datetime={entry.date.toISOString()}>{formatDate(entry.date)}</time></div>
+        <h3>{entry.title}</h3>
+        <p>{entry.description}</p>
+        <small>{entry.meta}</small>
+      </a>
+    ))}
+  </div>
+</div>
+
+<style>
+  .entry-index {
+    display: grid;
+    grid-template-columns: 170px minmax(0, 1fr);
+    gap: 52px;
+    margin: 0 var(--page-x);
+  }
+  .sidebar { position: sticky; top: 28px; align-self: start; padding-top: 28px; }
+  .sidebar h2 { margin: 0 0 11px; color: var(--muted); font-size: 13px; font-weight: 700; letter-spacing: .06em; }
+  .tag-list { display: flex; flex-direction: column; gap: 2px; }
+  .tag-list a { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: 4px; color: var(--muted); font-size: 14.5px; }
+  .tag-list a:hover { color: var(--ink); background: var(--soft); }
+  .tag-list a[aria-current="page"] { color: var(--ink); background: var(--soft); font-weight: 700; }
+  .tag-list small { color: var(--muted); font-size: 12px; font-weight: 400; }
+  .aside-note { margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.75; }
+  .aside-note a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
+  .entry-list { min-width: 0; max-width: 780px; padding-top: 8px; }
+  .entry { display: block; padding: 22px 0 24px; border-bottom: 1px solid var(--line); }
+  .entry:last-child { border-bottom: 0; }
+  .entry-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 14px; }
+  .entry-meta > * + *::before { content: "·"; margin-right: 12px; color: var(--line); }
+  .entry h3 { margin: 8px 0; font-size: 22px; line-height: 1.4; letter-spacing: -.025em; transition: color .15s; }
+  .entry:hover h3 { color: var(--accent); }
+  .entry p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.75; }
+  .entry small { display: block; margin-top: 10px; color: var(--muted); font-size: 14px; }
+
+  @media (max-width: 860px) {
+    .entry-index { grid-template-columns: 1fr; gap: 0; }
+    .sidebar { position: static; padding: 20px 0 16px; border-bottom: 1px solid var(--line); }
+    .sidebar h2, .aside-note { display: none; }
+    .tag-list { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+    .tag-list a { gap: 7px; padding: 4px 10px; border: 1px solid var(--line); }
+  }
+  @media (max-width: 760px) {
+    .entry h3 { font-size: 19px; }
+    .entry p { font-size: 15px; }
+  }
+</style>

@@ -59,17 +59,60 @@ const articles = [
     label: '05 两者对比与可借鉴点',
     description: '只比较设计语义：两套 harness 的 loop 骨架、关键问题的不同解法、各自值得借鉴的设计，以及自己实现 coding agent loop 时的取舍。',
   },
+  {
+    slug: 'codex-omp-diagrams',
+    label: '06 交互式架构图导览',
+    title: 'Codex 与 oh-my-pi 交互式架构图导览',
+    description: '7 张可交互的架构图：两者的组件总览、Agent Loop 状态机、采样与插话时序、工具编排流程。点击节点可查看固定提交上的源码位置。',
+    generate: () => diagramGuide(),
+  },
 ];
 
 const seriesSection = [
-  '## 系列文章与架构图',
+  '## 系列文章',
   '',
   '| 篇目 | 内容 |',
   '|---|---|',
   ...articles.map((article) => `| [${article.label}](${articleUrl(article.slug)}) | ${article.description} |`),
-  `| [交互式架构图](${base}diagrams/) | 用 archify 生成的 7 张可交互图（Codex 4 张、oh-my-pi 3 张），节点带固定提交上的源码引用 |`,
   '',
 ].join('\n');
+
+/** Heading text each diagram is attached to, filled while converting 03 and 04. */
+const calloutHeadings = new Map();
+
+const diagramGuide = () => {
+  const link = (slug) => {
+    const article = articles.find((candidate) => candidate.slug === slug);
+    return `[${article.label}](${articleUrl(slug)})`;
+  };
+  const lines = [
+    `这 7 张图是 ${link('codex-architecture')} 和 ${link('omp-architecture')} 的配图，用 [archify](https://github.com/tt-a1i/archify) 从类型化的 JSON 描述编译成单文件 HTML，并通过了结构校验和浏览器检查。每张图都是独立页面，下面的链接直接打开原图。`,
+    '',
+    '## 怎么看',
+    '',
+    '- **点击节点**：查看对应的源码文件和行号。链接固定在具体提交上，不会随仓库更新而漂移。',
+    '- **点击连线**：高亮这条关系；右下角可以缩放、追踪路径。',
+    '- **阅读顺序**：先看组件总览建立整体印象，再看状态机理解循环何时继续、何时结束，最后看时序图里的边界细节。',
+    '- 图按桌面宽度设计，手机上需要横向拖动。',
+    '',
+  ];
+  for (const group of diagramGroups) {
+    lines.push(`## ${group.project}`, '', `源码版本 [\`${group.revision}\`](${group.repo})，文字说明见 ${link(group.article)}。`, '');
+    for (const item of group.items) {
+      const heading = calloutHeadings.get(item.file);
+      if (!heading) throw new Error(`No article section links to ${item.file}`);
+      lines.push(
+        `### ${item.title}`,
+        '',
+        `**${item.kind}** · [打开交互图 →](${base}${diagramDir}${item.file}) · 对应文章中「${heading}」一节`,
+        '',
+        item.description,
+        '',
+      );
+    }
+  }
+  return lines.join('\n');
+};
 
 const edits = {
   '00-调研索引与资料清单.md': [
@@ -116,6 +159,7 @@ const insertCallouts = (text, callouts, name) => {
     if (!diagram) throw new Error(`${name}: unknown diagram ${file}`);
     const index = lines.findIndex((line) => /^#{2,5} /.test(line) && line.replace(/^#+ /, '').startsWith(prefix));
     if (index < 0) throw new Error(`${name}: heading starting with "${prefix}" not found`);
+    calloutHeadings.set(file, lines[index].replace(/^#+ /, ''));
     const callout = `> **交互图**：[${diagram.title}](${base}${diagramDir}${file})（${diagram.kind}，点击节点可查看源码位置）`;
     lines = [...lines.slice(0, index + 1), '', callout, ...lines.slice(index + 1)];
   }
@@ -136,7 +180,7 @@ const convert = (raw, article) => {
     .replaceAll('`d:\\Work\\hy\\oh-my-pi`', `[can1357/oh-my-pi](${ompRepo})`);
   for (const edit of edits[name] ?? []) text = applyEdit(text, edit, name);
   text = text.replace(/`(0[0-5])(?:-[^`\n]+?\.md)?`/g, (_, number) => {
-    const target = articles.find((candidate) => candidate.file.startsWith(`${number}-`));
+    const target = articles.find((candidate) => candidate.file?.startsWith(`${number}-`));
     return `[${target.label}](${articleUrl(target.slug)})`;
   });
 
@@ -151,19 +195,21 @@ const convert = (raw, article) => {
     if (leftover.test(text)) throw new Error(`${name}: leftover local reference matching ${leftover}`);
   }
 
-  const nav = articles
-    .map((candidate) => (candidate.slug === article.slug ? `**${candidate.label}**` : `[${candidate.label}](${articleUrl(candidate.slug)})`))
-    .join(' · ');
-  const body = `**本系列**：${nav} · [交互式架构图](${base}diagrams/)\n\n${text.trimStart()}`;
-  return { title, body };
+  return { title, text };
 };
+
+const seriesNav = (article) => articles
+  .map((candidate) => (candidate.slug === article.slug ? `**${candidate.label}**` : `[${candidate.label}](${articleUrl(candidate.slug)})`))
+  .join(' · ');
 
 const articleDir = new URL('../src/content/articles/', import.meta.url);
 const publishedBase = Date.parse('2026-09-28T12:00:00+08:00');
 
 for (const [index, article] of articles.entries()) {
-  const raw = await readFile(join(source, article.file), 'utf8');
-  const { title, body } = convert(raw, article);
+  const { title, text } = article.generate
+    ? { title: article.title, text: article.generate() }
+    : convert(await readFile(join(source, article.file), 'utf8'), article);
+  const body = `**本系列**：${seriesNav(article)}\n\n${text.trimStart()}`;
   const publishedAt = new Date(publishedBase - index * 10 * 60 * 1000).toISOString();
   const frontmatter = [
     '---',

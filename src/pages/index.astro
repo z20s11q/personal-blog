@@ -1,142 +1,21 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { getCollection } from 'astro:content';
-import { domains, domainLabel } from '../data/domains';
+import EntryIndex from '../components/EntryIndex.astro';
+import { getEntries } from '../data/entries';
 
-const articles = (await getCollection('articles')).sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
-const rustSections = await getCollection('rust');
-const rustChapters = new Set(rustSections.map((section) => section.data.chapter).filter((chapter) => chapter !== null)).size;
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
-const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.');
-const domainCounts = new Map<string, number>(domains.map((domain) => [domain.slug, 0]));
-for (const article of articles) for (const tag of article.data.tags) domainCounts.set(tag, (domainCounts.get(tag) ?? 0) + 1);
-domainCounts.set('development', (domainCounts.get('development') ?? 0) + 1);
-domainCounts.set('finance', (domainCounts.get('finance') ?? 0) + 1);
-const activeDomains = domains.filter((domain) => (domainCounts.get(domain.slug) ?? 0) > 0);
+const entries = await getEntries(base);
 ---
 
-<BaseLayout title="z20s11q 的个人博客" description="交易研究、Rust 编程与持续学习的个人笔记。">
+<BaseLayout title="z20s11q 的个人博客" description="交易研究、编程学习与 AI Agent 架构解析的个人笔记。">
   <section class="page-head intro">
     <div class="eyebrow">z20s11q / notes</div>
     <h1>个人笔记</h1>
-    <p>整理我正在学习和研究的内容。目前有价格行为研究、Rust 学习资料和 AI Agent 架构解析，以后也会加入其他主题。</p>
+    <p>整理我正在学习和研究的内容：价格行为研究、Rust 学习笔记和 AI Agent 架构解析。左侧按领域筛选。</p>
   </section>
-
-  <div class="home-grid">
-    <aside class="sidebar" aria-label="内容分类">
-      <div class="domain-block">
-        <h2>领域</h2>
-        <nav class="domain-list" aria-label="按领域浏览">
-          <a href={base} aria-current="page"><span>全部</span><small>{articles.length + 2}</small></a>
-          {activeDomains.map((domain) => <a href={`${base}tags/${domain.slug}/`}><span>{domain.label}</span><small>{domainCounts.get(domain.slug)}</small></a>)}
-        </nav>
-      </div>
-      <div class="aside-block">
-        <h2>关于本站</h2>
-        <p>记录交易研究、编程学习，以及以后值得长期保存的主题。</p>
-      </div>
-      <div class="aside-block">
-        <h2>查找内容</h2>
-        <p><a class="inline-link" href={`${base}search/`}>站内搜索</a>可以检索文章和 Rust 笔记。</p>
-      </div>
-    </aside>
-    <div class="main-column">
-      <section class="home-section">
-        <div class="section-title"><h2>最新文章</h2><a href={`${base}articles/`}>全部文章 →</a></div>
-        {articles.slice(0, 5).map((article) => (
-          <a class="entry" href={`${base}articles/${article.id}/`}>
-            <div class="entry-meta"><span>{article.data.tags.map(domainLabel).join(' · ')}</span><span>{article.data.category}</span><time datetime={article.data.publishedAt.toISOString()}>{formatDate(article.data.publishedAt)}</time></div>
-            <h3>{article.data.title}</h3>
-            <p>{article.data.description}</p>
-            <small>约 {article.data.readingMinutes} 分钟阅读</small>
-          </a>
-        ))}
-      </section>
-
-      <section class="home-section">
-        <div class="section-title"><h2>学习笔记</h2><span>连续阅读</span></div>
-        <a class="entry" href={`${base}rust/`}>
-          <div class="entry-meta"><span>开发 · Rust</span><span>{rustChapters} 章 · {rustSections.length} 节</span></div>
-          <h3>Rust 编程语言（精简版）</h3>
-          <p>基于 The Rust Programming Language 整理的中文学习笔记，全部章节在一页连续展开，目录会跟随阅读位置。</p>
-        </a>
-      </section>
-
-      <section class="home-section">
-        <div class="section-title"><h2>交互式架构图</h2><a href={`${base}diagrams/`}>全部图表 →</a></div>
-        <a class="entry" href={`${base}diagrams/`}>
-          <div class="entry-meta"><span>AI · 开发</span><span>Codex 4 张 · oh-my-pi 3 张</span></div>
-          <h3>Codex 与 oh-my-pi 架构图</h3>
-          <p>组件总览、Agent Loop 状态机、采样与插话时序、工具编排流程。点击节点可查看固定提交上的源码位置。</p>
-        </a>
-      </section>
-
-      <section class="home-section">
-        <div class="section-title"><h2>资料</h2><span>持续核对</span></div>
-        <a class="entry" href={`${base}resources/`}>
-          <div class="entry-meta"><span>金融 · 交易研究</span><span>原始来源优先</span></div>
-          <h3>价格行为资料索引</h3>
-          <p>原始教材、中文讲解、案例复盘与市场机制资料，按可核验程度分别标注。</p>
-        </a>
-      </section>
-    </div>
-
-  </div>
+  <EntryIndex all={entries} active="all" />
 </BaseLayout>
 
 <style>
-  .intro { padding-bottom: 40px; }
-  .home-grid {
-    display: grid;
-    grid-template-columns: 190px minmax(0, 1fr);
-    gap: 52px;
-    margin: 0 var(--page-x);
-  }
-  .main-column { min-width: 0; }
-  .home-section { padding-top: 40px; }
-
-  .entry {
-    display: block;
-    padding: 24px 0 26px;
-    border-bottom: 1px solid var(--line);
-  }
-  .entry:last-child { border-bottom: 0; }
-  .entry-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 14px; }
-  .entry-meta > * + *::before { content: "·"; margin-right: 12px; color: var(--line); }
-  .entry h3 {
-    margin: 8px 0 8px;
-    font-size: 23px;
-    line-height: 1.4;
-    letter-spacing: -.025em;
-    transition: color .15s;
-  }
-  .entry:hover h3 { color: var(--accent); }
-  .entry p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.75; }
-  .entry small { display: block; margin-top: 10px; color: var(--muted); font-size: 14px; }
-
-  .sidebar { padding-top: 40px; }
-  .domain-block { margin-bottom: 32px; }
-  .sidebar h2 { margin: 0 0 11px; font-size: 15px; letter-spacing: -.01em; }
-  .domain-list { display: flex; flex-direction: column; gap: 2px; }
-  .domain-list a { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: 4px; color: var(--muted); font-size: 14px; }
-  .domain-list a:hover { color: var(--ink); background: var(--soft); }
-  .domain-list a[aria-current="page"] { color: var(--ink); background: var(--soft); font-weight: 700; }
-  .domain-list small { color: var(--muted); font-size: 12px; }
-  .aside-block { padding-top: 18px; margin-bottom: 22px; border-top: 1px solid var(--line); }
-  .aside-block p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.75; }
-  .inline-link { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-
-  @media (max-width: 860px) {
-    .home-grid { grid-template-columns: 1fr; gap: 0; }
-    .sidebar { padding-top: 24px; }
-    .domain-block { margin-bottom: 0; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
-    .domain-list { flex-direction: row; flex-wrap: wrap; gap: 6px; }
-    .domain-list a { gap: 7px; border: 1px solid var(--line); padding: 4px 9px; }
-    .aside-block { display: none; }
-  }
-  @media (max-width: 760px) {
-    .home-section { padding-top: 32px; }
-    .entry h3 { font-size: 20px; }
-    .entry p { font-size: 15px; }
-  }
+  .intro { padding-bottom: 12px; }
 </style>

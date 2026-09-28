@@ -7,7 +7,7 @@ category: "Agent 架构调研"
 tags: ["ai", "development"]
 readingMinutes: 13
 ---
-**本系列**：[00 资料索引](/personal-blog/articles/codex-omp-research-index/) · [01 Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/) · [02 oh-my-pi 自带文档总结](/personal-blog/articles/omp-bundled-docs/) · [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) · [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) · **05 两者对比与可借鉴点** · [交互式架构图](/personal-blog/diagrams/)
+**本系列**：[00 资料索引](/personal-blog/articles/codex-omp-research-index/) · [01 Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/) · [02 oh-my-pi 自带文档总结](/personal-blog/articles/omp-bundled-docs/) · [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) · [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) · **05 两者对比与可借鉴点** · [06 交互式架构图导览](/personal-blog/articles/codex-omp-diagrams/)
 
 > 依据 [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) 和 [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 的第一部分（语言无关的架构设计）。快照：Codex `44fe510c`，oh-my-pi `df731d51`。
 > 本文只比较设计语义，不比较两种语言各自的实现手段。源码位置见 03、04 的第二部分。

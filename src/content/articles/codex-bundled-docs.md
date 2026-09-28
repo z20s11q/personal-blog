@@ -7,7 +7,7 @@ category: "Agent 架构调研"
 tags: ["ai", "development"]
 readingMinutes: 29
 ---
-**本系列**：[00 资料索引](/personal-blog/articles/codex-omp-research-index/) · **01 Codex 自带文档总结** · [02 oh-my-pi 自带文档总结](/personal-blog/articles/omp-bundled-docs/) · [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) · [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) · [05 两者对比与可借鉴点](/personal-blog/articles/codex-vs-omp/) · [交互式架构图](/personal-blog/diagrams/)
+**本系列**：[00 资料索引](/personal-blog/articles/codex-omp-research-index/) · **01 Codex 自带文档总结** · [02 oh-my-pi 自带文档总结](/personal-blog/articles/omp-bundled-docs/) · [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) · [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) · [05 两者对比与可借鉴点](/personal-blog/articles/codex-vs-omp/) · [06 交互式架构图导览](/personal-blog/articles/codex-omp-diagrams/)
 
 > 源码快照：[openai/codex](https://github.com/openai/codex/tree/44fe510ce3ee61c8ef623adcbf89b901c73ddd61)，HEAD `44fe510c`（2026-09-28）。在线文档于 2026-09-28 下载。
 

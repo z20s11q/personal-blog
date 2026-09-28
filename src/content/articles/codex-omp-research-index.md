@@ -7,14 +7,14 @@ category: "Agent 架构调研"
 tags: ["ai", "development"]
 readingMinutes: 22
 ---
-**本系列**：**00 资料索引** · [01 Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/) · [02 oh-my-pi 自带文档总结](/personal-blog/articles/omp-bundled-docs/) · [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) · [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) · [05 两者对比与可借鉴点](/personal-blog/articles/codex-vs-omp/) · [交互式架构图](/personal-blog/diagrams/)
+**本系列**：**00 资料索引** · [01 Codex 自带文档总结](/personal-blog/articles/codex-bundled-docs/) · [02 oh-my-pi 自带文档总结](/personal-blog/articles/omp-bundled-docs/) · [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) · [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) · [05 两者对比与可借鉴点](/personal-blog/articles/codex-vs-omp/) · [06 交互式架构图导览](/personal-blog/articles/codex-omp-diagrams/)
 
 > 调研日期：2026-09-28。时间窗口：只收录 **2026-07-28 之后**（近两个月）发布或更新的资料；更早的只在末尾“已排除”里列一行，便于溯源。
 > 源码快照：
 > - [openai/codex](https://github.com/openai/codex/tree/44fe510ce3ee61c8ef623adcbf89b901c73ddd61)，HEAD `44fe510c`（2026-09-28 06:30 UTC）
 > - [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi/tree/df731d516c0c722f658312187ae84c6d23e216fb)，HEAD `df731d51`（2026-09-28 10:27 +0200）
 
-## 系列文章与架构图
+## 系列文章
 
 | 篇目 | 内容 |
 |---|---|
@@ -24,7 +24,7 @@ readingMinutes: 22
 | [03 Codex 架构设计](/personal-blog/articles/codex-architecture/) | 语言无关地拆解 Codex：四层 Agent Loop、并行工具与编排、审批与沙箱升级、上下文管理、编排与扩展，附源码位置映射和交互式架构图。 |
 | [04 oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) | 按同一骨架拆解 oh-my-pi：三层 Agent Loop、Agent 状态与插话队列、LLM 集成、工具调度、只追加会话树与原生层，附源码位置映射和交互式架构图。 |
 | [05 两者对比与可借鉴点](/personal-blog/articles/codex-vs-omp/) | 只比较设计语义：两套 harness 的 loop 骨架、关键问题的不同解法、各自值得借鉴的设计，以及自己实现 coding agent loop 时的取舍。 |
-| [交互式架构图](/personal-blog/diagrams/) | 用 archify 生成的 7 张可交互图（Codex 4 张、oh-my-pi 3 张），节点带固定提交上的源码引用 |
+| [06 交互式架构图导览](/personal-blog/articles/codex-omp-diagrams/) | 7 张可交互的架构图：两者的组件总览、Agent Loop 状态机、采样与插话时序、工具编排流程。点击节点可查看固定提交上的源码位置。 |
 
 ---
 

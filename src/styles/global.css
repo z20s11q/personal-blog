@@ -59,8 +59,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 
 /* Header */
 .site-header {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 32px;
   min-height: var(--header-h);
@@ -75,25 +75,6 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
   white-space: nowrap;
 }
 .wordmark-sep { color: var(--accent); padding: 0 2px; }
-.site-nav {
-  display: flex;
-  justify-content: flex-end;
-  gap: 28px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--muted);
-}
-.site-nav a { position: relative; padding: 4px 0; white-space: nowrap; }
-.site-nav a:hover { color: var(--ink); }
-.site-nav a[aria-current="page"] { color: var(--ink); }
-.site-nav a[aria-current="page"]::after {
-  content: "";
-  position: absolute;
-  left: 0; right: 0; bottom: -2px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--accent);
-}
 .header-actions { display: flex; align-items: center; gap: 4px; }
 .icon-button {
   display: inline-grid;
@@ -201,24 +182,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 
 @media (max-width: 760px) {
   :root { --page-x: 20px; --header-h: 56px; }
-  .site-header {
-    grid-template-columns: 1fr auto;
-    grid-template-areas: "brand actions" "nav nav";
-    gap: 0 12px;
-  }
-  .wordmark { grid-area: brand; font-size: 16px; }
-  .header-actions { grid-area: actions; }
-  .site-nav {
-    grid-area: nav;
-    justify-content: flex-start;
-    gap: 22px;
-    margin: 0 calc(-1 * var(--page-x));
-    padding: 0 var(--page-x) 10px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    font-size: 15px;
-  }
-  .site-nav::-webkit-scrollbar { display: none; }
+  .site-header { gap: 12px; }
+  .wordmark { font-size: 16px; }
   .site-footer { display: block; margin-top: 48px; }
   .footer-links { margin: 14px 0; }
   .page-head { padding: 40px 0 28px; }
