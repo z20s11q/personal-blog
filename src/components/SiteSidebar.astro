@@ -1,0 +1,114 @@
+---
+import { domainCounts, filterByTag, flattenEntries, getEntries, type Entry } from '../data/entries';
+
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+const path = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.url.pathname}/`;
+const all = await getEntries(base);
+const isCurrent = (entry: Entry) => entry.href !== base && path.startsWith(entry.href);
+const contains = (entry: Entry) => isCurrent(entry) || entry.children.some(isCurrent);
+const current = (entry: Entry) => (isCurrent(entry) ? 'page' : undefined);
+const groups = domainCounts(all).map((domain) => ({ ...domain, entries: filterByTag(all, domain.slug) }));
+const activeTag = path.match(/\/tags\/([^/]+)\/$/)?.[1];
+const openSlug = activeTag ?? groups.find((group) => group.entries.some(contains))?.slug;
+const home = path === base || path === `${base}articles/`;
+---
+
+<aside class="site-sidebar">
+  <details class="sidebar-toggle" open data-sidebar-toggle>
+    <summary>分类导航</summary>
+    <nav class="sidebar-scroll" aria-label="分类导航" data-sidebar-scroll>
+      <a class="side-all" href={base} aria-current={home ? 'page' : undefined}><span>全部</span><small>{flattenEntries(all).length}</small></a>
+      {groups.map((group) => (
+        <details class="side-group" open={group.slug === openSlug}>
+          <summary><span>{group.label}</span><small>{group.count}</small></summary>
+          <ul>
+            {group.entries.map((entry) => entry.children.length > 0 ? (
+              <li>
+                <details class="side-collection" open={contains(entry)}>
+                  <summary><a href={entry.href} aria-current={current(entry)}>{entry.title}</a></summary>
+                  <ul>{entry.children.map((child) => <li><a href={child.href} aria-current={current(child)}>{child.title}</a></li>)}</ul>
+                </details>
+              </li>
+            ) : (
+              <li><a class="side-leaf" href={entry.href} aria-current={current(entry)}>{entry.title}</a></li>
+            ))}
+          </ul>
+        </details>
+      ))}
+      <a class="side-search" href={`${base}search/`}>站内搜索 →</a>
+    </nav>
+  </details>
+</aside>
+
+<script>
+  const mobile = matchMedia('(max-width: 900px)');
+  const toggle = document.querySelector<HTMLDetailsElement>('[data-sidebar-toggle]');
+  const scroller = document.querySelector<HTMLElement>('[data-sidebar-scroll]');
+  if (toggle && scroller) {
+    toggle.open = !mobile.matches;
+    mobile.addEventListener('change', (event) => { toggle.open = !event.matches; });
+    toggle.querySelector('summary')!.addEventListener('click', (event) => { if (!mobile.matches) event.preventDefault(); });
+    const active = scroller.querySelector<HTMLElement>('a[aria-current="page"]:not(.side-all)');
+    if (active && !mobile.matches) scroller.scrollTop = Math.max(0, active.offsetTop - scroller.clientHeight / 3);
+  }
+</script>
+
+<style>
+  .site-sidebar { position: sticky; top: 0; align-self: start; min-width: 0; padding: 28px 0 0 var(--page-x); }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  .sidebar-toggle > summary { display: none; }
+  .sidebar-scroll {
+    position: relative;
+    max-height: calc(100vh - 56px);
+    padding: 0 10px 24px 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  ul { margin: 0; padding: 0; list-style: none; }
+  a { color: var(--muted); }
+  a:hover { color: var(--ink); }
+  a[aria-current="page"] { color: var(--accent); font-weight: 700; }
+
+  .side-all, .side-group > summary { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 4px; color: var(--ink); font-size: 14.5px; font-weight: 600; }
+  .side-all:hover, .side-group > summary:hover { background: var(--soft); }
+  .side-all[aria-current="page"] { background: var(--soft); color: var(--ink); }
+  .side-all span, .side-group > summary span { flex: 1; }
+  small { color: var(--muted); font-size: 12px; font-weight: 400; }
+
+  .side-group > summary::before, .side-collection > summary::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid var(--muted);
+    border-bottom: 1.5px solid var(--muted);
+    transform: rotate(-45deg);
+    transition: transform .15s;
+  }
+  .side-group[open] > summary::before, .side-collection[open] > summary::before { transform: rotate(45deg); }
+  .side-all::before { content: ""; width: 6px; }
+
+  .side-group > ul { margin: 2px 0 8px 13px; padding-left: 10px; border-left: 1px solid var(--line); }
+  .side-group > ul > li > a, .side-collection > summary { display: flex; align-items: baseline; gap: 8px; padding: 5px 4px; }
+  .side-leaf { padding-left: 18px !important; }
+  .side-collection > summary::before { transform: rotate(-45deg) translate(-1px, -1px); }
+  .side-collection[open] > summary::before { transform: rotate(45deg) translate(-1px, -1px); }
+  .side-collection > summary a { flex: 1; color: var(--text); }
+  .side-collection > summary a[aria-current="page"] { color: var(--accent); }
+  .side-collection > ul { margin: 0 0 4px 17px; padding-left: 10px; border-left: 1px solid var(--line); }
+  .side-collection > ul a { display: block; padding: 4px 4px; font-size: 13.5px; }
+
+  .side-search { display: block; margin: 16px 10px 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--accent); font-size: 13px; }
+
+  @media (max-width: 900px) {
+    .site-sidebar { position: static; padding: 0 var(--page-x); border-bottom: 1px solid var(--line); }
+    .sidebar-toggle > summary { display: flex; align-items: center; justify-content: space-between; min-height: 48px; color: var(--ink); font-size: 15px; font-weight: 700; }
+    .sidebar-toggle > summary::after { content: ""; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-2px) rotate(45deg); transition: transform .15s; }
+    .sidebar-toggle[open] > summary::after { transform: translateY(2px) rotate(-135deg); }
+    .sidebar-scroll { max-height: 60vh; }
+  }
+</style>

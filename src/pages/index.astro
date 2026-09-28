@@ -11,9 +11,9 @@ const entries = await getEntries(base);
   <section class="page-head intro">
     <div class="eyebrow">z20s11q / notes</div>
     <h1>个人笔记</h1>
-    <p>整理我正在学习和研究的内容：价格行为研究、Rust 学习笔记和 AI Agent 架构解析。左侧按领域筛选。</p>
+    <p>整理我正在学习和研究的内容：价格行为研究、Rust 学习笔记和 AI Agent 架构解析。左侧按领域展开浏览。</p>
   </section>
-  <EntryIndex all={entries} active="all" />
+  <EntryIndex entries={entries} />
 </BaseLayout>
 
 <style>

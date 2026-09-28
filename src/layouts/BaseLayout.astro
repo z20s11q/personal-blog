@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import '../styles/prose.css';
+import SiteSidebar from '../components/SiteSidebar.astro';
 
 interface Props {
   title: string;
@@ -53,19 +54,24 @@ const searchUrl = `${base}search/`;
           </button>
         </div>
       </header>
-      <main><slot /></main>
-      <footer class="site-footer">
-        <div>
-          <strong>z20s11q / notes</strong>
-          <p>记录交易研究、编程学习、AI Agent 架构与以后值得整理的主题。</p>
+      <div class="site-body">
+        <SiteSidebar />
+        <div class="site-main">
+          <main><slot /></main>
+          <footer class="site-footer">
+            <div>
+              <strong>z20s11q / notes</strong>
+              <p>记录交易研究、编程学习、AI Agent 架构与以后值得整理的主题。</p>
+            </div>
+            <div class="footer-links">
+              <a href={base}>首页</a>
+              <a href={searchUrl}>搜索</a>
+              <a href="https://github.com/z20s11q/personal-blog" target="_blank" rel="noopener noreferrer">网站源码 ↗</a>
+            </div>
+            <small>交易相关内容仅供学习研究，不构成投资建议。</small>
+          </footer>
         </div>
-        <div class="footer-links">
-          <a href={base}>首页</a>
-          <a href={searchUrl}>搜索</a>
-          <a href="https://github.com/z20s11q/personal-blog" target="_blank" rel="noopener noreferrer">网站源码 ↗</a>
-        </div>
-        <small>交易相关内容仅供学习研究，不构成投资建议。</small>
-      </footer>
+      </div>
     </div>
   </body>
 </html>

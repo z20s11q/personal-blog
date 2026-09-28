@@ -55,7 +55,12 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
   border-radius: 3px;
 }
 
-.site-shell { max-width: 1160px; margin: 0 auto; }
+.site-shell { max-width: 1440px; margin: 0 auto; }
+.site-body { display: grid; grid-template-columns: 260px minmax(0, 1fr); }
+.site-main { min-width: 0; }
+@media (max-width: 900px) {
+  .site-body { display: block; }
+}
 
 /* Header */
 .site-header {

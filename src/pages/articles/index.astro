@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import EntryIndex from '../../components/EntryIndex.astro';
-import { getEntries } from '../../data/entries';
+import { flattenEntries, getEntries } from '../../data/entries';
 
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 const entries = await getEntries(base);
@@ -12,9 +12,9 @@ const canonical = new URL(base, Astro.site).href;
   <header class="page-head intro">
     <div class="eyebrow">Archive</div>
     <h1>全部文章</h1>
-    <p>按发布时间排列，共 {entries.length} 篇。左侧按领域筛选。</p>
+    <p>按发布时间排列，共 {flattenEntries(entries).length} 篇。左侧按领域展开浏览。</p>
   </header>
-  <EntryIndex all={entries} active="all" />
+  <EntryIndex entries={entries} />
 </BaseLayout>
 
 <style>

@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import EntryIndex from '../../components/EntryIndex.astro';
-import { domainCounts, getEntries } from '../../data/entries';
+import { domainCounts, filterByTag, getEntries } from '../../data/entries';
 
 export async function getStaticPaths() {
   const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
@@ -20,7 +20,7 @@ const canonical = new URL(`${base}tags/${domain.slug}/`, Astro.site).href;
     <h1>{domain.label}</h1>
     <p>{domain.description}共 {domain.count} 篇。</p>
   </header>
-  <EntryIndex all={entries} active={domain.slug} />
+  <EntryIndex entries={filterByTag(entries, domain.slug)} />
 </BaseLayout>
 
 <style>
