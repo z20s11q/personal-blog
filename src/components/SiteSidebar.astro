@@ -25,7 +25,10 @@ const current = (entry: Entry) => (isCurrent(entry) ? 'page' : undefined);
           {list.map((entry) => entry.children.length > 0 ? (
             <li>
               <details class="side-collection" open>
-                <summary><a href={entry.href} aria-current={current(entry)}>{entry.title}</a></summary>
+                <summary>
+                  <a href={entry.href} aria-current={current(entry)}>{entry.title}</a>
+                  <button type="button" class="side-caret" data-caret aria-expanded="true" aria-label="收起列表"></button>
+                </summary>
                 <ul>{entry.children.map((child) => <li><a href={child.href} aria-current={current(child)}>{child.title}</a></li>)}</ul>
               </details>
             </li>
@@ -48,17 +51,37 @@ const current = (entry: Entry) => (isCurrent(entry) ? 'page' : undefined);
     toggle.querySelector('summary')!.addEventListener('click', (event) => { if (!mobile.matches) event.preventDefault(); });
     const active = scroller.querySelector<HTMLElement>('a[aria-current="page"]');
     if (active && !mobile.matches) scroller.scrollTop = Math.max(0, active.offsetTop - scroller.clientHeight / 3);
+    for (const link of scroller.querySelectorAll<HTMLAnchorElement>('.side-collection > summary > a')) {
+      link.addEventListener('click', (event) => event.stopPropagation());
+    }
+    for (const button of scroller.querySelectorAll<HTMLButtonElement>('[data-caret]')) {
+      const details = button.closest('details');
+      if (!details) continue;
+      const sync = () => {
+        button.setAttribute('aria-expanded', String(details.open));
+        button.setAttribute('aria-label', details.open ? '收起列表' : '展开列表');
+      };
+      sync();
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        details.open = !details.open;
+        sync();
+      });
+    }
   }
 </script>
 
 <style>
-  .site-sidebar { position: sticky; top: var(--header-h); align-self: start; max-height: calc(100vh - var(--header-h)); min-width: 0; padding: 16px 0 12px; background: var(--sidebar); border-right: 1px solid var(--divider); }
+  .site-sidebar { position: sticky; top: var(--header-h); align-self: start; display: flex; flex-direction: column; height: calc(100vh - var(--header-h)); min-width: 0; padding: 12px 0; background: var(--sidebar); border-right: 1px solid var(--divider); }
   details > summary { list-style: none; cursor: pointer; }
   details > summary::-webkit-details-marker { display: none; }
+  .sidebar-toggle { display: flex; flex: 1; flex-direction: column; min-height: 0; }
   .sidebar-toggle > summary { display: none; }
   .sidebar-scroll {
-    max-height: min(560px, calc(100vh - var(--header-h) - 40px));
-    padding: 4px 16px 8px 18px;
+    flex: 1;
+    min-height: 0;
+    padding: 8px 14px 16px 22px;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -77,16 +100,22 @@ const current = (entry: Entry) => (isCurrent(entry) ? 'page' : undefined);
   .side-list > li + li { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--divider); }
   .side-leaf { display: block; padding: 4px 0; font-size: 14px; line-height: 1.6; }
 
-  .side-collection > summary { display: block; padding: 0 0 4px; }
-  .side-collection > summary a { color: var(--ink); font-size: 14px; font-weight: 700; line-height: 1.5; }
+  .side-collection > summary { display: flex; align-items: center; gap: 8px; padding: 0 0 4px; }
+  .side-collection > summary a { flex: 1; min-width: 0; color: var(--ink); font-size: 14px; font-weight: 700; line-height: 1.5; }
+  .side-caret { flex: none; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; }
+  .side-caret:hover { color: var(--ink); background: var(--soft); }
+  .side-caret::before { content: ""; display: block; width: 6px; height: 6px; margin: -2px auto 0; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform .15s; }
+  .side-collection[open] > summary .side-caret::before { margin-top: 2px; transform: rotate(45deg); }
   .side-collection > summary a[aria-current="page"] { color: var(--accent); font-weight: 700; }
   .side-collection > ul { margin: 0; padding: 0; border: 0; }
+  .side-collection:not([open]) > ul { display: none; }
   .side-collection > ul a { display: block; padding: 4px 0; font-size: 14px; font-weight: 400; line-height: 1.6; }
   .side-collection > ul a[aria-current="page"],
   .side-leaf[aria-current="page"] { color: var(--accent); font-weight: 600; }
 
   @media (max-width: 900px) {
-    .site-sidebar { position: static; max-height: none; padding: 0 var(--page-x); border-right: 0; border-bottom: 1px solid var(--divider); }
+    .site-sidebar { position: static; display: block; height: auto; padding: 0 var(--page-x); border-right: 0; border-bottom: 1px solid var(--divider); }
+    .sidebar-toggle { display: block; }
     .sidebar-toggle > summary { display: flex; align-items: center; justify-content: space-between; min-height: 48px; color: var(--ink); font-size: 15px; font-weight: 700; }
     .sidebar-toggle > summary::after { content: ""; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-2px) rotate(45deg); transition: transform .15s; }
     .sidebar-toggle[open] > summary::after { transform: translateY(2px) rotate(-135deg); }
