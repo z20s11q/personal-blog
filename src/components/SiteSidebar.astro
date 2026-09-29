@@ -67,28 +67,23 @@ const current = (entry: Entry) => (isCurrent(entry) ? 'page' : undefined);
   }
   ul { margin: 0; padding: 0; list-style: none; }
   a { color: var(--muted); }
-  a:hover { color: var(--ink); }
-  a[aria-current="page"] { color: var(--accent); font-weight: 700; }
+  a:hover { color: var(--accent); }
+  a:focus,
+  summary:focus,
+  a:focus-visible,
+  summary:focus-visible { outline: none; box-shadow: none; }
+  a[aria-current="page"] { color: var(--accent); font-weight: 500; background: none; }
 
-  .side-list > li > a,
-  .side-collection > summary { display: flex; align-items: baseline; gap: 8px; padding: 6px 4px; }
-  .side-leaf { padding-left: 16px !important; }
+  .side-list > li + li { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--divider); }
+  .side-leaf { display: block; padding: 4px 0; font-size: 14px; line-height: 1.6; }
 
-  .side-collection > summary::before {
-    content: "";
-    flex: none;
-    width: 6px;
-    height: 6px;
-    border-right: 1.5px solid var(--muted);
-    border-bottom: 1.5px solid var(--muted);
-    transform: rotate(-45deg) translate(-1px, -1px);
-    transition: transform .15s;
-  }
-  .side-collection[open] > summary::before { transform: rotate(45deg) translate(-1px, -1px); }
-  .side-collection > summary a { flex: 1; color: var(--text); }
-  .side-collection > summary a[aria-current="page"] { color: var(--accent); }
-  .side-collection > ul { margin: 0 0 6px 17px; padding-left: 10px; border-left: 1px solid var(--line); }
-  .side-collection > ul a { display: block; padding: 4px 4px; font-size: 13.5px; }
+  .side-collection > summary { display: block; padding: 0 0 4px; }
+  .side-collection > summary a { color: var(--ink); font-size: 14px; font-weight: 700; line-height: 1.5; }
+  .side-collection > summary a[aria-current="page"] { color: var(--accent); font-weight: 700; }
+  .side-collection > ul { margin: 0; padding: 0; border: 0; }
+  .side-collection > ul a { display: block; padding: 4px 0; font-size: 14px; font-weight: 400; line-height: 1.6; }
+  .side-collection > ul a[aria-current="page"],
+  .side-leaf[aria-current="page"] { color: var(--accent); font-weight: 600; }
 
   @media (max-width: 900px) {
     .site-sidebar { position: static; max-height: none; padding: 0 var(--page-x); border-right: 0; border-bottom: 1px solid var(--divider); }
