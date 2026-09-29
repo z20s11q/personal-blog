@@ -13,7 +13,6 @@ const path = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.ur
 const list = domain ? filterByTag(entries, domain) : [];
 const label = domain ? domainLabel(domain) : '';
 const isCurrent = (entry: Entry) => entry.href !== base && path.startsWith(entry.href);
-const contains = (entry: Entry) => isCurrent(entry) || entry.children.some(isCurrent);
 const current = (entry: Entry) => (isCurrent(entry) ? 'page' : undefined);
 ---
 
@@ -25,7 +24,7 @@ const current = (entry: Entry) => (isCurrent(entry) ? 'page' : undefined);
         <ul class="side-list">
           {list.map((entry) => entry.children.length > 0 ? (
             <li>
-              <details class="side-collection" open={contains(entry)}>
+              <details class="side-collection" open>
                 <summary><a href={entry.href} aria-current={current(entry)}>{entry.title}</a></summary>
                 <ul>{entry.children.map((child) => <li><a href={child.href} aria-current={current(child)}>{child.title}</a></li>)}</ul>
               </details>
