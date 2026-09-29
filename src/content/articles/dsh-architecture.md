@@ -4,7 +4,7 @@ description: "语言无关地拆解 DeepSeek Harness：组合内核、以日志�
 publishedAt: 2026-09-29T03:55:00.000Z
 reviewedAt: 2026-09-29
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 70
 parent: "dsh-architecture-analysis"
 order: 1

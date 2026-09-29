@@ -4,7 +4,7 @@ description: "只比较设计语义：两套 harness 的 loop 骨架、关键问
 publishedAt: 2026-09-28T03:55:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 13
 parent: "codex-omp-guide"
 order: 1

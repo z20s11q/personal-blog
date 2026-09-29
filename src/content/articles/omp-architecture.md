@@ -4,7 +4,7 @@ description: "按同一骨架拆解 oh-my-pi：三层 Agent Loop、Agent 状态�
 publishedAt: 2026-09-28T03:30:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 39
 ---
 > 源码快照：[can1357/oh-my-pi](https://github.com/can1357/oh-my-pi/tree/df731d516c0c722f658312187ae84c6d23e216fb)，HEAD `df731d51`（2026-09-28）。路径相对仓库根目录，行号以该快照为准。

@@ -4,7 +4,7 @@ description: "近两个月网上关于 Codex 与 oh-my-pi 的解析文章、改�
 publishedAt: 2026-09-28T03:50:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 20
 parent: "codex-omp-guide"
 order: 2

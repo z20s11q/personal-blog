@@ -4,7 +4,7 @@ description: "把 DeepSeek Harness 仓库自带的官方文档按主题合并成
 publishedAt: 2026-09-29T03:45:00.000Z
 reviewedAt: 2026-09-29
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 52
 parent: "dsh-architecture-analysis"
 order: 3

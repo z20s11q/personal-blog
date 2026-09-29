@@ -4,7 +4,7 @@ description: "DeepSeek Harness 的 5 张可交互架构图：组件总览、组�
 publishedAt: 2026-09-29T03:50:00.000Z
 reviewedAt: 2026-09-29
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 3
 parent: "dsh-architecture-analysis"
 order: 2

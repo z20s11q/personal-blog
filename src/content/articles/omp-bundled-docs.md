@@ -4,7 +4,7 @@ description: "oh-my-pi 自带 134 篇专题文档的主题化提炼：恢复与�
 publishedAt: 2026-09-28T03:25:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 32
 parent: "omp-architecture"
 order: 1

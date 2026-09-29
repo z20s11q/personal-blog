@@ -4,7 +4,7 @@ description: "DeepSeek Harness（0.2.0-rc.1）架构系列的阅读顺序：先�
 publishedAt: 2026-09-29T04:00:00.000Z
 reviewedAt: 2026-09-29
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 5
 ---
 > 这组文章基于 deepseek-ai/deepseek-harness 的源码快照 `4878cdab`（tag `dsh-v0.2.0-rc.1`，2026-09-28）。网上已有的 dsh 源码解析几乎都基于 8 月中下旬的 0.1.0 ～ 0.1.3 版本，0.1.6 之后的变化还没有人系统分析过，本系列补的就是这一块。本篇说明先读什么、后读什么。

@@ -4,7 +4,7 @@ description: "三套 harness 在 loop 骨架、输入与插话、工具调度、
 publishedAt: 2026-09-29T03:40:00.000Z
 reviewedAt: 2026-09-29
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 14
 parent: "dsh-architecture-analysis"
 order: 4

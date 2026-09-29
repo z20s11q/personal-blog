@@ -4,7 +4,7 @@ description: "把 Codex 仓库的 crate README 与官方在线文档按主题合
 publishedAt: 2026-09-28T03:40:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 29
 parent: "codex-architecture"
 order: 1

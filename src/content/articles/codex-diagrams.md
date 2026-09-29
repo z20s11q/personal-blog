@@ -4,7 +4,7 @@ description: "Codex 的 4 张可交互架构图：组件总览、Turn 循环状�
 publishedAt: 2026-09-28T03:35:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 2
 parent: "codex-architecture"
 order: 2

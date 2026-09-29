@@ -4,7 +4,7 @@ description: "语言无关地拆解 Codex：四层 Agent Loop、并行工具与�
 publishedAt: 2026-09-28T03:45:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 38
 ---
 > 源码快照：[openai/codex](https://github.com/openai/codex/tree/44fe510ce3ee61c8ef623adcbf89b901c73ddd61)，HEAD `44fe510c`（2026-09-28）。路径相对 `codex-rs/`，行号以该快照为准。

@@ -4,7 +4,7 @@ description: "近两个月网上关于 DeepSeek Harness 的架构解析文章、
 publishedAt: 2026-09-29T03:35:00.000Z
 reviewedAt: 2026-09-29
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 12
 parent: "dsh-architecture-analysis"
 order: 5

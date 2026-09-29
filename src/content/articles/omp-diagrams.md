@@ -4,7 +4,7 @@ description: "oh-my-pi 的 3 张可交互架构图：组件总览、主循环状
 publishedAt: 2026-09-28T03:20:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 1
 parent: "omp-architecture"
 order: 2

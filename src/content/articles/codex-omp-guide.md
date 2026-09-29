@@ -4,7 +4,7 @@ description: "两个开源 coding agent 的学习顺序：先用 Codex 建立 lo
 publishedAt: 2026-09-28T04:00:00.000Z
 reviewedAt: 2026-09-28
 category: "Agent 架构调研"
-tags: ["ai", "development"]
+tags: ["ai"]
 readingMinutes: 5
 ---
 > 这组文章基于两个开源 coding agent 的源码快照：openai/codex `44fe510c`、can1357/oh-my-pi `df731d51`（均为 2026-09-28）。本篇说明先读什么、后读什么，以及每一步在前一步的基础上多学到什么。
