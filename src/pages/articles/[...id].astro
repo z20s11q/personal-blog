@@ -96,10 +96,9 @@ const related = [...sameSeries, ...sameTags].slice(0, 4);
   .article-tags a:hover { color: var(--accent); border-color: var(--accent); }
   .doc-layout {
     display: grid;
-    grid-template-columns: minmax(0, 752px) 220px;
-    justify-content: center;
-    column-gap: 48px;
-    padding: 8px 32px 48px;
+    grid-template-columns: minmax(0, 1fr) var(--toc-w);
+    column-gap: var(--col-gap);
+    padding: 8px 0 48px;
   }
   .doc-layout > :global(.reading-toc) { grid-column: 2; grid-row: 1; }
   .doc-content { grid-column: 1; grid-row: 1; min-width: 0; }
@@ -122,7 +121,7 @@ const related = [...sameSeries, ...sameTags].slice(0, 4);
   .related-card p { display: -webkit-box; margin: 0; overflow: hidden; color: var(--muted); font-size: 14.5px; line-height: 1.7; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 
   @media (max-width: 1180px) {
-    .doc-layout { grid-template-columns: 1fr; padding: 0 var(--page-x) 32px; }
+    .doc-layout { grid-template-columns: 1fr; padding: 0 0 32px; }
     .doc-layout > :global(.reading-toc),
     .doc-content { grid-column: auto; grid-row: auto; }
   }
