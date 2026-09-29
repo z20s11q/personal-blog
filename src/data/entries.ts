@@ -73,6 +73,17 @@ export async function getEntries(base: string): Promise<Entry[]> {
 
 export const flattenEntries = (entries: Entry[]) => entries.flatMap((entry) => [entry, ...entry.children]);
 
+/** Domain of the page being read: a tag route, or the longest matching entry. */
+export function currentDomainSlug(path: string, entries: Entry[], base: string) {
+  const normalized = path.endsWith('/') ? path : `${path}/`;
+  const fromRoute = normalized.match(/\/tags\/([^/]+)\/$/)?.[1];
+  if (fromRoute && domains.some((domain) => domain.slug === fromRoute)) return fromRoute;
+  const match = flattenEntries(entries)
+    .filter((entry) => entry.href !== base && normalized.startsWith(entry.href))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  return match?.tags.find((tag) => domains.some((domain) => domain.slug === tag));
+}
+
 /** Keeps a collection when its parent or any child has the tag, showing only the children that have it. */
 export const filterByTag = (entries: Entry[], tag: string) => entries
   .map((entry) => ({ ...entry, children: entry.children.filter((child) => child.tags.includes(tag)) }))

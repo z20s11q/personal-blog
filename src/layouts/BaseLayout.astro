@@ -2,6 +2,8 @@
 import '../styles/global.css';
 import '../styles/prose.css';
 import SiteSidebar from '../components/SiteSidebar.astro';
+import { domains } from '../data/domains';
+import { currentDomainSlug, getEntries } from '../data/entries';
 
 interface Props {
   title: string;
@@ -14,6 +16,10 @@ const siteName = 'z20s11q 的个人博客';
 const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 const searchUrl = `${base}search/`;
+const path = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.url.pathname}/`;
+const entries = await getEntries(base);
+const domain = currentDomainSlug(path, entries, base);
+const home = path === base || path === `${base}articles/`;
 ---
 
 <!doctype html>
@@ -53,6 +59,7 @@ const searchUrl = `${base}search/`;
     <div class="site-shell">
       <header class="site-header">
         <div class="header-start">
+          <a class="nav-link" href={base} aria-current={home ? 'page' : undefined}>首页</a>
           <a class="wordmark" href={base} aria-label="个人博客首页">z20s11q<span class="wordmark-sep"> / </span>notes</a>
           <a class="search-pill" href={searchUrl} aria-label="搜索">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
@@ -61,6 +68,9 @@ const searchUrl = `${base}search/`;
           </a>
         </div>
         <div class="header-actions">
+          <nav class="domain-nav" aria-label="领域">
+            {domains.map((item) => <a class:list={[{ 'is-current': domain === item.slug }]} href={`${base}tags/${item.slug}/`} aria-current={path === `${base}tags/${item.slug}/` ? 'page' : undefined}>{item.label}</a>)}
+          </nav>
           <div class="text-size" role="group" aria-label="正文字号，每次调整 1 像素">
             <button type="button" data-text-delta="-1" aria-label="减小正文字号">−</button>
             <span data-text-size-value>16</span>
@@ -73,7 +83,7 @@ const searchUrl = `${base}search/`;
         </div>
       </header>
       <div class="site-body">
-        <SiteSidebar />
+        <SiteSidebar entries={entries} domain={domain} />
         <div class="site-main">
           <main><slot /></main>
           <footer class="site-footer">
