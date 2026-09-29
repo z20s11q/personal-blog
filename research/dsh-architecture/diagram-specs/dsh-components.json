@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "DeepSeek Harness 组件总览：入口 → 注册表 → AgentLoop → 驱动器",
+    "output": ".archify/architecture-dsh-components-20260929-1100/dsh-components.html",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/deepseek-ai/deepseek-harness.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "4878cdabd87d4041bdaff61d04c966883b9fd07a"
+    }
+  },
+  "components": [
+    {
+      "id": "entry", "type": "frontend", "label": "接入面", "sublabel": "Web · 桌面 · SDK · ACP · headless", "pos": [40, 260], "size": [160, 64],
+      "sources": [
+        { "path": "apps/cli/src/bin.ts", "line": 18, "end_line": 64, "label": "命令行入口与模式分派" },
+        { "path": "packages/sdk/server/src/server.ts", "line": 281, "label": "SDK 服务器创建 agent" },
+        { "path": "packages/acp/acp/src/session.ts", "line": 128, "label": "ACP 会话创建 agent" }
+      ]
+    },
+    {
+      "id": "kernel", "type": "security", "label": "组合内核", "sublabel": "profile · bundle · patch · HMR", "pos": [40, 420], "size": [160, 64],
+      "sources": [
+        { "path": "packages/boot/app-boot/src/index.ts", "line": 972, "end_line": 1038, "label": "boot：Context → Loader → 根 include" },
+        { "path": "vendor/include/src/index.ts", "line": 57, "end_line": 127, "label": "补丁叠加" },
+        { "path": "vendor/cordis/src/fiber.ts", "line": 184, "end_line": 440, "label": "插件生命周期与 effect" }
+      ]
+    },
+    {
+      "id": "controller", "type": "backend", "label": "会话控制器", "sublabel": "提示 · 取消 · 队列编辑", "pos": [300, 260], "size": [160, 64],
+      "sources": [
+        { "path": "packages/api/session-controller/src/commands.ts", "line": 311, "end_line": 376, "label": "prompt：followup 或 steer" },
+        { "path": "packages/api/session-controller/src/commands.ts", "line": 511, "end_line": 525, "label": "cancel（保留收件箱）" }
+      ]
+    },
+    {
+      "id": "preset", "type": "backend", "label": "预设注册表", "sublabel": "每会话工具与人设 · 按代次", "pos": [560, 100], "size": [160, 64],
+      "sources": [
+        { "path": "packages/preset/agent-preset-registry/src/index.ts", "line": 64, "end_line": 334, "label": "代次引用计数" }
+      ]
+    },
+    {
+      "id": "registry", "type": "backend", "label": "Agent 注册表", "sublabel": "create / resume · 发起者作用域", "pos": [560, 260], "size": [160, 64],
+      "sources": [
+        { "path": "packages/core/agent/src/index.ts", "line": 245, "end_line": 687, "label": "AgentRegistry" },
+        { "path": "packages/core/agent/src/runtime-types.ts", "line": 163, "end_line": 395, "label": "agent 契约与事件" }
+      ]
+    },
+    {
+      "id": "subagent", "type": "backend", "label": "子 agent", "sublabel": "spawn · fork · 进程外提供者", "pos": [560, 420], "size": [160, 64],
+      "sources": [
+        { "path": "packages/subagent/subagent/src/index.ts", "line": 559, "label": "start" },
+        { "path": "packages/subagent/subagent-in-process-driver/src/index.ts", "line": 134, "label": "进程内子 agent 走同一个创建接口" },
+        { "path": "packages/subagent/subagent/src/child-agent.ts", "line": 249, "label": "审批固定为 never" }
+      ]
+    },
+    {
+      "id": "loopsvc", "type": "backend", "label": "AgentLoop 服务", "sublabel": "创建 · 恢复 · 崩溃修复 · 拆除", "pos": [820, 260], "size": [160, 64],
+      "sources": [
+        { "path": "packages/core/agent-loop/src/index.ts", "line": 330, "end_line": 404, "label": "服务构造与投影注册" },
+        { "path": "packages/core/agent-loop/src/index.ts", "line": 816, "end_line": 890, "label": "恢复" }
+      ]
+    },
+    {
+      "id": "plugins", "type": "backend", "label": "扩展点插件", "sublabel": "重试 · 压缩 · 检查点 · hooks", "pos": [820, 420], "size": [160, 64],
+      "sources": [
+        { "path": "packages/llm/llm-retry/src/index.ts", "line": 194, "end_line": 252, "label": "请求出错 → 重试" },
+        { "path": "packages/compaction/compaction-basic/src/index.ts", "line": 158, "end_line": 234, "label": "step 前压力压缩 / 溢出恢复" },
+        { "path": "packages/session/session-checkpoint-policy/src/index.ts", "line": 63, "end_line": 83, "label": "检查点落盘" }
+      ]
+    },
+    {
+      "id": "driver", "type": "backend", "label": "单 agent 驱动器", "sublabel": "收件箱 → turn → step → 尝试", "pos": [1080, 260], "size": [160, 64],
+      "sources": [
+        { "path": "packages/core/agent-loop/src/agent.ts", "line": 296, "end_line": 396, "label": "turn 循环" },
+        { "path": "packages/core/agent-loop/src/agent.ts", "line": 398, "end_line": 544, "label": "step 尝试循环" },
+        { "path": "packages/core/agent-loop/src/inbox.ts", "line": 27, "end_line": 65, "label": "收件箱投影" }
+      ]
+    },
+    {
+      "id": "session", "type": "database", "label": "会话日志", "sublabel": "只追加 · surface · 投影", "pos": [1080, 100], "size": [160, 64],
+      "sources": [
+        { "path": "packages/core/session/src/index.ts", "line": 722, "end_line": 773, "label": "同步追加" },
+        { "path": "packages/core/session/src/index.ts", "line": 860, "end_line": 881, "label": "推导模型消息" },
+        { "path": "packages/core/agent-loop/src/invariant.ts", "line": 19, "end_line": 57, "label": "请求 == 日志推导" }
+      ]
+    },
+    {
+      "id": "persistence", "type": "database", "label": "持久化后端", "sublabel": "JSONL · 异步落盘", "pos": [820, 100], "size": [160, 64],
+      "sources": [
+        { "path": "packages/session/session-persistence-jsonl/src/storage.ts", "line": 534, "end_line": 554, "label": "入队与 flush" }
+      ]
+    },
+    {
+      "id": "tools", "type": "backend", "label": "工具注册表", "sublabel": "固定管线 · 按作用域可见", "pos": [1080, 420], "size": [160, 64],
+      "sources": [
+        { "path": "packages/core/agent-loop/src/tool-calls.ts", "line": 60, "end_line": 290, "label": "批次调度" },
+        { "path": "packages/core/tools/src/index.ts", "line": 1493, "end_line": 1714, "label": "执行管线" }
+      ]
+    },
+    {
+      "id": "ext", "type": "external", "label": "skills · MCP", "sublabel": "显式配置的扩展行", "pos": [1080, 580], "size": [160, 64],
+      "sources": [
+        { "path": "packages/skill/skill-filesystem/src/index.ts", "line": 250, "end_line": 262, "label": "skill 根目录与优先级" },
+        { "path": "packages/mcp/mcp-client/src/tools.ts", "line": 113, "end_line": 162, "label": "MCP 工具整代同步" }
+      ]
+    },
+    {
+      "id": "sandbox", "type": "security", "label": "沙箱与审批", "sublabel": "只管文件写 · 只审批提权", "pos": [1340, 420], "size": [160, 64],
+      "sources": [
+        { "path": "packages/sandbox/sandbox-local/src/index.ts", "line": 160, "end_line": 242, "label": "平台后端候选链" },
+        { "path": "packages/sandbox/sandbox/src/escalation.ts", "line": 171, "end_line": 208, "label": "提权审批" },
+        { "path": "packages/interaction/user-approval/src/index.ts", "line": 215, "end_line": 307, "label": "审批服务" }
+      ]
+    },
+    {
+      "id": "llm", "type": "cloud", "label": "LLM 运行时", "sublabel": "统一流协议 · 失败转结束块", "pos": [1340, 260], "size": [160, 64],
+      "sources": [
+        { "path": "packages/llm/llm/src/index.ts", "line": 936, "end_line": 983, "label": "准备调用：绑定适配器代次" },
+        { "path": "packages/llm/llm/src/index.ts", "line": 1033, "end_line": 1122, "label": "适配器异常转结束块" },
+        { "path": "packages/llm/llm-deepseek/src/adapter.ts", "line": 51, "end_line": 159, "label": "DeepSeek 适配器" }
+      ]
+    },
+    {
+      "id": "deepseek", "type": "external", "label": "DeepSeek API", "sublabel": "Anthropic Messages 兼容", "pos": [1340, 100], "size": [160, 64],
+      "sources": [
+        { "path": "packages/llm/deepseek-llm-api-extensions/src/index.ts", "line": 66, "end_line": 129, "label": "请求体扩展字段" },
+        { "path": "packages/session/session-log-deepseek/src/index.ts", "line": 40, "end_line": 54, "label": "会话日志上传（默认开启）" }
+      ]
+    }
+  ],
+  "connections": [
+    { "id": "c-entry-controller", "from": "entry", "to": "controller", "label": "RPC", "variant": "emphasis" },
+    { "id": "c-controller-registry", "from": "controller", "to": "registry", "label": "取得 agent", "variant": "emphasis" },
+    { "id": "c-registry-loopsvc", "from": "registry", "to": "loopsvc", "label": "委托工厂", "variant": "emphasis" },
+    { "id": "c-loopsvc-driver", "from": "loopsvc", "to": "driver", "label": "构造驱动器", "variant": "emphasis" },
+    { "id": "c-driver-llm", "from": "driver", "to": "llm", "label": "流式请求", "variant": "emphasis" },
+    { "id": "c-llm-deepseek", "from": "llm", "to": "deepseek", "label": "SSE", "variant": "emphasis", "fromSide": "top", "toSide": "bottom" },
+    { "id": "c-driver-session", "from": "driver", "to": "session", "label": "追加 · 推导请求", "variant": "emphasis", "fromSide": "top", "toSide": "bottom" },
+    { "id": "c-session-persistence", "from": "session", "to": "persistence", "label": "事件通知", "variant": "dashed", "fromSide": "left", "toSide": "right" },
+    { "id": "c-preset-registry", "from": "preset", "to": "registry", "label": "为新会话挂载", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "id": "c-subagent-registry", "from": "subagent", "to": "registry", "label": "创建子 agent", "variant": "dashed", "fromSide": "top", "toSide": "bottom" },
+    { "id": "c-driver-plugins", "from": "driver", "to": "plugins", "label": "四个扩展点", "variant": "dashed", "fromSide": "left", "toSide": "right", "via": [[1030, 292], [1030, 452]] },
+    { "id": "c-driver-tools", "from": "driver", "to": "tools", "label": "流结束后调度", "variant": "emphasis", "fromSide": "bottom", "toSide": "top" },
+    { "id": "c-tools-sandbox", "from": "tools", "to": "sandbox", "label": "工具体内选沙箱", "fromSide": "right", "toSide": "left" },
+    { "id": "c-ext-tools", "from": "ext", "to": "tools", "label": "注册工具", "variant": "dashed", "fromSide": "top", "toSide": "bottom" },
+    { "id": "c-kernel-entry", "from": "kernel", "to": "entry", "label": "装配插件树", "variant": "dashed", "fromSide": "top", "toSide": "bottom" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan", "title": "所有入口都是 agent 工厂的适配器",
+      "items": [
+        "Web 与桌面经会话控制器，SDK、ACP、Webhook、定时任务、子 agent 直接调用同一个创建 / 恢复接口",
+        "取得 agent 之后只调 followup / steer / inject / cancel，没有入口绕开主循环",
+        "注册表只在取得 agent 时参与；运行时它提供“当前是哪个 agent 在执行”的作用域"
+      ]
+    },
+    {
+      "dot": "violet", "title": "持久状态只有日志",
+      "items": [
+        "收件箱、turn 编号、重试计数、计划模式都是日志投影",
+        "每次请求从日志推导并冻结；不变量插件在分发前核对“请求 == 推导结果”",
+        "追加是同步的，不做 I/O；持久化后端在检查点统一落盘"
+      ]
+    },
+    {
+      "dot": "amber", "title": "策略都在插件里",
+      "items": [
+        "驱动器只有 step 前、请求配置、请求出错、turn 即将结束四个扩展点",
+        "重试、压缩、检查点、hooks、目标驱动都挂在这四个点上",
+        "沙箱模式在工具体内部决定；审批只在模型申请提权时发生"
+      ]
+    },
+    {
+      "dot": "rose", "title": "与 DeepSeek 服务端的协同",
+      "items": [
+        "系统提示词中途更新、对话中途增删工具需要服务端支持",
+        "请求体默认附带在用插件清单和会话日志增量，不占模型 token",
+        "组合内核装配出整棵插件树；连 agent loop 本身也是其中一行"
+      ]
+    }
+  ]
+}

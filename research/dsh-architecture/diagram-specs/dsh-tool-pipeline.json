@@ -1,0 +1,481 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "dsh 工具执行管线：审批只管提权，沙箱在工具体内部",
+    "output": ".archify/workflow-dsh-tool-pipeline-20260929-1130/dsh-tool-pipeline.html",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/deepseek-ai/deepseek-harness.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "4878cdabd87d4041bdaff61d04c966883b9fd07a"
+    }
+  },
+  "lanes": [
+    {
+      "id": "policy",
+      "label": "审批（执行前 / 提权）"
+    },
+    {
+      "id": "main",
+      "label": "执行主路径"
+    },
+    {
+      "id": "body",
+      "label": "工具体内部（以 bash 为例）"
+    },
+    {
+      "id": "fail",
+      "label": "拒绝与失败",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "p-admit",
+      "label": "1 按序准入",
+      "fromCol": 0,
+      "toCol": 2
+    },
+    {
+      "id": "p-run",
+      "label": "2 并行派发",
+      "fromCol": 3,
+      "toCol": 4,
+      "variant": "emphasis"
+    },
+    {
+      "id": "p-commit",
+      "label": "3 按模型顺序收尾",
+      "fromCol": 5,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "call",
+    "pre",
+    "guard",
+    "wrap",
+    "body",
+    "post"
+  ],
+  "nodes": [
+    {
+      "id": "call",
+      "lane": "main",
+      "col": 0,
+      "type": "backend",
+      "label": "登记调用",
+      "sublabel": "写 tool/call · 冻结参数",
+      "width": 140,
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/tool-calls.ts",
+          "line": 165,
+          "end_line": 170,
+          "label": "启动时写 tool/call"
+        },
+        {
+          "path": "packages/core/tools/src/index.ts",
+          "line": 1391,
+          "end_line": 1481,
+          "label": "快照并冻结参数"
+        }
+      ]
+    },
+    {
+      "id": "pre",
+      "lane": "main",
+      "col": 1,
+      "type": "backend",
+      "label": "执行前钩子",
+      "sublabel": "允许 · 询问 · 拒绝",
+      "width": 140,
+      "sources": [
+        {
+          "path": "packages/core/tools/src/index.ts",
+          "line": 1496,
+          "end_line": 1511,
+          "label": "tools/pre-execute"
+        }
+      ]
+    },
+    {
+      "id": "approval",
+      "lane": "policy",
+      "col": 1,
+      "type": "security",
+      "label": "审批服务",
+      "sublabel": "只有允许一次",
+      "width": 140,
+      "sources": [
+        {
+          "path": "packages/core/tools/src/index.ts",
+          "line": 1727,
+          "end_line": 1768,
+          "label": "询问转审批"
+        },
+        {
+          "path": "packages/interaction/user-approval/src/index.ts",
+          "line": 215,
+          "end_line": 307,
+          "label": "审批服务"
+        }
+      ]
+    },
+    {
+      "id": "guard",
+      "lane": "main",
+      "col": 2,
+      "type": "security",
+      "label": "单调守卫",
+      "sublabel": "只能拒绝",
+      "width": 140,
+      "sources": [
+        {
+          "path": "packages/core/tools/src/index.ts",
+          "line": 1136,
+          "end_line": 1154,
+          "label": "守卫注册与求值"
+        },
+        {
+          "path": "packages/core/tools/src/index.ts",
+          "line": 1519,
+          "end_line": 1535,
+          "label": "允许后才求值守卫"
+        }
+      ]
+    },
+    {
+      "id": "wrap",
+      "lane": "main",
+      "col": 3,
+      "type": "backend",
+      "label": "执行包装层",
+      "sublabel": "检查点 · 超时",
+      "width": 140,
+      "sources": [
+        {
+          "path": "packages/core/tools/src/index.ts",
+          "line": 1601,
+          "end_line": 1631,
+          "label": "tools/execute"
+        },
+        {
+          "path": "packages/session/session-checkpoint-policy/src/index.ts",
+          "line": 70,
+          "end_line": 75,
+          "label": "派发前落盘"
+        },
+        {
+          "path": "packages/guard/timeout-policy/src/index.ts",
+          "line": 55,
+          "end_line": 81,
+          "label": "工具级超时"
+        }
+      ]
+    },
+    {
+      "id": "body",
+      "lane": "main",
+      "col": 4,
+      "type": "backend",
+      "label": "工具体",
+      "sublabel": "校验参数 · 选沙箱模式",
+      "width": 140,
+      "sources": [
+        {
+          "path": "packages/core/tools/src/index.ts",
+          "line": 1564,
+          "end_line": 1592,
+          "label": "调用工具体"
+        },
+        {
+          "path": "packages/core/tools/src/schema.ts",
+          "line": 554,
+          "end_line": 632,
+          "label": "参数校验在工具体内"
+        },
+        {
+          "path": "packages/shell/tool-bash/src/index.ts",
+          "line": 478,
+          "end_line": 527,
+          "label": "bash：沙箱与提权"
+        }
+      ]
+    },
+    {
+      "id": "escalate",
+      "lane": "policy",
+      "col": 4,
+      "type": "security",
+      "label": "提权审批",
+      "sublabel": "允许一次后放宽一级",
+      "width": 150,
+      "sources": [
+        {
+          "path": "packages/sandbox/sandbox/src/escalation.ts",
+          "line": 171,
+          "end_line": 208,
+          "label": "approveEscalation"
+        }
+      ]
+    },
+    {
+      "id": "confine",
+      "lane": "body",
+      "col": 4,
+      "type": "security",
+      "label": "沙箱包装执行",
+      "sublabel": "只限制文件写",
+      "width": 140,
+      "sources": [
+        {
+          "path": "packages/shell/bash-sandbox/src/index.ts",
+          "line": 89,
+          "end_line": 133,
+          "label": "包装命令"
+        },
+        {
+          "path": "packages/sandbox/sandbox-local/src/index.ts",
+          "line": 325,
+          "end_line": 344,
+          "label": "confine"
+        }
+      ]
+    },
+    {
+      "id": "deny",
+      "lane": "fail",
+      "col": 2,
+      "type": "security",
+      "label": "拒绝结果",
+      "sublabel": "Error: 原因",
+      "width": 140,
+      "sources": [
+        {
+          "path": "packages/core/tools/src/index.ts",
+          "line": 1519,
+          "end_line": 1531,
+          "label": "拒绝转错误结果"
+        },
+        {
+          "path": "packages/core/tools/src/index.ts",
+          "line": 1752,
+          "end_line": 1766,
+          "label": "四种审批结果"
+        }
+      ]
+    },
+    {
+      "id": "unavailable",
+      "lane": "fail",
+      "col": 4,
+      "type": "security",
+      "label": "沙箱不可用",
+      "sublabel": "不降级为无沙箱",
+      "width": 140,
+      "sources": [
+        {
+          "path": "packages/sandbox/sandbox-local/src/index.ts",
+          "line": 503,
+          "end_line": 507,
+          "label": "选择后端"
+        },
+        {
+          "path": "packages/shell/bash-sandbox/src/index.ts",
+          "line": 115,
+          "end_line": 131,
+          "label": "SANDBOX_UNAVAILABLE"
+        },
+        {
+          "path": "packages/sandbox/sandbox/src/diagnostics.ts",
+          "line": 66,
+          "end_line": 100,
+          "label": "禁止静默放行"
+        }
+      ]
+    },
+    {
+      "id": "post",
+      "lane": "main",
+      "col": 5,
+      "type": "backend",
+      "label": "执行后与提交",
+      "sublabel": "spill · 按模型顺序写结果",
+      "width": 150,
+      "sources": [
+        {
+          "path": "packages/core/tools/src/index.ts",
+          "line": 1641,
+          "end_line": 1659,
+          "label": "tools/post-execute"
+        },
+        {
+          "path": "packages/spill/spill-policy/src/index.ts",
+          "line": 133,
+          "end_line": 156,
+          "label": "超过阈值写入 spill"
+        },
+        {
+          "path": "packages/core/agent-loop/src/tool-calls.ts",
+          "line": 147,
+          "end_line": 161,
+          "label": "按模型顺序提交"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "call-pre",
+      "from": "call",
+      "to": "pre",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "pre-guard",
+      "from": "pre",
+      "to": "guard",
+      "label": "允许",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "pre-approval",
+      "from": "pre",
+      "to": "approval",
+      "label": "询问",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "approval-guard",
+      "from": "approval",
+      "to": "guard",
+      "label": "允许一次",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "approval-deny",
+      "from": "approval",
+      "to": "deny",
+      "label": "拒绝 / 无通道",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "guard-deny",
+      "from": "guard",
+      "to": "deny",
+      "label": "任一守卫拒绝",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "guard-wrap",
+      "from": "guard",
+      "to": "wrap",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "wrap-body",
+      "from": "wrap",
+      "to": "body",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "body-post",
+      "from": "body",
+      "to": "post",
+      "label": "结果",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "body-escalate",
+      "from": "body",
+      "to": "escalate",
+      "label": "带 sandbox_permissions",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "body-confine",
+      "from": "body",
+      "to": "confine",
+      "label": "受限模式",
+      "role": "branch"
+    },
+    {
+      "id": "confine-post",
+      "from": "confine",
+      "to": "post",
+      "label": "普通结果",
+      "role": "return"
+    },
+    {
+      "id": "confine-unavailable",
+      "from": "confine",
+      "to": "unavailable",
+      "label": "后端不可用",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "deny-post",
+      "from": "deny",
+      "to": "post",
+      "label": "仍经执行后",
+      "variant": "security",
+      "role": "error"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "violet",
+      "title": "审批只有一种结果能放行",
+      "items": [
+        "执行前钩子返回询问时才找审批服务；没有组合审批服务就直接拒绝",
+        "审批结果只有允许一次、拒绝、取消、无通道四种，没有“总是允许”",
+        "守卫在允许之后求值，只能拒绝，不能替别人放行",
+        "base 包里没有按工具、路径或命令前缀的规则引擎"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "沙箱在工具体内部",
+      "items": [
+        "参数校验、沙箱模式选择、提权审批都发生在工具体里，不在执行前钩子",
+        "沙箱只限制文件写；读文件、网络、进程不受限",
+        "模型带 sandbox_permissions 重试时才申请提权，一次放宽到最窄的更宽模式",
+        "提权被拒时工具体抛错，提示模型停止并解释"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "失败的两种形态",
+      "items": [
+        "命令被沙箱拦截、非零退出、超时都是普通结果加标记，不算错误",
+        "被拦截的结果附带提权提示，告诉模型可以带参数重试同一条命令",
+        "沙箱后端不可用时返回错误，命令不执行，绝不静默放行"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "顺序与并行",
+      "items": [
+        "登记、执行前钩子、审批、守卫按模型顺序串行",
+        "只有执行包装层与工具体在滚动池里并行",
+        "执行后钩子与结果提交按模型顺序进行；拒绝结果同样经过执行后钩子"
+      ]
+    }
+  ]
+}

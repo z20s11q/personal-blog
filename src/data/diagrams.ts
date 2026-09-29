@@ -26,6 +26,24 @@ export const diagramGroups = [
   },
 ] as const;
 
+export const dshDiagramDir = 'diagrams/dsh/';
+
+export const dshDiagramGroup = {
+  project: 'DeepSeek Harness',
+  repo: 'https://github.com/deepseek-ai/deepseek-harness/tree/4878cdabd87d4041bdaff61d04c966883b9fd07a',
+  revision: '4878cdab',
+  article: 'dsh-architecture',
+  items: [
+    { file: 'dsh-components.html', kind: '架构图', title: '组件总览：入口 → 注册表 → AgentLoop → 驱动器', description: '所有接入面都经 agent 注册表创建或恢复 agent；驱动器围绕会话日志运转，通过四个扩展点挂接重试、压缩、检查点等插件；工具注册表在流结束后调度，沙箱与审批在工具体内部。' },
+    { file: 'dsh-composition.html', kind: '数据流图', title: '组合与装配：五层补丁 → 行表 → Loader → 服务与预设', description: 'bundle、profile、用户、启动参数、遥测关闭五层补丁按序叠加成行表；Loader 逐行挂载插件；HMR 只在 Web / 桌面做行级更新；预设按会话挂载并按代次引用计数。' },
+    { file: 'dsh-turn-lifecycle.html', kind: '状态图', title: 'turn / step 状态机', description: 'step 准入 → 请求准备 → 采样 → 执行工具 → 关 step 判定；请求出错扩展点决定重试；turn 即将结束扩展点可追加消息续跑；四种结束方式。' },
+    { file: 'dsh-step-sequence.html', kind: '时序图', title: '一次 step：先落日志再推导请求，流结束后才调度工具', description: '收件箱认领、step 前扩展点、从日志推导并冻结请求、采样只记账、独占屏障与滚动池、按模型顺序提交工具结果。' },
+    { file: 'dsh-tool-pipeline.html', kind: '流程图', title: '工具执行管线：审批只管提权，沙箱在工具体内部', description: '登记 → 执行前钩子 → 单调守卫 → 执行包装层 → 工具体 → 执行后与提交；询问转审批服务，模型带 sandbox_permissions 时才申请提权，沙箱后端不可用时绝不静默放行。' },
+  ],
+} as const;
+
 type Diagram = { file: string; kind: string; title: string; description: string };
 
 export const findDiagram = (file: string) => diagramGroups.flatMap<Diagram>((group) => [...group.items]).find((item) => item.file === file);
+
+export const findDshDiagram = (file: string) => dshDiagramGroup.items.find((item) => item.file === file);

@@ -1,0 +1,401 @@
+{
+  "schema_version": 2,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "dsh turn / step 状态机（AgentLoopAgent.turn）",
+    "output": ".archify/lifecycle-dsh-turn-20260929-1110/dsh-turn-lifecycle.html",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/deepseek-ai/deepseek-harness.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "4878cdabd87d4041bdaff61d04c966883b9fd07a"
+    }
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "每个 step 的主路径"
+    },
+    {
+      "id": "side",
+      "label": "工具批次 / 请求失败"
+    },
+    {
+      "id": "stop",
+      "label": "准备结束"
+    },
+    {
+      "id": "terminal",
+      "label": "turn 结束"
+    }
+  ],
+  "states": [
+    {
+      "id": "prestep",
+      "type": "start",
+      "label": "开 turn · step 准入",
+      "sublabel": "认领收件箱 · 准入扩展点",
+      "lane": "main",
+      "col": 0,
+      "step": "01",
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 296,
+          "end_line": 311,
+          "label": "turn 开头"
+        },
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 267,
+          "end_line": 286,
+          "label": "preStep 与 agent/pre-step"
+        },
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 313,
+          "end_line": 330,
+          "label": "准入结果处理"
+        }
+      ]
+    },
+    {
+      "id": "prepare",
+      "type": "active",
+      "label": "请求准备",
+      "sublabel": "绑定适配器 · 冻结请求",
+      "lane": "main",
+      "col": 1,
+      "step": "02",
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 407,
+          "end_line": 425,
+          "label": "每次尝试重新准备"
+        },
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 546,
+          "end_line": 596,
+          "label": "prepareRequest 与 agent/request"
+        }
+      ]
+    },
+    {
+      "id": "sample",
+      "type": "active",
+      "label": "采样",
+      "sublabel": "流式记账 · 结束后一次性提交",
+      "lane": "main",
+      "col": 2,
+      "step": "03",
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 426,
+          "end_line": 486,
+          "label": "流式与中断结算"
+        },
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 512,
+          "end_line": 533,
+          "label": "提交 assistant/message"
+        },
+        {
+          "path": "packages/core/agent-loop/src/assistant-stream.ts",
+          "line": 18,
+          "end_line": 140,
+          "label": "流式尝试记账"
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "type": "active",
+      "label": "执行工具",
+      "sublabel": "流结束后调度 · 按模型顺序提交",
+      "lane": "side",
+      "col": 3,
+      "step": "04",
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 534,
+          "end_line": 538,
+          "label": "工具执行后 step 返回“继续”"
+        },
+        {
+          "path": "packages/core/agent-loop/src/tool-calls.ts",
+          "line": 60,
+          "end_line": 290,
+          "label": "批次调度与提交"
+        }
+      ]
+    },
+    {
+      "id": "stepend",
+      "type": "decision",
+      "label": "关 step · 判定",
+      "sublabel": "本可结束 ∧ next-step 为空？",
+      "lane": "main",
+      "col": 4,
+      "step": "05",
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 336,
+          "end_line": 357,
+          "label": "step 结束原因与配对恢复"
+        },
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 358,
+          "end_line": 364,
+          "label": "继续 / 结束判定"
+        }
+      ]
+    },
+    {
+      "id": "reqerr",
+      "type": "waiting",
+      "label": "请求出错扩展点",
+      "sublabel": "重试插件 · 溢出压缩",
+      "lane": "side",
+      "col": 2,
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 488,
+          "end_line": 510,
+          "label": "agent/request-error"
+        },
+        {
+          "path": "packages/llm/llm-retry/src/index.ts",
+          "line": 194,
+          "end_line": 241,
+          "label": "重试退避"
+        },
+        {
+          "path": "packages/compaction/compaction-basic/src/index.ts",
+          "line": 190,
+          "end_line": 234,
+          "label": "溢出恢复"
+        }
+      ]
+    },
+    {
+      "id": "stopping",
+      "type": "decision",
+      "label": "turn 即将结束",
+      "sublabel": "监听者可追加 next-step",
+      "lane": "stop",
+      "col": 4,
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 359,
+          "end_line": 363,
+          "label": "agent/turn-stopping"
+        },
+        {
+          "path": "packages/core/agent/src/runtime-types.ts",
+          "line": 365,
+          "end_line": 381,
+          "label": "扩展点契约"
+        }
+      ]
+    },
+    {
+      "id": "blocked",
+      "type": "failure",
+      "label": "被拦截",
+      "sublabel": "blocked",
+      "lane": "terminal",
+      "col": 0,
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 317,
+          "end_line": 320,
+          "label": "准入被拒绝"
+        }
+      ]
+    },
+    {
+      "id": "aborted",
+      "type": "failure",
+      "label": "已中止",
+      "sublabel": "aborted · 收件箱保留",
+      "lane": "terminal",
+      "col": 1,
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 366,
+          "end_line": 372,
+          "label": "中止原因"
+        }
+      ]
+    },
+    {
+      "id": "failed",
+      "type": "failure",
+      "label": "出错",
+      "sublabel": "error · 结构化失败",
+      "lane": "terminal",
+      "col": 2,
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 373,
+          "end_line": 381,
+          "label": "错误结构化"
+        }
+      ]
+    },
+    {
+      "id": "done",
+      "type": "success",
+      "label": "turn 完成",
+      "sublabel": "completed / max-tokens",
+      "lane": "terminal",
+      "col": 4,
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 382,
+          "end_line": 395,
+          "label": "turn/end 与下一个 turn"
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "from": "prestep",
+      "to": "prepare",
+      "label": "进入"
+    },
+    {
+      "from": "prepare",
+      "to": "sample"
+    },
+    {
+      "from": "sample",
+      "to": "tools",
+      "label": "有工具调用",
+      "variant": "emphasis"
+    },
+    {
+      "from": "sample",
+      "to": "stepend",
+      "label": "无工具 / 截断"
+    },
+    {
+      "from": "tools",
+      "to": "stepend",
+      "label": "需要下一步",
+      "variant": "emphasis"
+    },
+    {
+      "from": "stepend",
+      "to": "prestep",
+      "label": "继续：取 next-step",
+      "variant": "emphasis",
+      "route": "top-channel"
+    },
+    {
+      "from": "sample",
+      "to": "reqerr",
+      "label": "以错误结束",
+      "variant": "dashed"
+    },
+    {
+      "from": "reqerr",
+      "to": "prepare",
+      "label": "重试",
+      "variant": "dashed"
+    },
+    {
+      "from": "stepend",
+      "to": "stopping",
+      "label": "本可结束"
+    },
+    {
+      "from": "stopping",
+      "to": "stepend",
+      "label": "追加后重判",
+      "variant": "emphasis",
+      "route": "right-channel"
+    },
+    {
+      "from": "stopping",
+      "to": "done",
+      "label": "仍为空",
+      "variant": "emphasis"
+    },
+    {
+      "from": "prestep",
+      "to": "blocked",
+      "label": "拒绝",
+      "variant": "security"
+    },
+    {
+      "from": "prepare",
+      "to": "aborted",
+      "label": "取消（任意阶段）",
+      "variant": "security"
+    },
+    {
+      "from": "reqerr",
+      "to": "failed",
+      "label": "无人重试",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "继续与结束",
+      "items": [
+        "step 返回“继续”只有一种情况：执行了工具且没有工具宣告结束",
+        "无工具调用记为完成；输出截断记为 max-tokens，且之后的完成不会把它降级",
+        "本可结束但 next-step 非空时照样继续，用户插话与工具续跑走同一条回边",
+        "没有步数上限；结束只取决于模型不再调用工具"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "请求失败的处理",
+      "items": [
+        "适配器异常被转成带失败信息的结束块，而不是抛出",
+        "失败交给请求出错扩展点：重试插件退避后要求重试，压缩插件处理上下文溢出",
+        "每次重试都重新准备请求，所以压缩后的日志会立即生效",
+        "无人要求重试时抛出结构化错误，turn 以 error 结束"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "准入与收件箱",
+      "items": [
+        "开 turn 后第一个 step 认领 next-turn，之后的 step 认领 next-step",
+        "step 前扩展点可以改写消息或拒绝；拒绝记为 blocked",
+        "首个 step 的消息被改写为空时，turn 直接完成，不花一次模型调用",
+        "turn 结束后收件箱仍有待处理消息，驱动器立即开下一个 turn"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "中断与配对",
+      "items": [
+        "取消在任何阶段都会中止当前 turn，已生成的内容以中断消息落盘",
+        "step 抛错时，配对恢复为每个未完成的工具调用补一条结果",
+        "取消不会清空收件箱；恢复会话时也不会重跑被打断的 turn"
+      ]
+    }
+  ]
+}

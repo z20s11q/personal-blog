@@ -1,0 +1,410 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "dsh 组合与装配：五层补丁 → 行表 → Loader → 服务与预设",
+    "output": ".archify/dataflow-dsh-composition-20260929-1140/dsh-composition.html",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "repository": {
+      "url": "https://github.com/deepseek-ai/deepseek-harness.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "4878cdabd87d4041bdaff61d04c966883b9fd07a"
+    }
+  },
+  "stages": [
+    {
+      "label": "补丁来源（按叠加顺序）"
+    },
+    {
+      "label": "叠加"
+    },
+    {
+      "label": "装配"
+    },
+    {
+      "label": "Host 平面与会话"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "bundles",
+      "type": "database",
+      "label": "bundle 补丁",
+      "sublabel": "base · web-app · 可选 bundle",
+      "stage": 0,
+      "row": 0,
+      "tag": "第 1 层",
+      "sources": [
+        {
+          "path": "packages/boot/app-boot/src/profile.ts",
+          "line": 179,
+          "end_line": 218,
+          "label": "模板与可选 bundle"
+        },
+        {
+          "path": "packages/bundle/base/cordis.patch.yml",
+          "line": 1,
+          "end_line": 528,
+          "label": "base 全部行"
+        }
+      ]
+    },
+    {
+      "id": "profile",
+      "type": "database",
+      "label": "profile 补丁",
+      "sublabel": "profile 目录自带",
+      "stage": 0,
+      "row": 1,
+      "tag": "第 2 层",
+      "sources": [
+        {
+          "path": "packages/boot/app-boot/src/profile.ts",
+          "line": 655,
+          "end_line": 721,
+          "label": "读取 profile 目录"
+        }
+      ]
+    },
+    {
+      "id": "home",
+      "type": "database",
+      "label": "用户补丁",
+      "sublabel": "home 下的补丁文件",
+      "stage": 0,
+      "row": 2,
+      "tag": "第 3 层",
+      "sources": [
+        {
+          "path": "packages/boot/app-boot/src/profile-context.ts",
+          "line": 63,
+          "end_line": 75,
+          "label": "层序"
+        }
+      ]
+    },
+    {
+      "id": "cli",
+      "type": "database",
+      "label": "启动参数补丁",
+      "sublabel": "--patch",
+      "stage": 0,
+      "row": 3,
+      "tag": "第 4 层",
+      "sources": [
+        {
+          "path": "apps/cli/src/args.ts",
+          "line": 150,
+          "end_line": 204,
+          "label": "启动器参数"
+        }
+      ]
+    },
+    {
+      "id": "env",
+      "type": "security",
+      "label": "遥测关闭补丁",
+      "sublabel": "DSH_TELEMETRY_DISABLED",
+      "stage": 0,
+      "row": 4,
+      "tag": "最后叠加",
+      "sources": [
+        {
+          "path": "packages/boot/app-boot/src/profile-context.ts",
+          "line": 52,
+          "end_line": 55,
+          "label": "任何非空值都关闭"
+        }
+      ]
+    },
+    {
+      "id": "include",
+      "type": "backend",
+      "label": "补丁叠加",
+      "sublabel": "插入新行 · 整字段覆盖",
+      "stage": 1,
+      "row": 4,
+      "tag": "include",
+      "sources": [
+        {
+          "path": "vendor/include/src/index.ts",
+          "line": 57,
+          "end_line": 127,
+          "label": "叠加规则"
+        },
+        {
+          "path": "vendor/include/src/index.ts",
+          "line": 159,
+          "end_line": 287,
+          "label": "Include 与刷新"
+        }
+      ]
+    },
+    {
+      "id": "loader",
+      "type": "backend",
+      "label": "Loader",
+      "sublabel": "每行 import + 挂载插件",
+      "stage": 2,
+      "row": 2,
+      "tag": "行表",
+      "sources": [
+        {
+          "path": "packages/boot/app-boot/src/index.ts",
+          "line": 972,
+          "end_line": 1038,
+          "label": "boot"
+        },
+        {
+          "path": "vendor/loader/src/config/entry.ts",
+          "line": 221,
+          "end_line": 235,
+          "label": "行初始化"
+        }
+      ]
+    },
+    {
+      "id": "hmr",
+      "type": "messagebus",
+      "label": "HMR",
+      "sublabel": "只在 Web / 桌面",
+      "stage": 2,
+      "row": 4,
+      "tag": "热重载",
+      "sources": [
+        {
+          "path": "packages/boot/hmr/src/index.ts",
+          "line": 160,
+          "end_line": 237,
+          "label": "监视与刷新"
+        },
+        {
+          "path": "packages/boot/app-boot/src/index.ts",
+          "line": 273,
+          "end_line": 302,
+          "label": "重算补丁"
+        },
+        {
+          "path": "vendor/loader/src/config/entry.ts",
+          "line": 116,
+          "end_line": 155,
+          "label": "原地提交或重挂"
+        }
+      ]
+    },
+    {
+      "id": "host",
+      "type": "backend",
+      "label": "Host 服务",
+      "sublabel": "注册表 · LLM · 工具 · 会话",
+      "stage": 3,
+      "row": 0,
+      "tag": "全局",
+      "sources": [
+        {
+          "path": "vendor/cordis/src/service.ts",
+          "line": 42,
+          "end_line": 63,
+          "label": "服务自注册"
+        },
+        {
+          "path": "vendor/cordis/src/fiber.ts",
+          "line": 184,
+          "end_line": 440,
+          "label": "effect 生命周期"
+        },
+        {
+          "path": "packages/bundle/web-app/cordis.patch.yml",
+          "line": 44,
+          "end_line": 556,
+          "label": "web-app 行"
+        }
+      ]
+    },
+    {
+      "id": "preset",
+      "type": "backend",
+      "label": "预设注册表",
+      "sublabel": "按代次引用计数",
+      "stage": 3,
+      "row": 4,
+      "tag": "每会话",
+      "sources": [
+        {
+          "path": "packages/preset/agent-preset-registry/src/index.ts",
+          "line": 64,
+          "end_line": 334,
+          "label": "代次"
+        },
+        {
+          "path": "packages/preset/agent-preset-registry/src/mount.ts",
+          "line": 258,
+          "end_line": 272,
+          "label": "挂载与泄漏审计"
+        },
+        {
+          "path": "packages/bundle/web-app/presets/standard.patch.yml",
+          "line": 42,
+          "end_line": 130,
+          "label": "standard 预设"
+        }
+      ]
+    },
+    {
+      "id": "agent",
+      "type": "frontend",
+      "label": "会话 agent",
+      "sublabel": "独立作用域",
+      "stage": 3,
+      "row": 2,
+      "tag": "运行时",
+      "sources": [
+        {
+          "path": "packages/core/agent/src/index.ts",
+          "line": 391,
+          "end_line": 416,
+          "label": "create / resume"
+        }
+      ]
+    }
+  ],
+  "flows": [
+    {
+      "from": "bundles",
+      "to": "profile",
+      "label": "叠加",
+      "variant": "emphasis",
+      "route": "straight",
+      "labelAt": [
+        100,
+        201
+      ]
+    },
+    {
+      "from": "profile",
+      "to": "home",
+      "label": "叠加",
+      "variant": "emphasis",
+      "route": "straight",
+      "labelAt": [
+        100,
+        315
+      ]
+    },
+    {
+      "from": "home",
+      "to": "cli",
+      "label": "叠加",
+      "variant": "emphasis",
+      "route": "straight",
+      "labelAt": [
+        100,
+        429
+      ]
+    },
+    {
+      "from": "cli",
+      "to": "env",
+      "label": "叠加",
+      "variant": "emphasis",
+      "route": "straight",
+      "labelAt": [
+        100,
+        543
+      ]
+    },
+    {
+      "from": "env",
+      "to": "include",
+      "label": "有序补丁列表",
+      "variant": "emphasis"
+    },
+    {
+      "from": "include",
+      "to": "loader",
+      "label": "有效行表",
+      "variant": "emphasis"
+    },
+    {
+      "from": "loader",
+      "to": "host",
+      "label": "挂载服务行",
+      "variant": "emphasis"
+    },
+    {
+      "from": "loader",
+      "to": "preset",
+      "label": "注册预设"
+    },
+    {
+      "from": "hmr",
+      "to": "loader",
+      "label": "行级更新",
+      "variant": "dashed",
+      "route": "straight"
+    },
+    {
+      "from": "host",
+      "to": "agent",
+      "label": "共享服务",
+      "variant": "emphasis",
+      "route": "straight",
+      "labelAt": [
+        745,
+        271
+      ]
+    },
+    {
+      "from": "preset",
+      "to": "agent",
+      "label": "按会话挂载",
+      "variant": "dashed",
+      "route": "straight",
+      "labelAt": [
+        745,
+        499
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "叠加规则",
+      "items": [
+        "补丁按 bundle → profile → 用户 → 启动参数 → 遥测关闭的顺序叠加",
+        "同 id 的行按字段覆盖，覆盖是整字段替换，不做深合并",
+        "新 id 插入到指定位置；叠加结果就是 Loader 要装配的行表"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "一切都是行",
+      "items": [
+        "每一行是一个插件：导入模块、挂载到作用域、按依赖顺序启动",
+        "Agent loop、LLM 适配器、工具、UI 都是行；换掉一行就是换掉一个实现",
+        "服务在插件里自注册，依赖它的插件在服务就绪后才启动"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "热重载",
+      "items": [
+        "只有 Web 与桌面挂载 HMR；CLI 与 headless 不重载",
+        "补丁文件变化后重算整张行表，只更新变化的行",
+        "标记为易变的字段原地生效，其他字段变化会重挂整行"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "预设与代次",
+      "items": [
+        "预设是一组按会话挂载的行，决定这个会话的工具、人设和策略",
+        "预设更新产生新代次；已有会话继续引用旧代次，新会话用新代次",
+        "旧代次的引用计数归零后才卸载"
+      ]
+    }
+  ]
+}
