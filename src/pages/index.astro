@@ -1,21 +1,100 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import EntryIndex from '../components/EntryIndex.astro';
-import { getEntries } from '../data/entries';
+import { domainCounts, filterByTag, getEntries } from '../data/entries';
 
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 const entries = await getEntries(base);
+const sections = domainCounts(entries)
+  .sort((a, b) => b.count - a.count)
+  .map((domain) => ({ ...domain, items: filterByTag(entries, domain.slug) }));
+const formatDate = (date: Date) => date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '.');
 ---
 
 <BaseLayout title="z20s11q 的个人博客" description="交易研究、编程学习与 AI Agent 架构解析的个人笔记。">
   <section class="page-head intro">
     <div class="eyebrow">z20s11q / notes</div>
     <h1>个人笔记</h1>
-    <p>整理我正在学习和研究的内容：价格行为研究、Rust 学习笔记和 AI Agent 架构解析。右上角按领域进入，左侧只列出当前领域的文章。</p>
+    <p>按领域整理正在学习的内容：AI Agent 架构、Rust，以及价格行为研究。点进一个领域后，左侧会列出该领域的文章。</p>
   </section>
-  <EntryIndex entries={entries} />
+  <div class="home">
+    {sections.map((section) => (
+      <section class="domain" aria-labelledby={`domain-${section.slug}`}>
+        <div class="domain-head">
+          <div>
+            <h2 id={`domain-${section.slug}`}>{section.label}</h2>
+            <p>{section.description}共 {section.count} 篇。</p>
+          </div>
+          <a href={`${base}tags/${section.slug}/`}>进入{section.label} →</a>
+        </div>
+        <div class="cards">
+          {section.items.map((entry) => (
+            <article class="card">
+              <div class="card-top">
+                <span>{entry.category}</span>
+                <time datetime={entry.date.toISOString()}>{formatDate(entry.date)}</time>
+              </div>
+              <h3><a href={entry.href}>{entry.title}</a></h3>
+              <p>{entry.description}</p>
+              <div class="card-foot">
+                <span>{entry.children.length > 0 ? entry.meta.split(' · ')[0] : entry.meta}</span>
+                {entry.children.length > 0 && <span class="pill">合集 {entry.children.length + 1} 篇</span>}
+              </div>
+              {entry.children.length > 0 && (
+                <ol>
+                  {entry.children.map((child, index) => (
+                    <li><a href={child.href}><span>{String(index + 1).padStart(2, '0')}</span>{child.title}</a></li>
+                  ))}
+                </ol>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+    ))}
+  </div>
 </BaseLayout>
 
 <style>
-  .intro { padding-bottom: 12px; }
+  .intro { padding-bottom: 8px; }
+  .domain { padding: 28px 0 8px; }
+  .domain + .domain { margin-top: 12px; border-top: 1px solid var(--divider); }
+  .domain-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px 24px; margin-bottom: 16px; }
+  .domain-head h2 { margin: 0; font-size: 26px; letter-spacing: -.03em; }
+  .domain-head p { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+  .domain-head > a { flex: none; color: var(--accent); font-size: 15px; font-weight: 600; }
+  .domain-head > a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .cards:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    min-height: 220px;
+    padding: 22px 24px 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    transition: border-color .15s, background .15s;
+  }
+  .card:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent-soft) 35%, var(--surface)); }
+  .card-top { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; }
+  .card-top span { color: var(--accent); font-weight: 600; }
+  .card h3 { margin: 10px 0 8px; font-size: 22px; line-height: 1.35; letter-spacing: -.025em; }
+  .card h3 a:hover { color: var(--accent); }
+  .card > p { margin: 0; color: var(--text); font-size: var(--prose-size); line-height: 1.7; }
+  .card-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; color: var(--muted); font-size: 14px; }
+  .pill { padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 600; }
+  .card ol { margin: 16px 0 4px; padding: 12px 0 0; border-top: 1px solid var(--divider); list-style: none; }
+  .card li a { display: flex; gap: 10px; padding: 6px 0; color: var(--text); font-size: 15px; line-height: 1.45; }
+  .card li a span { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; line-height: 1.7; }
+  .card li a:hover { color: var(--accent); }
+
+  @media (max-width: 900px) {
+    .cards { grid-template-columns: 1fr; }
+    .domain-head { align-items: flex-start; flex-direction: column; }
+    .domain-head h2 { font-size: 22px; }
+    .card { min-height: 0; padding: 18px 16px 12px; }
+    .card h3 { font-size: 19px; }
+  }
 </style>
