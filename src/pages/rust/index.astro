@@ -35,16 +35,16 @@ const canonical = new URL(rustBase, Astro.site).href;
 ---
 
 <BaseLayout title="Rust 编程语言（精简版）" description="在同一页面从上到下阅读 Rust 编程语言精简学习笔记。" canonical={canonical} progress>
-  <header class="page-head" id="top">
-    <div class="eyebrow">编程学习 / Rust</div>
-    <h1>Rust 编程语言（精简版）</h1>
-    <p>基于 The Rust Programming Language 整理的中文学习笔记。全部章节在这一页连续展开，可以直接向下阅读；目录会跟随当前阅读位置。</p>
-    <div class="page-meta"><span>{chapters.length} 章</span><span>{sections.length} 节</span><span>含 {appendices.length} 篇附录</span></div>
-    <div class="page-links"><a href="#chapter-0">开始阅读 ↓</a><a href="https://github.com/z20s11q/rust-book-web" target="_blank" rel="noopener noreferrer">原项目 ↗</a></div>
-  </header>
   <div class="rust-layout">
-    <ReadingToc items={toc} label="目录" namespaceSections />
+    <ReadingToc items={toc} label="本页目录" namespaceSections />
     <div class="reading-column" data-pagefind-body>
+      <header class="page-head" id="top">
+        <div class="eyebrow">编程学习 / Rust</div>
+        <h1>Rust 编程语言（精简版）</h1>
+        <p>基于 The Rust Programming Language 整理的中文学习笔记。全部章节在这一页连续展开，可以直接向下阅读；目录会跟随当前阅读位置。</p>
+        <div class="page-meta"><span>{chapters.length} 章</span><span>{sections.length} 节</span><span>含 {appendices.length} 篇附录</span></div>
+        <div class="page-links"><a href="#chapter-0">开始阅读 ↓</a><a href="https://github.com/z20s11q/rust-book-web" target="_blank" rel="noopener noreferrer">原项目 ↗</a></div>
+      </header>
       {chapters.map(({ number, items }) => <section class="chapter" id={`chapter-${number}`}>
         <div class="chapter-heading"><span>{String(number).padStart(2, '0')}</span><h2>{items[0].section.data.title}</h2></div>
         {items.map(({ section, Content }, index) => <section class="reading-section" id={`section-${section.id}`}>
@@ -67,12 +67,13 @@ const canonical = new URL(rustBase, Astro.site).href;
 <style>
   .rust-layout {
     display: grid;
-    grid-template-columns: minmax(0, 760px) 250px;
-    gap: 72px;
-    margin: 0 var(--page-x);
-    padding: 40px 0;
+    grid-template-columns: minmax(0, 752px) 220px;
+    justify-content: center;
+    column-gap: 48px;
+    padding: 8px 32px 48px;
   }
   .rust-layout > :global(.reading-toc) { grid-column: 2; grid-row: 1; }
+  .reading-column :global(.page-head) { margin: 0; padding: 20px 0 8px; border-bottom: 0; }
 
   .reading-column { min-width: 0; }
   .chapter { padding: 8px 0 32px; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
@@ -102,15 +103,14 @@ const canonical = new URL(rustBase, Astro.site).href;
     line-height: 1.4;
     letter-spacing: -.02em;
   }
-  .reading-column .prose :global(h2) { font-size: 20px; margin-top: 36px; }
+  .reading-column .prose :global(h2) { font-size: 20px; margin-top: 32px; }
   .reading-column .prose :global(h3) { font-size: 17px; }
-  .reading-column .prose { font-size: 15.5px; }
 
   .back-top { display: inline-block; margin-top: 28px; color: var(--muted); font-size: 15px; font-weight: 700; }
   .back-top:hover { color: var(--ink); }
 
-  @media (max-width: 1360px) {
-    .rust-layout { grid-template-columns: 1fr; gap: 0; padding-top: 0; }
+  @media (max-width: 1180px) {
+    .rust-layout { grid-template-columns: 1fr; padding: 0 var(--page-x) 32px; }
     .rust-layout > :global(.reading-toc) { grid-column: auto; grid-row: auto; }
     .chapter { scroll-margin-top: 64px; }
     .reading-section, .reading-column .prose :global(:is(h2, h3, h4)[id]) { scroll-margin-top: 64px; }
@@ -118,6 +118,5 @@ const canonical = new URL(rustBase, Astro.site).href;
   @media (max-width: 760px) {
     .chapter-heading h2 { font-size: 25px; }
     .section-heading { font-size: 21px; }
-    .reading-column .prose { font-size: 15px; }
   }
 </style>

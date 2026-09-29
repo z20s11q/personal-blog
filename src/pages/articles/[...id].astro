@@ -27,20 +27,20 @@ const related = [...sameSeries, ...sameTags].slice(0, 4);
 ---
 
 <BaseLayout title={article.data.title} description={article.data.description} canonical={canonical} progress>
-  <header class="page-head">
-    <div class="eyebrow">{article.data.category}</div>
-    <h1>{article.data.title}</h1>
-    <p>{article.data.description}</p>
-    <div class="article-tags">{article.data.tags.map((tag) => <a href={`${base}tags/${tag}/`}>{domainLabel(tag)}</a>)}</div>
-    <div class="page-meta">
-      <span>发布于 {formatDate(article.data.publishedAt)}</span>
-      <span>复核于 {formatDate(article.data.reviewedAt)}</span>
-      <span>约 {article.data.readingMinutes} 分钟</span>
-    </div>
-  </header>
-  <div class="article-grid">
-    <ReadingToc items={toc} back={{ href: base, text: '← 返回首页' }} />
-    <div class="article-main">
+  <div class="doc-layout">
+    <ReadingToc items={toc} back={{ href: base, text: '返回首页' }} />
+    <div class="doc-content">
+      <header class="page-head">
+        <div class="eyebrow">{article.data.category}</div>
+        <h1>{article.data.title}</h1>
+        <p>{article.data.description}</p>
+        <div class="article-tags">{article.data.tags.map((tag) => <a href={`${base}tags/${tag}/`}>{domainLabel(tag)}</a>)}</div>
+        <div class="page-meta">
+          <span>发布于 {formatDate(article.data.publishedAt)}</span>
+          <span>复核于 {formatDate(article.data.reviewedAt)}</span>
+          <span>约 {article.data.readingMinutes} 分钟</span>
+        </div>
+      </header>
       {collection && (
         <nav class="collection" aria-label="所在合集">
           <div class="collection-label">合集 · 共 {collection.children.length + 1} 篇</div>
@@ -53,9 +53,7 @@ const related = [...sameSeries, ...sameTags].slice(0, 4);
       <article class="prose" data-pagefind-body>
         <Content />
       </article>
-    </div>
-  </div>
-  {related.length > 0 && (
+      {related.length > 0 && (
     <section class="article-end">
       <div class="eyebrow">{sameSeries.length > 0 ? `同系列 · ${article.data.category}` : '相关内容'}</div>
       <div class="related">
@@ -68,7 +66,9 @@ const related = [...sameSeries, ...sameTags].slice(0, 4);
         ))}
       </div>
     </section>
-  )}
+      )}
+    </div>
+  </div>
 </BaseLayout>
 
 <script>
@@ -94,15 +94,16 @@ const related = [...sameSeries, ...sameTags].slice(0, 4);
   .article-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   .article-tags a { padding: 2px 10px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 13px; }
   .article-tags a:hover { color: var(--accent); border-color: var(--accent); }
-  .article-grid {
+  .doc-layout {
     display: grid;
-    grid-template-columns: minmax(0, 760px) 250px;
-    gap: 72px;
-    margin: 0 var(--page-x);
-    padding: 40px 0;
+    grid-template-columns: minmax(0, 752px) 220px;
+    justify-content: center;
+    column-gap: 48px;
+    padding: 8px 32px 48px;
   }
-  .article-grid > :global(.reading-toc) { grid-column: 2; grid-row: 1; }
-  .article-main { min-width: 0; }
+  .doc-layout > :global(.reading-toc) { grid-column: 2; grid-row: 1; }
+  .doc-content { grid-column: 1; grid-row: 1; min-width: 0; }
+  .doc-content :global(.page-head) { margin: 0; padding: 20px 0 8px; border-bottom: 0; }
   .collection { margin: 0 0 32px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 15px; line-height: 1.6; }
   .collection-label { margin-bottom: 6px; color: var(--muted); font-size: 13px; }
   .collection a { color: var(--muted); }
@@ -111,7 +112,7 @@ const related = [...sameSeries, ...sameTags].slice(0, 4);
   .collection > a { display: block; font-weight: 600; }
   .collection ol { margin: 4px 0 0 4px; padding: 0 0 0 16px; border-left: 2px solid var(--line); list-style: none; }
   .collection li { padding: 2px 0; }
-  .article-end { margin: 0 var(--page-x); padding: 28px 0 0; border-top: 1px solid var(--line); }
+  .article-end { margin: 40px 0 0; padding: 28px 0 0; border-top: 1px solid var(--divider); }
   .related { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
   .related-card { display: block; padding: 18px 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); transition: border-color .15s; }
   .related-card:hover { border-color: var(--accent); }
@@ -120,12 +121,12 @@ const related = [...sameSeries, ...sameTags].slice(0, 4);
   .related-card:hover h3 { color: var(--accent); }
   .related-card p { display: -webkit-box; margin: 0; overflow: hidden; color: var(--muted); font-size: 14.5px; line-height: 1.7; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 
-  @media (max-width: 1360px) {
-    .article-grid { grid-template-columns: 1fr; gap: 0; }
-    .article-grid > :global(.reading-toc) { grid-column: auto; grid-row: auto; }
+  @media (max-width: 1180px) {
+    .doc-layout { grid-template-columns: 1fr; padding: 0 var(--page-x) 32px; }
+    .doc-layout > :global(.reading-toc),
+    .doc-content { grid-column: auto; grid-row: auto; }
   }
   @media (max-width: 760px) {
-    .article-grid { padding: 28px 0; }
     .related { grid-template-columns: 1fr; }
   }
 </style>

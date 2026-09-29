@@ -54,14 +54,14 @@ const home = path === base || path === `${base}articles/`;
 </script>
 
 <style>
-  .site-sidebar { position: sticky; top: 0; align-self: start; min-width: 0; padding: 28px 0 0 var(--page-x); }
+  .site-sidebar { position: sticky; top: var(--header-h); align-self: start; height: calc(100vh - var(--header-h)); min-width: 0; padding: 12px 0 0; background: var(--sidebar); border-right: 1px solid var(--divider); }
   details > summary { list-style: none; cursor: pointer; }
   details > summary::-webkit-details-marker { display: none; }
   .sidebar-toggle > summary { display: none; }
   .sidebar-scroll {
     position: relative;
-    max-height: calc(100vh - 56px);
-    padding: 0 10px 24px 0;
+    max-height: calc(100vh - var(--header-h) - 12px);
+    padding: 8px 16px 24px 22px;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -105,7 +105,7 @@ const home = path === base || path === `${base}articles/`;
   .side-search { display: block; margin: 16px 10px 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--accent); font-size: 13px; }
 
   @media (max-width: 900px) {
-    .site-sidebar { position: static; padding: 0 var(--page-x); border-bottom: 1px solid var(--line); }
+    .site-sidebar { position: static; height: auto; padding: 0 var(--page-x); border-right: 0; border-bottom: 1px solid var(--divider); }
     .sidebar-toggle > summary { display: flex; align-items: center; justify-content: space-between; min-height: 48px; color: var(--ink); font-size: 15px; font-weight: 700; }
     .sidebar-toggle > summary::after { content: ""; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-2px) rotate(45deg); transition: transform .15s; }
     .sidebar-toggle[open] > summary::after { transform: translateY(2px) rotate(-135deg); }

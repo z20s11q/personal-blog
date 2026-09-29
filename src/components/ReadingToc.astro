@@ -12,7 +12,7 @@ interface Props {
   namespaceSections?: boolean;
 }
 
-const { items, label = '本篇目录', back, namespaceSections = false } = Astro.props;
+const { items, label = '本页目录', back, namespaceSections = false } = Astro.props;
 ---
 
 <nav class="reading-toc" aria-label={label} data-reading-toc data-namespace-sections={namespaceSections ? '' : undefined}>
@@ -79,10 +79,10 @@ const { items, label = '本篇目录', back, namespaceSections = false } = Astro
 </script>
 
 <style>
-  .reading-toc { position: sticky; top: 28px; align-self: start; min-width: 0; }
+  .reading-toc { position: sticky; top: calc(var(--header-h) + 24px); align-self: start; min-width: 0; }
   details summary { list-style: none; }
   details summary::-webkit-details-marker { display: none; }
-  .toc-label { color: var(--muted); font-size: 13px; font-weight: 700; letter-spacing: .06em; }
+  .toc-label { color: var(--ink); font-size: 13px; font-weight: 600; }
   .toc-current { display: none; }
   .toc-links { display: flex; flex-direction: column; max-height: calc(100vh - 90px); margin-top: 12px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
   .toc-links a { padding: 6px 8px 6px 14px; border-left: 2px solid var(--line); color: var(--muted); font-size: 14px; line-height: 1.5; transition: color .15s, border-color .15s; }
