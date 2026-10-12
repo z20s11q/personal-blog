@@ -3,14 +3,14 @@
   "diagram_type": "lifecycle",
   "meta": {
     "title": "dsh turn / step 状态机（AgentLoopAgent.turn）",
-    "output": ".archify/lifecycle-dsh-turn-20260929-1110/dsh-turn-lifecycle.html",
+    "output": ".archify/lifecycle-dsh-turn-20261012-2110/dsh-turn-lifecycle.html",
     "locale": "zh-CN",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/deepseek-ai/deepseek-harness.git",
       "provider": "github",
       "link_mode": "web",
-      "revision": "4878cdabd87d4041bdaff61d04c966883b9fd07a"
+      "revision": "d743267388641bc76f17c45ce8b4c231aed1d32c"
     }
   },
   "lanes": [
@@ -43,20 +43,20 @@
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 296,
-          "end_line": 311,
+          "line": 298,
+          "end_line": 313,
           "label": "turn 开头"
         },
         {
           "path": "packages/core/agent-loop/src/agent.ts",
           "line": 267,
-          "end_line": 286,
+          "end_line": 288,
           "label": "preStep 与 agent/pre-step"
         },
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 313,
-          "end_line": 330,
+          "line": 315,
+          "end_line": 332,
           "label": "准入结果处理"
         }
       ]
@@ -65,22 +65,28 @@
       "id": "prepare",
       "type": "active",
       "label": "请求准备",
-      "sublabel": "绑定适配器 · 冻结请求",
+      "sublabel": "绑定适配器 · 刷新上下文",
       "lane": "main",
       "col": 1,
       "step": "02",
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 407,
-          "end_line": 425,
-          "label": "每次尝试重新准备"
+          "line": 409,
+          "end_line": 442,
+          "label": "每次尝试：重新准备并刷新上下文"
         },
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 546,
-          "end_line": 596,
+          "line": 563,
+          "end_line": 613,
           "label": "prepareRequest 与 agent/request"
+        },
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 615,
+          "end_line": 704,
+          "label": "buildRequest：从日志推导并冻结"
         }
       ]
     },
@@ -95,14 +101,14 @@
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 426,
-          "end_line": 486,
+          "line": 443,
+          "end_line": 503,
           "label": "流式与中断结算"
         },
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 512,
-          "end_line": 533,
+          "line": 529,
+          "end_line": 550,
           "label": "提交 assistant/message"
         },
         {
@@ -124,8 +130,8 @@
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 534,
-          "end_line": 538,
+          "line": 551,
+          "end_line": 555,
           "label": "工具执行后 step 返回“继续”"
         },
         {
@@ -147,14 +153,14 @@
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 336,
-          "end_line": 357,
+          "line": 338,
+          "end_line": 359,
           "label": "step 结束原因与配对恢复"
         },
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 358,
-          "end_line": 364,
+          "line": 360,
+          "end_line": 366,
           "label": "继续 / 结束判定"
         }
       ]
@@ -169,8 +175,8 @@
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 488,
-          "end_line": 510,
+          "line": 505,
+          "end_line": 527,
           "label": "agent/request-error"
         },
         {
@@ -197,8 +203,8 @@
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 359,
-          "end_line": 363,
+          "line": 361,
+          "end_line": 365,
           "label": "agent/turn-stopping"
         },
         {
@@ -219,8 +225,8 @@
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 317,
-          "end_line": 320,
+          "line": 319,
+          "end_line": 322,
           "label": "准入被拒绝"
         }
       ]
@@ -235,8 +241,8 @@
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 366,
-          "end_line": 372,
+          "line": 368,
+          "end_line": 374,
           "label": "中止原因"
         }
       ]
@@ -251,8 +257,8 @@
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 373,
-          "end_line": 381,
+          "line": 375,
+          "end_line": 383,
           "label": "错误结构化"
         }
       ]
@@ -267,8 +273,8 @@
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 382,
-          "end_line": 395,
+          "line": 384,
+          "end_line": 397,
           "label": "turn/end 与下一个 turn"
         }
       ]
@@ -374,7 +380,7 @@
       "items": [
         "适配器异常被转成带失败信息的结束块，而不是抛出",
         "失败交给请求出错扩展点：重试插件退避后要求重试，压缩插件处理上下文溢出",
-        "每次重试都重新准备请求，所以压缩后的日志会立即生效",
+        "每次重试都重新准备请求并刷新运行时上下文，压缩后的日志会立即生效",
         "无人要求重试时抛出结构化错误，turn 以 error 结束"
       ]
     },

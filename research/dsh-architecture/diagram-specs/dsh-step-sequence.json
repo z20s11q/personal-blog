@@ -3,7 +3,7 @@
   "diagram_type": "sequence",
   "meta": {
     "title": "dsh 一次 step：先落日志再推导请求，流结束后才调度工具",
-    "output": ".archify/sequence-dsh-step-20260929-1120/dsh-step-sequence.html",
+    "output": ".archify/sequence-dsh-step-20261012-2115/dsh-step-sequence.html",
     "locale": "zh-CN",
     "quality_profile": "showcase",
     "column_fit": "spread",
@@ -11,7 +11,7 @@
       "url": "https://github.com/deepseek-ai/deepseek-harness.git",
       "provider": "github",
       "link_mode": "web",
-      "revision": "4878cdabd87d4041bdaff61d04c966883b9fd07a"
+      "revision": "d743267388641bc76f17c45ce8b4c231aed1d32c"
     }
   },
   "participants": [
@@ -57,14 +57,14 @@
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 296,
-          "end_line": 396,
+          "line": 298,
+          "end_line": 398,
           "label": "turn"
         },
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 398,
-          "end_line": 544,
+          "line": 400,
+          "end_line": 561,
           "label": "step"
         }
       ]
@@ -77,14 +77,14 @@
       "sources": [
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 276,
-          "end_line": 282,
+          "line": 274,
+          "end_line": 284,
           "label": "agent/pre-step"
         },
         {
           "path": "packages/core/agent-loop/src/agent.ts",
-          "line": 494,
-          "end_line": 504,
+          "line": 511,
+          "end_line": 521,
           "label": "agent/request-error"
         }
       ]
@@ -97,21 +97,21 @@
       "sources": [
         {
           "path": "packages/core/session/src/index.ts",
-          "line": 722,
-          "end_line": 773,
+          "line": 798,
+          "end_line": 827,
           "label": "同步追加"
         },
         {
           "path": "packages/core/session/src/index.ts",
-          "line": 860,
-          "end_line": 881,
+          "line": 984,
+          "end_line": 1005,
           "label": "推导模型消息"
         },
         {
-          "path": "packages/core/agent-loop/src/invariant.ts",
-          "line": 19,
-          "end_line": 57,
-          "label": "请求 == 日志推导"
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "line": 615,
+          "end_line": 704,
+          "label": "buildRequest：请求 == 日志推导"
         }
       ]
     },
@@ -123,8 +123,8 @@
       "sources": [
         {
           "path": "packages/llm/llm/src/index.ts",
-          "line": 1033,
-          "end_line": 1122,
+          "line": 1041,
+          "end_line": 1130,
           "label": "异常转结束块"
         }
       ]
@@ -143,8 +143,8 @@
         },
         {
           "path": "packages/core/tools/src/index.ts",
-          "line": 1493,
-          "end_line": 1714,
+          "line": 1499,
+          "end_line": 1720,
           "label": "执行管线"
         }
       ]
@@ -228,7 +228,8 @@
       "from": "driver",
       "to": "session",
       "y": 407,
-      "label": "写系统提示词变化与用户消息"
+      "label": "写提示词变化、用户消息与新上下文",
+      "note": "每次尝试先刷新运行时上下文，变了才追加"
     },
     {
       "id": "derive",
@@ -237,7 +238,7 @@
       "y": 437,
       "label": "从日志推导并冻结请求",
       "variant": "return",
-      "note": "不变量插件核对请求与推导一致"
+      "note": "buildRequest 直接取 deriveMessages() 并冻结"
     },
     {
       "id": "stream",
@@ -262,7 +263,7 @@
       "y": 562,
       "label": "结束块：完成 / 截断 / 失败",
       "variant": "return",
-      "note": "失败时交给请求出错扩展点决定是否重试"
+      "note": "失败时交给请求出错扩展点；重试回到请求准备"
     },
     {
       "id": "commit-msg",
@@ -346,8 +347,9 @@
       "title": "请求从日志推导",
       "items": [
         "驱动器先把系统提示词变化和用户消息写进日志，再从日志推导请求",
-        "请求在分发前冻结；不变量插件逐次核对它与日志推导结果一致",
-        "因此恢复会话时，重建出的请求与原来发出的请求相同"
+        "每次尝试（含重试）都先刷新运行时上下文；有变化时先追加一条用户消息",
+        "请求由 buildRequest 直接取日志推导的消息并冻结，运行时不另做核对",
+        "因此取同一段日志前缀，就能重建出这次尝试交给 LLM 运行时的请求（适配器之后的序列化不在日志里）"
       ]
     },
     {

@@ -2,14 +2,14 @@
 title: "DeepSeek Harness 架构设计：以 Agent Loop 为中心"
 description: "语言无关地拆解 DeepSeek Harness：组合内核、以日志为真源的 Agent Loop、工具管线、审批与沙箱、上下文与压缩、LLM 集成与数据外发、编排与扩展，附源码位置映射和交互式架构图。"
 publishedAt: 2026-09-29T03:55:00.000Z
-reviewedAt: 2026-09-29
+reviewedAt: 2026-10-12
 category: "Agent 架构调研"
 tags: ["ai"]
-readingMinutes: 70
+readingMinutes: 83
 parent: "dsh-architecture-analysis"
 order: 1
 ---
-> 源码快照：deepseek-ai/deepseek-harness，tag `dsh-v0.2.0-rc.1`，commit `4878cdab`（2026-09-28）。路径相对仓库根目录，行号以该快照为准。
+> 源码快照：deepseek-ai/deepseek-harness，tag `dsh-v0.2.1-alpha.2`，commit `d7432673`（2026-10-09）。路径相对仓库根目录，行号以该快照为准。与上一版快照 `dsh-v0.2.0-rc.1` 相比的变化见第 16 节。
 > 官方文档说了什么、哪里与源码不一致，见 [DeepSeek Harness 自带文档总结](/personal-blog/articles/dsh-bundled-docs/)。
 >
 > **阅读说明**：本文分两部分，结构与 [Codex 架构设计](/personal-blog/articles/codex-architecture/)、[oh-my-pi 架构设计](/personal-blog/articles/omp-architecture/) 相同，可以逐节对照。
@@ -29,7 +29,7 @@ dsh 是一个**全插件化的 agent 运行时**。它没有写死的主程序�
 从源码和仓库规约里能归纳出五条设计目标：
 
 1. **一切皆插件，且一切可撤销**：每个能力都是插件树上的一"行"。插件注册的每一样东西（工具、提示词片段、事件监听、服务）都和一个清理动作绑定，卸载或禁用这一行时逆序撤销。热重载、插件开关、子 agent 隔离都建立在这条约束上。
-2. **会话日志是唯一真源**：会话是一条只追加的事件日志。排队的输入、turn 编号、重试计数、审批记录、计划模式开关都是日志的"投影"。每一次模型请求都从日志重新推导，并有不变量检查在请求发出前核对"请求 == 日志推导结果"。
+2. **会话日志是唯一真源**：会话是一条只追加的事件日志。排队的输入、turn 编号、重试计数、审批记录、计划模式开关都是日志的"投影"。每一次模型请求都直接用日志推导出的消息和请求头组装，"请求可以由日志完整重建"靠构造方式和测试保证，运行时没有单独的核对步骤。
 3. **loop 极简，策略外置**：loop 里没有重试、没有压缩、没有步数上限、没有预算。这些都由插件挂在四个扩展点上决定。
 4. **前缀缓存稳定，并与服务端协同**：系统提示词、工具列表、环境信息的变化都以"追加"表达；DeepSeek 服务端配合支持"历史中途更新系统提示词""对话中途增删工具"两个扩展语义。
 5. **fail-closed**：并发判定出错按独占处理，审批没有应答者按拒绝处理，沙箱后端不可用就不执行，审查器出错就拒绝。
@@ -50,10 +50,11 @@ dsh 是一个**全插件化的 agent 运行时**。它没有写死的主程序�
 | **Turn（回合）** | 由一条输入引出的完整工作，以 `turn/start` 和 `turn/end` 两个事件为边界 |
 | **Step（步）** | turn 内的一次模型请求，加上它引出的全部工具执行 |
 | **Attempt（尝试）** | step 内的一次请求尝试。失败重试时同一 step 有多次尝试 |
+| **工作目录** | 会话当前的执行目录，由工作目录服务维护，模型可以用 `working_directory` 工具切换，每次切换写一条 `working-directory/change` 事件。它和会话创建时记录的项目目录分开：项目目录决定可写范围，切换执行目录不会扩大写权限 |
 | **Inbox（收件箱）** | 两条持久队列：`next-turn`（每条开一个新 turn）和 `next-step`（在下一个 step 边界整批并入） |
 | **Scope（作用域）** | 每个 agent 一个。通过它注册的工具、提示词片段、监听只对该 agent 可见；父作用域能观察所有后代的事件 |
 | **扩展点** | 事件的三种分发语义：**通知**（不能影响流程）、**瀑布**（每个监听者可以改写结果或短路）、**串行**（按序等待每个监听者） |
-| **Preset（预设）** | 一组"每会话"的工具与人设组合（standard、code、cordis、minimal、ptc）。媒体所说的 "Creator 模式"在源码中叫 `cordis` |
+| **Preset（预设）** | 一组"每会话"的工具与人设组合，Web 端内置 standard、cordis、minimal、ptc 四个。媒体所说的 "Creator 模式"在源码中叫 `cordis` |
 
 ### 3. 组件视图
 
@@ -66,7 +67,7 @@ flowchart TB
     SDK[TS / Python SDK]
     ACP[ACP 编辑器]
     HL[命令行 headless]
-    HOOK[Webhook / 定时任务]
+    HOOK[定时任务（Web 内置）<br/>Webhook（实验包）]
   end
   subgraph host["应用入口与 Host 平面（Web / 桌面）"]
     GW["网关与连接<br/>HTTP + WebSocket 多路复用；Host/Origin 围栏 + 浏览器认证"]
@@ -78,6 +79,7 @@ flowchart TB
     AL["AgentLoop 服务<br/>创建、恢复、崩溃修复、拆除"]
     RA["单 agent 驱动器<br/>收件箱 → turn → step → 尝试"]
     SS["会话日志与投影<br/>只追加；surface；投影注册表"]
+    WD["工作目录服务<br/>当前执行目录；切换即写事件"]
     SP["系统提示词<br/>按顺序号组装片段"]
     TR["工具注册表<br/>固定管线；按作用域可见"]
   end
@@ -88,8 +90,8 @@ flowchart TB
     PER["持久化后端<br/>JSONL；检查点策略"]
   end
   subgraph orch["编排与扩展"]
-    SUB["子 agent 注册表<br/>进程内 spawn/fork；进程外 codex、claude-code、ACP"]
-    EXT["skills、MCP、hooks 桥、workflow、goal、plan"]
+    SUB["子 agent 服务<br/>托管激活；进程内 spawn/fork 可续聊；进程外 codex、claude-code、ACP"]
+    EXT["skills、MCP、workflow、goal、plan<br/>hooks 桥、webhook 等实验包需单独安装"]
   end
   KER["组合内核<br/>Context / Service / effect；Loader + Include；HMR"]
   clients --> GW --> SC --> AR
@@ -99,6 +101,8 @@ flowchart TB
   HOOK --> AR
   AR --> AL --> RA
   RA --> SS
+  WD --> SS
+  WD -. 必需上下文 .-> SP
   RA --> SP
   RA --> LLM
   RA --> TR --> SBX
@@ -121,8 +125,9 @@ flowchart TB
 | 会话日志 | 同步追加、校验、通知观察者；推导模型消息 | 不做 I/O（由持久化后端异步落盘） |
 | 工具注册表 | 固定的执行管线、并发分类、按作用域的可见性 | 不决定沙箱模式（由工具体内部决定） |
 | 预设注册表 | 为每个会话挂载一套工具与人设，按代次隔离热更新 | 不影响已开会话 |
+| 工作目录服务 | 维护会话当前执行目录，把它作为必需的上下文注入请求，切换时写事件 | 不改变可写根目录 |
 
-**所有协议驱动都是"agent 工厂的适配器"**：SDK 服务器、ACP、Webhook、定时任务、命令行 headless、子 agent，最终都调用同一个"创建 / 恢复 agent"接口，然后调 agent 的 `followup / steer / cancel`。没有哪个入口绕开主循环。
+**所有协议驱动都是"agent 工厂的适配器"**：SDK 服务器、ACP、定时任务、Webhook、命令行 headless、子 agent，最终都调用同一个"创建 / 恢复 agent"接口，然后调 agent 的 `followup / steer / cancel`。没有哪个入口绕开主循环。
 
 **部署形态**：
 
@@ -136,7 +141,7 @@ flowchart TB
 
 ### 4. 组合内核：一切皆插件
 
-这一层是 dsh 与 Codex、oh-my-pi 差异最大的地方。它来自 Cordis 框架（dsh 以源码形式内置了 4.0.0-rc.7，并记录了 18 处本地修改）。
+这一层是 dsh 与 Codex、oh-my-pi 差异最大的地方。它来自 Cordis 框架（dsh 以源码形式内置了上游 4.0.0-rc.7，`vendor/README.md` 记录了 23 处本地修改）。
 
 #### 4.1 三条基本约束
 
@@ -151,7 +156,7 @@ flowchart TB
 ```text
 Profile（有序 bundle 列表 + 用户补丁）
   ├─ bundle: dsh-base          → 贡献 94 行（LLM、工具、会话、沙箱、审批、遥测……）
-  ├─ bundle: dsh-web-app       → 再贡献 85 行（网关、UI 行；把每会话的行迁到预设）
+  ├─ bundle: dsh-web-app       → 再贡献 87 行（网关、UI、定时任务；把每会话的行迁到预设）
   └─ 用户补丁
 叠加顺序：bundle 层（按列表顺序）→ profile 补丁 → 用户 home 补丁 → 命令行 --patch → 遥测关闭补丁
 ```
@@ -160,7 +165,17 @@ Profile（有序 bundle 列表 + 用户补丁）
 - 配置值可以写成延迟求值的表达式（例如读环境变量），在装配时计算。
 - bundle 解析失败或声明的 dsh 版本不兼容时，这个 bundle 被跳过并结构化上报；profile 自身出错则直接失败。
 
-各 profile 的差别只在于 bundle 组合和"入口行"（接管进程生命周期的那一行）：`web / headless / sdk / acp` 都是 base 加一个应用 bundle；`sdk-minimal` 自成一棵完整的树（无沙箱、无子 agent、无 skill）。另有四个默认不启用的可选 bundle：agent-team、语音输入、自动审查（auto-review）、定时任务（schedule）。
+各 profile 的差别只在于 bundle 组合和"入口行"（接管进程生命周期的那一行）：`web / headless / sdk / acp` 都是 base 加一个应用 bundle；`sdk-minimal` 自成一棵完整的树（无沙箱、无子 agent、无 skill）。
+
+默认组合之外的能力分三类：
+
+| 类别 | 内容 | 怎么启用 |
+|---|---|---|
+| 可选 bundle（11 个，随安装包分发） | 会话搜索、ralph、终端、徽章 skill、会话标题、agent-team、语音输入、思维链翻译、自动审查、会话检查器、git worktree | 在插件管理页打开，或写进 profile 的 bundle 列表 |
+| 按需安装的官方 bundle | claude-code、codex 两个外部子 agent 提供者（各自再注册一个全局委派工具） | 首次选用时由安装器下载 |
+| 实验包 | Claude Code / Codex hooks 桥、webhook（含 GitHub 适配）等，代码在 `packages/experimental/` | `dsh plugin add` 安装（连同所需的 peer 包），再在补丁里插入一行 |
+
+安装和挂载是两步：装了包不等于挂载，bundle 被选中之后，它贡献的行才能在补丁里配置。可选工具一律注册为 Host 上的全局行，所有预设都看得到。
 
 #### 4.3 两个平面（Web / 桌面）
 
@@ -236,7 +251,7 @@ dsh 没有 Codex 那样独立的"任务"层：驱动器的"一段活动"就是"�
 | S0 | 开 turn | 同步追加 `turn/start` | → S1 |
 | S1 | Step 准入 | 认领收件箱；组装系统提示词；生成运行时上下文快照；运行"step 前"瀑布扩展点 | 被拒 → S9（blocked）；首个 step 且没有任何消息 → S9（completed，不调模型）；否则 → S2 |
 | S2 | 开 step | 追加 `step/start` | → S3 |
-| S3 | 请求准备 | 运行"请求配置"瀑布；绑定模型与能力；按需提交系统提示词、本 step 的用户消息（**只在第一次尝试**）、请求头与工具增删消息；从日志推导并冻结请求 | → S4 |
+| S3 | 请求准备 | 运行"请求配置"瀑布；绑定模型与能力；**每次尝试**都重新求值运行时上下文，有变化先追加一条用户消息；按需提交系统提示词、本 step 的用户消息（**只在第一次尝试**）、请求头与工具增删消息；从日志推导并冻结请求 | → S4 |
 | S4 | 采样 | 流式消费；每块检查取消；分片只作为进程内帧广播 | 取消 → 保留已显示的前缀，→ S8；正常结束 → S6；以错误结束 → S5 |
 | S5 | 请求失败 | 追加 `assistant/attempt`；运行"请求出错"瀑布 | 有插件要求重试 → 回 S3（同一 step）；否则 → S8（error） |
 | S6 | 结算 | 追加 `assistant/message` | 输出被截断 → S8（max-tokens）；没有工具调用 → S8（completed）；有 → S7 |
@@ -290,7 +305,7 @@ loop 的所有策略决策都交给插件，loop 本身只负责"执行结果"�
 | step 内任何抛错 | 根据**已提交的事件**算出未回答的调用：已写过调用事件的给"结果未知，勿盲目重试"，没写过的给"未启动" |
 | 进程崩溃 | 恢复时用同一套算法补结果，再补 `step/end` 和 `turn/end{interrupted}` |
 
-另外，日志的不变量检查规定工具结果必须对应本 step 已有的工具调用。截断和中断两种情况则干脆不让工具调用进入模型可见历史，从源头上避免了不配对。
+日志追加时只校验单条事件的结构（工具结果必须带上它回应的调用 id），"结果对应本 step 已有的调用"这类跨事件关系由上面的构造路径保证，运行时不另做检查。截断和中断两种情况则干脆不让工具调用进入模型可见历史，从源头上避免了不配对。
 
 #### 5.8 恢复
 
@@ -345,7 +360,7 @@ loop 的所有策略决策都交给插件，loop 本身只负责"执行结果"�
 
 #### 6.3 并行调度
 
-- **判定**：每个工具可以按参数声明 `isConcurrencySafe(args)`，**只有返回严格的 true 才并行**；未声明、抛异常、返回其他值一律按独占处理。当前内置工具里声明并行的只有 read、read_image、web_search、web_fetch、subagent 和三个会话查询工具，而且都返回常量；bash、write、edit、grep、glob、MCP 工具都是独占。
+- **判定**：每个工具可以按参数声明 `isConcurrencySafe(args)`，**只有返回严格的 true 才并行**；未声明、抛异常、返回其他值一律按独占处理。当前内置工具里声明并行的只有 read、read_image、web_search、web_fetch、subagent，以及实验包里的会话查询工具，而且都返回常量；bash、write、edit、grep、glob、MCP 工具都是独占。
 - **时机**：模型流**结束之后**才开始调度，不是边流边执行。换来的是"先有完整助手消息，后有工具调用事件"的简单日志顺序。
 - **算法**：按模型顺序遍历。独占调用单独成组（屏障）；并行调用组成一个**有界滚动池**（默认上限 10，可热更新）；每个调用启动前**重新分类**，所以运行中注册表的变化会影响尚未启动的调用；遇到独占调用就停止扩池。
 - **哪部分真正并行**：执行前钩子、审批、守卫都**按模型顺序串行**，只有执行包装和工具体重叠。结果也按模型顺序提交：只推进连续已完成的队头，执行后钩子、写回、附加上下文都按序进行。
@@ -372,8 +387,9 @@ PTC 是 Programmatic Tool Calling：模型不直接调工具，而是写一段�
 
 - 在 PTC 呈现模式下，模型只看到一个 `run_code` 工具，外加一段根据可见工具 schema 生成的 TypeScript / Python 声明。模型直接调用其他工具名会在策略管线**之前**就被拒绝，避免"声明一个表面、执行另一个表面"。
 - 程序里的每次工具调用都**重新进入完整管线**：执行前钩子、守卫、审批、执行后钩子全部生效，按原生并发规则调度。
-- 每次运行启动一个全新的子进程：清空父进程环境变量、用与 shell 相同的沙箱包装，有堆、输出、并发调用上限。
-- base 挂载了运行时，但默认呈现模式是原生；Web 端有一个 `ptc` 预设。
+- 每次运行启动一个全新的子进程：清空父进程环境变量、用与 shell 相同的沙箱包装，有堆、输出、并发调用上限。默认组合用 Node 运行时，实验包里的 Python 运行时也套用同一套沙箱策略；受限模式下建立不了隔离就返回"沙箱不可用"，不在无沙箱下运行。
+- 呈现模式只有原生和 PTC 两种。base 挂载了运行时，但默认呈现模式是原生；Web 端有一个 `ptc` 预设。
+- 程序里的嵌套调用和原生调用一样计算展示元数据并写进日志，回放时能重建同样的工具卡片。
 
 ### 7. D5　安全与权限
 
@@ -420,7 +436,7 @@ PTC 是 Programmatic Tool Calling：模型不直接调工具，而是写一段�
 两层：
 
 1. **原生扩展点**（插件直接挂监听，强类型）：执行前、执行包装、执行后、结果观察、文件写意图、审批应答、step 前、turn 即将结束等。
-2. **外部命令 hooks**：兼容未修改的 Claude Code 和 Codex `hooks.json`，桥接到原生扩展点。
+2. **外部命令 hooks**：兼容未修改的 Claude Code 和 Codex `hooks.json`，桥接到原生扩展点。两个桥都是实验包，CLI 默认不安装，需要 `dsh plugin add` 装上桥和公共的 hook 协议包，再在补丁里插入一行。
 
 | 方言 | 挂点 | PreToolUse | PostToolUse |
 |---|---|---|---|
@@ -430,7 +446,7 @@ PTC 是 Programmatic Tool Calling：模型不直接调工具，而是写一段�
 - 同一挂点内按配置顺序串行执行，合并规则 `deny > ask > allow`。
 - `continue: false` 目前只记录不生效；Stop hook 的阻止实现为插话续跑，没有循环保护（源码里都留了 TODO）。
 - hooks 配置在进程启动时读一次，需要在补丁里显式配置一行，没有自动发现。
-- 一个可能的坑：hook 命令运行时没有传入会话的沙箱策略，会回退到**部署默认模式**，而不是会话当前模式（推测：会话切到完全访问后 hook 仍受限）。
+- hook 命令在会话当前工作目录下运行。一个可能的坑：运行时没有传入会话的沙箱策略，会回退到**部署默认模式**，而不是会话当前模式（推测：会话切到完全访问后 hook 仍受限）。
 
 #### 7.5 其他防护
 
@@ -438,7 +454,7 @@ PTC 是 Programmatic Tool Calling：模型不直接调工具，而是写一段�
 - **只有根 agent 能向人提问**；子 agent 调用提问工具直接报错，避免永远阻塞。
 - **子 agent 的审批策略固定为 never**，只能在父级已授予的沙箱范围内运行。
 - **计划模式不是安全机制**：它只是日志里的一个状态加一段提示词引导，不拦截任何工具；`exit_plan_mode` 工具始终注册，切换计划模式只改提示词片段、不改工具列表（保护缓存）。真正的限制只来自沙箱和审批。
-- **Web 访问控制**：Host / Origin 围栏 + 浏览器认证（进程启动令牌交换 cookie）。据 open-harness.net 的分析，首发版本只有 Origin 围栏（安全披露 #853），当前版本已经有认证。
+- **Web 访问控制**：Host / Origin 围栏 + 浏览器认证（进程启动令牌交换 cookie）；监听地址不能是 `0.0.0.0`、`::` 这类通配地址，可信 Host 列表由启动配置提供。据 open-harness.net 的分析，首发版本只有 Origin 围栏（安全披露 #853）。
 - 审计：审批、hooks 调用、预设切换都写入会话日志。
 
 ### 8. D4　上下文与记忆
@@ -453,11 +469,11 @@ PTC 是 Programmatic Tool Calling：模型不直接调工具，而是写一段�
 #### 8.2 系统提示词：第 0 号节点 + 历史中途追加
 
 - 各插件按名字和**集中分配的顺序号**注册提示词片段（身份在最前，工具说明在中段，结构化输出、人设后缀在末尾）。片段随插件的生命周期注册和撤销；片段可以是函数，组装时动态求值；最后还有一个可以替换组装结果的瀑布扩展点。
-- **每个 step 重新组装**，不做缓存；同一 step 内的重试复用组装结果。
+- **每个 step 重新组装**，不做缓存；同一 step 内的重试复用组装好的片段、工具和变量，只有运行时上下文每次尝试前重新求值（见下文）。
 - 渲染后的提示词**不走请求的 system 字段**，而是作为 surface **第 0 号节点**写进日志。
 - 如果模型声明支持"历史中途更新系统提示词"：提示词不变时什么都不写；变了就在历史**末尾追加**一条新的系统消息，服务端把最新的系统消息当作有效提示词。**已发送的前缀不失效**。
 - 不支持时（或开始了一个新的"请求序列"，例如压缩之后）：归并回头节点，前缀缓存从头失效。
-- 易变信息（沙箱模式、审批策略、子 agent 委派说明等）**不进系统提示词**，而是合并成一条"运行时上下文快照"用户消息，只在变化时追加。模型切换通知同样以用户消息追加。
+- 易变信息（当前工作目录、沙箱模式、审批策略、子 agent 委派说明等）**不进系统提示词**，而是合并成一条"运行时上下文快照"用户消息。快照在每次请求尝试前重新求值（包括重试），只在内容变化时追加。工作目录是"必需"的上下文，由工作目录服务注入；提示词模板的内置变量只有 `provider` 和 `model`。模型切换通知同样以用户消息追加。
 
 #### 8.3 工具增删也只追加
 
@@ -498,7 +514,7 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 #### 8.6 指令文件与记忆
 
 - **没有跨会话长期记忆**。
-- 指令文件：全局 `$DSH_HOME/AGENTS.md`，加上从项目根（以 `.git` 为标记）到工作目录每一层的 `AGENTS.md`、`CLAUDE.md` 及其 `.local` 叠加文件。从宽泛到具体排列，同目录内容相同的只保留一份；超预算时先丢宽泛的，再截断最具体的。
+- 指令文件：全局一组是 `$DSH_HOME/AGENTS.md` 和多个工具共享的 `$DSH_AGENTS_HOME/AGENTS.md`（未设置时为 `~/.agents/AGENTS.md`），组内同内容去重；项目一组是从项目根（以 `.git` 为标记）到**当前工作目录**每一层的 `AGENTS.md`、`CLAUDE.md` 及其 `.local` 叠加文件，用 `working_directory` 切换目录后重新加载这一组。从宽泛到具体排列，同目录内容相同的只保留一份；超预算时先丢宽泛的，再截断最具体的。
 - 注入方式：第一次 step 准入时生成一条**持久的用户消息**，包在 `<system-reminder>` 里，并转义正文中字面的结束标签，防止仓库内容跳出框架。
 - **跟随文件工具增量发现**：没有文件监视器；只有成功的 read / write / edit 触及更深的目录时，才在 step 结束后把新增、更新或删除的指令排进 next-step。bash 里的 `cd` 不会触发。所有变化都只追加。
 - 跨会话引用（Web 端）：用户用 `@会话` 引用另一个会话，系统追加一条标为不可信的只读快照。这是"召回"，不是记忆。
@@ -518,8 +534,8 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 
 | 适配器 | 协议 | 默认 |
 |---|---|---|
-| DeepSeek | Anthropic Messages 兼容的 SSE 端点（`api.deepseek.com/anthropic`），直接 HTTP；认证分 API Key 与平台账户两个插件 | 默认，模型 `deepseek-flash` |
-| pi-ai | 基于第三方 pi-ai 库，支持 OpenAI Completions、OpenAI Responses、Anthropic Messages | 挂载但休眠，配置后才有路由 |
+| DeepSeek | Anthropic Messages 兼容的 SSE 端点（`api.deepseek.com/anthropic`），直接 HTTP；认证分 API Key 与平台账户两个插件；API Key 路由没有凭据时模型列表为空 | 默认，模型 `deepseek-flash`（显示名 DeepSeek-V4.1-Flash） |
+| pi-ai | 基于第三方 pi-ai 库，支持 OpenAI Completions、OpenAI Responses、Anthropic Messages；同样支持中途更新系统提示词和工具 | 挂载但休眠，配置后才有路由 |
 
 容错：空闲看门狗（默认 5 分钟）；乱序或缺失事件判为畸形；流在结束事件之前关闭有专门错误码；没有任何内容却正常结束判为"空回复"（默认可重试）；**输出被截断时整批丢弃工具调用**（截断的调用不能执行）。
 
@@ -536,7 +552,7 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 
 模型能力包括：上下文窗口、默认输出上限、支持的推理强度、输入模态、"历史中途更新系统提示词"、"对话中途增删工具"（或"只支持新增"）。**没有**"是否支持工具""是否支持并行工具调用""结构化输出"这类字段；并行与否由工具层决定。
 
-默认目录里只有 `deepseek-flash` 声明了图片输入和两个中途更新能力，`deepseek-v4-pro` 什么都没声明，会按纯文本、完整工具列表、改写头节点处理。显式指定不支持的推理强度直接报错，不自动收窄。
+默认目录里只有 `deepseek-flash` 声明了图片输入、"历史中途更新系统提示词"和"只支持新增工具"，`deepseek-v4-pro` 什么都没声明，会按纯文本、完整工具列表、改写头节点处理。显式指定不支持的推理强度直接报错，不自动收窄。
 
 #### 9.5 DeepSeek 专有扩展与数据外发
 
@@ -547,6 +563,8 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
   - `dsh_plugin_packages`：每次请求都携带完整的在用插件包名与版本清单。
   - `dsh_session_log`：**会话事件日志的增量后缀**，单次上限 8 MiB。收到 2xx 后把"已接受水位"写成一条日志事件，实现至少一次投递。只附在发往 DeepSeek 官方端点的请求上（API Key 与平台账户两条路由共用同一个适配器，都会携带），**默认开启**，可以在补丁里把 `session-log-deepseek` 行的 `enabled` 设为 false 关闭（该字段是易变字段，热生效）。
 
+两个字段准备失败（例如日志后缀读取出错）时，只在这次请求里省略该字段（每个字段只告警一次），请求照常发出；只有取消会让请求失败。
+
 另外有一条独立的 OTel 上报路径（上报到 `dsh-otel-collector.deepseeksvc.com`）：默认模式 `FEEDBACK_ONLY`，**只在用户显式提交反馈（文本反馈、评分、编辑或撤回）后**，释放截至该反馈的完整会话日志前缀（含上下文）；设置非空的 `DSH_TELEMETRY_DISABLED` 可以整体关闭。
 
 服务端拿这些数据做什么，源码和文档都没有说明。可以确定的是：使用官方端点的默认配置下，**完整会话日志会随请求同步给 DeepSeek**，这一点在接入敏感代码库前需要评估。
@@ -555,15 +573,13 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 
 #### 10.1 子 agent
 
-- **注册表 + 提供者**：提供者声明是否继承父上下文。进程内有两个：spawn（新上下文）和 fork（种子取父会话截至最后一个 `turn/end` 的前缀）。进程外有 codex、claude-code、ACP、dsh-sdk，都不继承父上下文。提供者撤销后不能再启动新子 agent，已在运行的不受影响。
-- **进程内子 agent 就是一个普通 agent**：调用同一个"创建 agent"接口，带上父 agent、会话元数据（来源、父会话、委派深度、预设、工作目录）和种子；然后 `followup(任务)`，等它空闲，读最终输出。父取消时以 `parent` 原因取消子 agent。
+- **服务 + 提供者，执行归服务**：子 agent 服务统一负责启动、续聊、中断、列表和结果投递，提供者只负责"怎么造出这个子 agent"。进程内有两个提供者：spawn（新上下文）和 fork（创建时截取一次父会话到最后一个 `turn/end` 的前缀作种子）；它们只提供创建参数，子会话由服务按"可续聊"方式创建。进程外有 codex、claude-code、ACP、dsh-sdk，都不继承父上下文，**执行一次就结束、不能续聊**，在父会话里记一条外部执行的目录项。提供者撤销后不能再启动新子 agent，已在运行的不受影响。
+- **托管激活**：每次委派在子 agent 被接受后立即返回 `{激活, 子 agent id}`，工具调用不阻塞。子 agent 结束时，服务把最终回答作为一条"完成通知"投递给父 agent：父 agent 空闲时排进 next-turn 并唤醒，运行中则作为插话并入下一个 step。宿主代码要直接拿结果时可以选"调用方投递"，此时不发完成通知。
+- **续聊与控制**：进程内子 agent 结束后仍保留在列表里，父 agent 可以用 `send_message` 继续对话（按插话投递，需要持久化和会话查询），子 agent 也能用它给直接父级发消息；`interrupt_agent` 中断当前执行，`list_agents` 列出后代。子 agent 冷恢复时回放的是自己的会话日志。
+- **进程内子 agent 就是一个普通 agent**：调用同一个"创建 agent"接口，带上父 agent、会话元数据（来源、父会话、委派深度、预设）和种子。工作目录取启动请求里的 `cwd`（相对路径按父 agent 当前工作目录解析），没给就取父 agent 当前的工作目录。父取消时以 `parent` 原因取消子 agent。
 - **隔离与继承**：子 agent 加入父 agent **同一代次**的预设，再叠加委派说明、人设片段和工具过滤；审批策略**固定为 never**，继承父级的沙箱覆盖和权限预设。子 agent 不能弹审批、不能向人提问。
 - **深度与并发**：默认最大深度 1、最多 8 个活跃子 agent，都是易变配置。子 agent 工具声明为可并行，所以一个 step 可以并行发出多个委派。
-- **结果回传三种方式**：
-  1. 可续聊模式：子 agent 结束时以一条消息投递到父级收件箱，父级空闲时被唤醒；
-  2. 一次性后台模式：交给后台任务系统；
-  3. 前台模式：工具调用阻塞到子 agent 完成再返回。
-- base 默认：`subagent` 工具为 spawn + 可续聊，`subagent_fork` 为一次性。
+- base 默认：`subagent` 工具走 spawn，`subagent_fork` 走 fork；按需安装 claude-code、codex 两个 bundle 后，各自再注册一个全局委派工具。
 
 #### 10.2 其他编排机制
 
@@ -572,14 +588,14 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 | 机制 | 与主循环的关系 |
 |---|---|
 | workflow | 模型写的 JS 在沙箱化的代码执行进程里批量启动子 agent，并发上限默认 `min(16, 核数 − 2)` |
-| ralph（默认关闭） | 每轮启动一个全新的结构化子 agent，最多 256 轮 |
+| ralph（可选 bundle） | 每轮启动一个全新的结构化子 agent，最多 256 轮 |
 | goal | 目标状态事件溯源；轮次驱动器监听 agent 事件，以 `followup` 续跑 |
 | plan | 日志化的计划状态 + 提示词片段 + `exit_plan_mode`；不拦截工具 |
 | todo | 写入会话事件快照，后写胜出，纯数据 |
-| jobs | 进程内后台任务，带输出环形缓冲，被一次性子 agent、超时转后台的 shell 命令复用 |
-| schedule（可选 bundle） | 定时扫描到期任务 → 取得 agent → `followup` → 落盘 |
-| webhook | 每次请求创建工作区和 agent，然后 `followup`，即发即忘 |
-| agent-team（实验） | 在 Lead 会话日志上维护成员表、邮箱和任务板；队员以可续聊子 agent 启动 |
+| jobs | 进程内后台任务，带输出环形缓冲，供 workflow、终端、超时转后台的 shell 命令使用 |
+| schedule（Web 内置） | 定时扫描到期任务 → 取得 agent → 以定时用户消息 `followup` → 落盘；standard、cordis、ptc 预设里模型可用 `schedule_create / list / update / delete` 管理任务 |
+| webhook（实验包） | 每次请求创建工作区和 agent，然后 `followup`，即发即忘 |
+| agent-team（可选 bundle） | 在 Lead 会话日志上维护成员表和任务板；队员以可续聊子 agent 启动，队员之间的消息直接投递到对方收件箱 |
 
 ### 11. D7　扩展
 
@@ -590,7 +606,7 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 | npm 插件 / bundle | profile 清单里的 bundle 列表；`dsh plugin …` 是包管理器的转发器 | 安装时检查 dsh 版本兼容性，失败回滚；有热重载时即时生效，否则提示需要重启 |
 | skill | 按优先级扫描多个根目录：项目 `.dsh/skills` → 项目 `.agents/skills` → 自定义 → `$DSH_HOME/skills` → 用户 `.agents/skills` → 内置；同名时高优先级胜出 | 目录变化由文件监视器使缓存失效，增删 SKILL.md 无需重启；正文按需读取 |
 | MCP | **没有自动发现**，每个 server 在补丁里写一行；ACP 会话由客户端下发 | 首次列工具成功后注册为 `mcp__<server>__<tool>`；每次同步整代替换、失败整体回滚；卸载即断开并注销 |
-| hooks | 需要显式配置一行并指定配置文件 | 进程级读一次 |
+| hooks | 实验包，先 `dsh plugin add` 安装，再显式配置一行并指定配置文件 | 进程级读一次 |
 | 运行时插件 | 两个只读的内核自省工具；模型定义的动态插件在沙箱虚拟机里运行 | 持久安装走 `plugin_manager` 工具 |
 
 写第三方插件：一个 npm 包导出名字、依赖的服务、配置 schema 和 `apply(ctx, config)`（或一个 Service 子类），在 peer 依赖里声明兼容的 dsh 版本；要当 bundle 用再声明一个补丁文件。仓库里还带了一个给模型用的"插件开发"skill。
@@ -607,7 +623,9 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 
 #### 12.2 格式与恢复
 
-- JSONL 文件，会话格式版本从 V0 演进到 V4（当前写入器为 V4，自 0.1.7-alpha.1 起）。读取时遇到不认识且未标记"可忽略"的事件类型会拒绝重建。
+- JSONL 文件，会话格式版本从 V0 演进到 V4。V4 自 0.1.7-alpha.1 起写入和发布（仓库把 alpha、rc 预发布也算作正式发布，发布后的格式必须继续可读）；V4 之内新增的字段和事件（如工作目录、外部子 agent 目录项）逐条记录在 `docs/persistence-changes/`。读取时遇到不认识且未标记"可忽略"的事件类型会拒绝重建。
+- 实验插件可以写 `plugin:<名字>` 类型的记录，这类记录一律标为"可忽略"，不进入模型可见的消息，也不进事件目录；只有 `packages/experimental/` 下的包能写。
+- 持久化层会报告每个会话的格式状态。需要迁移的旧会话在列表里有提示，迁移推迟到打开时进行；在侧栏 fork 这类会话会被拒绝，要求先打开源会话完成迁移。
 - 一个会话 id 同时只有一个写句柄。
 - 合成事件使用确定性 id 和确定性时间戳（复用最后一条真实事件的时间），恢复多次结果相同。
 
@@ -616,12 +634,13 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 - 所有 agent 事件都带作用域：通过 agent 作用域注册的监听者只收到该 agent 的事件，全局监听者收到全部，祖先作用域收到后代的。
 - 通知类事件不能否决生命周期；瀑布和串行事件才能改变控制流。
 - 典型用法：**实时 token 用进程内流帧，持久事实用"会话事件"通知**；流结束帧携带已提交事件的 seq，客户端据此把瞬态流与持久事件对齐。
+- 调试入口以会话日志为主：Web 端的 Trajectory 视图按事件检索日志，`/export` 导出 ZIP；可选的"开发者工具" bundle（默认关闭）内嵌 Chrome DevTools，并提供原始会话日志检查面板。发行 profile 没有挂载控制台日志输出，插件里的 `logger.warn` 不会出现在任何地方，只有启动期的告警会写进 `$DSH_HOME/logs/startup-*.log`。遥测只有 OTLP 日志，没有 span 和指标。
 
 ### 13. 不变量汇总
 
 1. 同一会话同一时刻最多一个 turn；会话内唯一的并发是 step 内的工具并行。
 2. 持久状态只有会话日志；收件箱、turn 编号、重试计数、计划模式等都是日志投影。
-3. 每次模型请求的消息必须等于"此刻从日志推导出的消息"，配置必须等于折叠出的请求头（不变量插件在请求发出前检查）。
+3. 每次模型请求的消息等于"此刻从日志推导出的消息"，配置等于折叠出的请求头。请求构造直接调用这两个推导函数，由测试和缓存命中端到端测试守护，运行时不另做比对。
 4. 每个工具调用都有配对结果；截断和中断时工具调用不进入模型可见历史。
 5. 工具结果按模型顺序提交；工具参数冻结后任何阶段都不能改写。
 6. `turn/start` 必有 `turn/end`，`step/start` 必有 `step/end`；崩溃后由恢复补齐。
@@ -637,7 +656,7 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 |---|---|---|
 | 1 | 收件箱本身是日志投影 | 排队项持久化、可远程编辑、重启不丢 |
 | 2 | 两级收件箱 + 统一的 `send(目标, 是否唤醒)` | followup、插话、注入三种语义一个入口 |
-| 3 | 请求每次从日志推导，并在分发点校验 | "日志可完整重建请求"变成运行时可检测的契约 |
+| 3 | 请求每次直接用日志推导结果组装 | 日志可以完整重建任意一次请求，回放和审计不需要另存请求体 |
 | 4 | loop 只有四个扩展点，重试、压缩、续跑、拒绝都是插件 | loop 极简，策略可替换、可组合 |
 | 5 | "turn 即将结束"只能通过插话续跑 | 续跑由数据决定，监听者顺序不影响结果 |
 | 6 | 适配器异常统一转成"以错误结束的流" | loop 只有一条失败路径 |
@@ -671,8 +690,29 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 | 落盘文件 30 天清理 | 旧会话恢复时路径可能失效 |
 | 计划模式只靠提示词 | 模型不遵守时没有硬限制 |
 | 能力声明不对称：只有 `deepseek-flash` 声明了中途更新 | 换用 `deepseek-v4-pro` 会失去前缀保护 |
+| "请求 == 日志推导"没有运行时检查 | 构造路径被改坏时只能靠测试发现 |
+| hooks 桥是实验包、默认不安装 | 依赖 Claude Code / Codex hooks 的部署要显式安装并配置 |
 
-### 16. v0.1.7-rc.1 → v0.2.0-rc.1 的变化
+### 16. 版本变化
+
+#### 16.1 v0.2.0-rc.1 → v0.2.1-alpha.2
+
+中间有 rc.2（09-29）、alpha.1（10-03）、alpha.2（10-09）三个 tag，共 1122 个提交。仓库没有 CHANGELOG，最接近发布说明的是 `docs/upgrade-guide/<来源版本>/` 下的升级指南（例如 `v0.2.1-alpha.1/` 目录描述的是 alpha.1 之后、alpha.2 带来的变化）。内核（`vendor/`）只改了版本号。agent loop、工具管线、沙箱与审批、压缩、重试和 JSONL V4 的骨架都没变，架构层面的变化有：
+
+| # | 变化 | 影响到本文 |
+|---|---|---|
+| 1 | **删除运行时不变量插件**（包括"请求 == 日志推导"检查和各包的不变量文件） | 1、5.7、13、14 节 |
+| 2 | **新增会话工作目录**：工作目录服务 + `working_directory` 工具 + `working-directory/change` 事件；提示词模板的目录变量和 ACP / dsh-sdk 提供者的 `cwd` 配置删除 | 2、3、8.2、8.6 节 |
+| 3 | **运行时上下文在每次请求尝试前重新求值** | 5.4、8.2 节 |
+| 4 | **子 agent 改为托管激活**：委派立即返回激活回执，结果用完成通知送回；前台模式、后台任务模式和独立的进程内驱动包删除；进程内子 agent 都可续聊，新增 `send_message / interrupt_agent / list_agents` | 10.1 节 |
+| 5 | **实验能力的组合规则**：可选 bundle 增加到 11 个；hooks 桥、webhook 移到 `packages/experimental/`，CLI 默认不装；ralph、终端、徽章 skill 从默认组合移到可选 bundle；claude-code、codex 子 agent 改为按需安装的官方 bundle | 4.2、7.4、10.2、11 节 |
+| 6 | **定时任务由 Web 组合直接挂载**，定时任务 bundle 退役，新增模型可用的定时任务工具 | 10.2 节 |
+| 7 | **会话格式**：仍是 V4，格式状态文件补上了发布记录；新增 `plugin:*` 可忽略记录；格式状态与延迟迁移 | 12.2 节 |
+| 8 | **工具呈现模式只剩原生和 PTC**；嵌套 PTC 调用也持久化展示元数据；Python PTC 必须有沙箱 | 6.6 节 |
+| 9 | **DeepSeek 扩展字段准备失败时只省略字段**，请求照常发出 | 9.5 节 |
+| 10 | Web 监听拒绝通配地址；agent-team 的队员消息直接投递收件箱；桌面端默认端口改由系统分配 | 7.5、10.2 节 |
+
+#### 16.2 v0.1.7-rc.1 → v0.2.0-rc.1
 
 两个 tag 相隔五天、约 600 个提交，内核（`vendor/`）没有变化，改动集中在 Web 和桌面前端。架构层面值得注意的有：
 
@@ -694,18 +734,20 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 
 | 概念 | 源码位置 |
 |---|---|
-| CLI 入口与模式分派 | `apps/cli/src/bin.ts:18-64` |
+| CLI 入口与模式分派 | `apps/cli/src/bin.ts:26-74` |
 | runProfile（信号、appReady、boot） | `apps/cli/src/profile-boot.ts:244-326`；空根配置 `:81-85` |
-| boot：Context → Loader → 根 include → 启动审计 | `packages/boot/app-boot/src/index.ts:972-1038`；根 include `:538-585` |
-| profile 模板、默认与可选 bundle | `packages/boot/app-boot/src/profile.ts:179-218` |
+| boot：Context → Loader → 根 include → 启动审计 | `packages/boot/app-boot/src/index.ts:975-1041`；根 include `:540-587` |
+| profile 模板与默认 bundle | `packages/boot/app-boot/src/profile.ts:179-195`；默认 bundle `:213` |
+| 可选 bundle 列表与已退役 bundle | `packages/boot/app-boot/src/profile.ts:215-235`；退役列表 `:202-210`，加载 profile 时剔除 `:670-681`、`:745` |
+| 按需安装的官方 bundle | `packages/boot/app-boot/src/official-bundle-packages.ts:3-7`；离线目录 `official-bundles.ts:1-15`、`official-bundles.generated.ts` |
 | 补丁层序 | `packages/boot/app-boot/src/profile-context.ts:63-75`；遥测关闭补丁 `:52-55` |
 | 插入与整字段覆盖 | `vendor/include/src/index.ts:57-127` |
-| 行的更新：易变字段原地提交、其他重挂 | `vendor/loader/src/config/entry.ts:116-155` |
+| 行的更新：易变字段原地提交、其他重挂 | `vendor/loader/src/config/entry.ts:118-157` |
 | Service 自注册、fiber 与 effect | `vendor/cordis/src/service.ts:42-63`；`vendor/cordis/src/fiber.ts:184-440` |
 | 插件版本兼容性检查 | `packages/boot/app-boot/src/plugin-compatibility.ts:61-88` |
-| 热重载 | `packages/boot/hmr/src/index.ts:160-237`；`packages/boot/app-boot/src/index.ts:273-302` |
-| 预设注册表（代次引用计数） | `packages/preset/agent-preset-registry/src/index.ts:64-334` |
-| base / web-app 全部行 | `packages/bundle/base/cordis.patch.yml`；`packages/bundle/web-app/cordis.patch.yml:44-556` |
+| 热重载 | `packages/boot/hmr/src/index.ts:283-351`；`packages/boot/app-boot/src/index.ts:275-304` |
+| 预设注册表（代次引用计数） | `packages/preset/agent-preset-registry/src/index.ts:64-362` |
+| base / web-app 全部行 | `packages/bundle/base/cordis.patch.yml`；`packages/bundle/web-app/cordis.patch.yml:44-568` |
 
 ### B. Agent Loop
 
@@ -713,19 +755,20 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 |---|---|
 | Agent 注册表、同 id 冲突、发起者作用域 | `packages/core/agent/src/index.ts:245-687`（冲突 `:459-494`） |
 | Agent 契约与全部 agent 事件声明 | `packages/core/agent/src/runtime-types.ts:163-395` |
-| AgentLoop 服务：构造、投影注册 | `packages/core/agent-loop/src/index.ts:330-404` |
-| 创建与有序拆除 | `packages/core/agent-loop/src/index.ts:479-640`（拆除 `:526-571`） |
-| 恢复：写所有权 → 冷读 → 收尾 → 种子 | `packages/core/agent-loop/src/index.ts:816-890` |
+| AgentLoop 服务：构造、投影注册 | `packages/core/agent-loop/src/index.ts:341-422`（投影注册 `:377-387`） |
+| 创建与有序拆除 | `packages/core/agent-loop/src/index.ts:497-676`（拆除 `:544-591`） |
+| 恢复：写所有权 → 冷读 → 收尾 → 种子 | `packages/core/agent-loop/src/index.ts:852-926` |
 | 阶段状态机 | `packages/core/agent-loop/src/agent.ts:42-50` |
 | send / followup / steer / inject / cancel | `packages/core/agent-loop/src/agent.ts:154-181` |
 | 唤醒与闩锁、驱动循环 | `packages/core/agent-loop/src/agent.ts:214-265` |
-| step 准入 | `packages/core/agent-loop/src/agent.ts:267-286` |
-| turn 循环与停止判定 | `packages/core/agent-loop/src/agent.ts:296-396` |
-| step 尝试循环、失败上报、工具派发 | `packages/core/agent-loop/src/agent.ts:398-544` |
-| 请求配置与请求推导 | `packages/core/agent-loop/src/agent.ts:547-687` |
+| step 准入 | `packages/core/agent-loop/src/agent.ts:267-288` |
+| turn 循环与停止判定 | `packages/core/agent-loop/src/agent.ts:298-398` |
+| step 尝试循环、失败上报、工具派发 | `packages/core/agent-loop/src/agent.ts:400-561` |
+| 每次请求尝试前刷新运行时上下文 | `packages/core/agent-loop/src/agent.ts:410-440`；`packages/core/system-prompt/src/index.ts:567-598` |
+| 请求配置 | `packages/core/agent-loop/src/agent.ts:564-613` |
+| 请求从日志推导：请求头分代、`deriveMessages`、`markAgentLoopRequest` | `packages/core/agent-loop/src/agent.ts:616-704`（推导 `:688`，标记并冻结 `:695-702`）；`packages/llm/llm/src/call-config.ts:79-96` |
 | 收件箱投影与认领 | `packages/core/agent-loop/src/inbox.ts:27-65`、`:109-114`、`:198-243` |
 | 流尝试帧与结算 | `packages/core/agent-loop/src/assistant-stream.ts:18-140` |
-| 请求 == 日志推导 不变量 | `packages/core/agent-loop/src/invariant.ts:19-57` |
 | 结束原因、取消原因、事件词表 | `packages/core/session/src/types.ts:189-229`、`:281-428` |
 | 配对恢复算法（step 失败、崩溃、fork 共用） | `packages/core/session/src/repair.ts:53-97`、`:105-197` |
 | 作用域 | `packages/core/scope/src/index.ts:72-185` |
@@ -734,70 +777,76 @@ token 计量以最近一次成功调用的真实用量为锚，再用启发式�
 
 | 概念 | 源码位置 |
 |---|---|
-| 工具定义与结果结构 | `packages/core/tools/src/index.ts:223-299`、`:572-596` |
-| 注册、限制、守卫、可见性 | `packages/core/tools/src/index.ts:1063-1219` |
-| 并发分类 | `packages/core/tools/src/index.ts:1303-1312` |
-| 执行前 → 审批 → 守卫 | `packages/core/tools/src/index.ts:1493-1539`；审批映射 `:1727-1768` |
-| 执行包装、信号融合、执行后、冻结 | `packages/core/tools/src/index.ts:1564-1714` |
+| 工具定义与结果结构 | `packages/core/tools/src/index.ts:224-300`、`:573-597` |
+| 注册、限制、守卫、可见性 | `packages/core/tools/src/index.ts:1069-1225` |
+| 并发分类 | `packages/core/tools/src/index.ts:1309-1318` |
+| 执行前 → 审批 → 守卫 | `packages/core/tools/src/index.ts:1499-1545`；审批映射 `:1733-1774` |
+| 执行包装、信号融合、执行后、冻结 | `packages/core/tools/src/index.ts:1570-1720` |
 | 参数校验（在工具体内） | `packages/core/tools/src/schema.ts:554-632`（`:597-599`） |
 | 批次调度、滚动池、按序提交、中止合成 | `packages/core/agent-loop/src/tool-calls.ts:60-290`；并行上限 `constants.ts` |
-| PTC 桥与 Node 运行时 | `packages/core/tools/src/ptc.ts:333-731`；`packages/ptc-runtime/ptc-runtime-node/src/index.ts` |
-| shell 提权与结果标记 | `packages/shell/tool-bash/src/index.ts:478-527`；`render.ts:28-66` |
+| PTC 桥与 Node 运行时 | `packages/core/tools/src/ptc.ts:336-736`；`packages/ptc-runtime/ptc-runtime-node/src/index.ts` |
+| shell 提权与结果标记 | `packages/shell/tool-bash/src/index.ts:477-530`；`render.ts:28-66` |
 | 提权阶梯 | `packages/sandbox/sandbox/src/escalation.ts:171-208` |
 | 可写根目录 | `packages/sandbox/sandbox/src/roots.ts:52-55` |
 | 本地沙箱后端与平台 profile | `packages/sandbox/sandbox-local/src/index.ts:160-551`；`profiles.ts:16-58` |
 | 沙箱策略默认值 | `packages/sandbox/sandbox-policy/src/index.ts:112-117` |
 | 审批服务 | `packages/interaction/user-approval/src/index.ts:215-307` |
-| 权限预设 | `packages/interaction/permission-presets/src/index.ts:79-82`、`:183-227`；CLI 默认 `packages/bundle/base/cordis.patch.yml:222-262` |
+| 权限预设 | `packages/interaction/permission-presets/src/index.ts:79-82`、`:183-227`；CLI 默认 `packages/bundle/base/cordis.patch.yml:231-271` |
 | 文件写围栏、先读后改 | `packages/fs/fs-sandbox/src/index.ts:122-144`；`packages/fs/fs-observation-policy/src/index.ts:65-94` |
-| hooks 桥、合并、匹配 | `packages/hooks/hooks-claude-code/src/index.ts:143-297`；`packages/hooks/hooks-codex/src/index.ts:230-259`；`packages/hooks/hook-protocol/src/merge.ts:62-100` |
+| hooks 桥（实验包）、合并、匹配 | `packages/experimental/hooks-claude-code/src/index.ts:143-303`；`packages/experimental/hooks-codex/src/index.ts:227-256`；`packages/experimental/hook-protocol/src/merge.ts:62-100` |
 | 子进程环境清洗 | `packages/subprocess/subprocess/src/index.ts:47-70` |
-| 计划模式 | `packages/plan/plan-mode/src/index.ts:1-22`、`:197` |
-| Web 访问控制 | `packages/client/connection/src/rpc-host.ts:103-122` |
+| 计划模式 | `packages/plan/plan-mode/src/index.ts:1-22`、`:196` |
+| Web 访问控制 | `packages/client/connection/src/rpc-host.ts:106-129` |
 
 ### D. 上下文与 LLM
 
 | 概念 | 源码位置 |
 |---|---|
-| surface 事件与投影、改写约束 | `packages/core/session/src/surface.ts:50-158`、`:462-590` |
-| 追加、推导、请求头折叠 | `packages/core/session/src/index.ts:722-881` |
-| 系统提示词注册、顺序号、组装 | `packages/core/system-prompt/src/index.ts:53-168`、`:454-635` |
+| surface 事件与投影、改写约束 | `packages/core/session/src/surface.ts:50-152`、`:456-585` |
+| 追加、推导、请求头折叠 | `packages/core/session/src/index.ts:798-827`、`:876-1005` |
+| 系统提示词注册、顺序号、组装 | `packages/core/system-prompt/src/index.ts:53-175`、`:474-684` |
 | 第 0 号节点与运行时上下文快照 | `packages/core/agent-loop/src/runtime-context.ts:65-164` |
+| 会话工作目录：服务、必需上下文、`working_directory` 工具、`working-directory/change` 事件 | `packages/session/working-directory/src/index.ts:62-223`（事件声明 `:33-41`，投影 `:82-89`，必需上下文 `:90-110`，切换与提示 `:186-206`）；`packages/session/tool-working-directory/src/index.ts:19-42`；挂载 `packages/bundle/base/cordis.patch.yml:161-165` |
 | 压缩接缝、三个触发、阈值、选区、写回 | `packages/compaction/compaction/src/index.ts:119-193`；`packages/compaction/compaction-basic/src/index.ts:158-435`；`config.ts:153-217`；`region.ts:117-563` |
-| 工具配对平衡 | `packages/compaction/compaction/src/tool-pairing.ts:29-135` |
+| 工具配对平衡 | `packages/compaction/compaction/src/tool-pairing.ts:29-126` |
 | 工具结果裁剪 | `packages/compaction/compaction-tool-result-pruner/src/config.ts:7-14` |
 | 落盘策略与存储 | `packages/spill/spill-policy/src/index.ts:25-155`；`packages/spill/spill-local/src/store.ts` |
-| 指令文件 | `packages/context/agent-instructions/src/index.ts:74-359`；`render.ts:10-242` |
+| 指令文件 | `packages/context/agent-instructions/src/index.ts:76-378`；`render.ts:16-316` |
 | 统一流协议、失败、用量、能力 | `packages/llm/llm/src/types.ts:41-59`、`:175-189`、`:396-464` |
-| 准备、分发、异常转结束块 | `packages/llm/llm/src/index.ts:936-1161` |
+| 准备、分发、异常转结束块 | `packages/llm/llm/src/index.ts:933-1169` |
 | 截断丢弃工具调用、中断前缀 | `packages/llm/llm/src/assembler.ts:135-179` |
 | 重试策略与插件 | `packages/llm/llm/src/retry-policy.ts:14-24`；`packages/llm/llm-retry/src/index.ts:125-252` |
-| DeepSeek 适配器：请求、SSE 翻译、序列化 | `packages/llm/llm-deepseek/src/adapter.ts:51-159`；`translate.ts:34-166`；`serialize.ts:56-168` |
-| DeepSeek 请求体扩展 | `packages/llm/deepseek-llm-api-extensions/src/index.ts:66-129`；`packages/llm/llm-deepseek/src/host.ts:36` |
+| DeepSeek 适配器：请求、SSE 翻译、序列化 | `packages/llm/llm-deepseek/src/adapter.ts:51-163`；`translate.ts:34-166`；`serialize.ts:56-168` |
+| DeepSeek 请求体扩展（准备失败只省略该字段） | `packages/llm/deepseek-llm-api-extensions/src/index.ts:66-142`；`packages/llm/llm-deepseek/src/host.ts:52-53` |
 | 会话日志上传 | `packages/session/session-log-deepseek/src/index.ts:40-54` |
-| OTel 上报 | `packages/bundle/base/cordis.patch.yml:188-218`；`packages/session/session-telemetry-otel/src/index.ts:34-88` |
+| OTel 上报 | `packages/bundle/base/cordis.patch.yml:197-227`；`packages/session/session-telemetry-otel/src/index.ts:32-86` |
 | 持久化检查点 | `packages/session/session-checkpoint-policy/src/index.ts:63-83` |
+| 插件记录 `plugin:*` | `packages/core/session/src/types.ts:518-549`；`packages/core/session/src/index.ts:439-512`（`appendPluginRecord` `:492-498`，`pluginRecordOf` `:508-512`），写入时标为可忽略 `:839-855`；调用方门禁 `scripts/verify-plugin-record-callers.ts` |
+| 会话格式状态与迁移 | `packages/session/session-format/src/catalog.ts:70-78`；`packages/session/session-persistence/src/index.ts:50-54`；`packages/session/session-persistence-jsonl/src/index.ts:1094-1150`；fork 的 `allowMigration` 检查与 `session/migration-required` `packages/api/session-controller/src/index.ts:415-433`，投影读取延后 `:521-524` |
 
 ### E. 编排与扩展
 
 | 概念 | 源码位置 |
 |---|---|
-| 子 agent 注册表与提供者契约 | `packages/subagent/subagent/src/index.ts:192-589`；`types.ts:344-390` |
-| 子 agent 组合与策略继承 | `packages/subagent/subagent/src/child-agent.ts:50-280` |
-| 进程内驱动 | `packages/subagent/subagent-in-process-driver/src/index.ts:104-238` |
-| 三种结果回传 | `packages/subagent/tool-subagent/src/index.ts:470-592` |
-| workflow、goal、schedule、webhook | `packages/workflow/workflow-ptc/src/index.ts:103-188`；`packages/goal/goal-round-driver/src/index.ts:192`；`packages/schedule/schedule/src/runtime.ts:88-163`；`packages/webhook/webhook/src/session.ts:131-153` |
-| skills | `packages/skill/skill/src/index.ts:390-439`；`packages/skill/skill-filesystem/src/index.ts:250-262` |
+| 子 agent 注册表与提供者契约 | `packages/subagent/subagent/src/index.ts:184-592`；`types.ts:323-366` |
+| 子 agent 组合与策略继承 | `packages/subagent/subagent/src/child-agent.ts:48-278` |
+| 进程内提供者（spawn / fork）只提供 `prepareContinuable` 创建参数 | `packages/subagent/subagent-spawn-in-process/src/index.ts:39-57`；`packages/subagent/subagent-fork-in-process/src/index.ts:46-81` |
+| 托管激活：本地与外部启动、容量、自然结算、父级完成通知 | `packages/subagent/subagent/src/manager.ts:130-176`、`:379-524`、`:1020-1069`、`:1090-1202`；容量池 `activation.ts:16-36`；完成通知 `continuation-messages.ts:138-168` |
+| 续聊与控制：`send_message / interrupt_agent / list_agents`、冷恢复 | `packages/subagent/tool-subagent-control/src/index.ts:27-112`；`list-agents.ts:85-178`；`packages/subagent/subagent/src/manager.ts:545-586`、`:1325-1377` |
+| 委派工具返回激活回执 | `packages/subagent/tool-subagent/src/index.ts:267-342`；base 行 `packages/bundle/base/cordis.patch.yml:369-390` |
+| workflow、goal、schedule、webhook（实验包） | `packages/workflow/workflow-ptc/src/index.ts:104-189`；`packages/goal/goal-round-driver/src/index.ts:192`；`packages/schedule/schedule/src/runtime.ts:88-163`；`packages/experimental/webhook/src/session.ts:131-153` |
+| schedule 工具与 Web 挂载 | `packages/schedule/tool-schedule/src/index.ts:435-582`；`packages/bundle/web-app/cordis.patch.yml:134-140`；预设 `packages/bundle/web-app/presets/standard.patch.yml:34-35` |
+| skills | `packages/skill/skill/src/index.ts:390-439`；`packages/skill/skill-filesystem/src/index.ts:249-261` |
 | MCP | `packages/mcp/mcp-client/src/index.ts:30-203`；`tools.ts:113-313` |
-| SDK、ACP、桌面 | `packages/sdk/protocol/src/types.ts:14-119`；`packages/acp/acp/src/index.ts:374-376`；`apps/desktop/src/host-process.ts:186-212` |
+| SDK、ACP、桌面 | `packages/sdk/protocol/src/types.ts:14-146`；`packages/acp/acp/src/index.ts:378-380`；`apps/desktop/src/host-process.ts:186-212` |
 
 ### F. 源码阅读路线
 
 1. **先看契约**：`packages/core/agent/src/runtime-types.ts:163-395`（agent 方法与全部事件的注释，信息密度最高）→ `packages/core/session/src/types.ts:189-428`。
 2. **主循环**：`packages/core/agent-loop/src/agent.ts` 按 `send → wakeDriver → kick → turn → preStep → step → prepareRequest → buildRequest` 的顺序读，对照本文 5.4 节的状态表。
 3. **收件箱**：`packages/core/agent-loop/src/inbox.ts` 全文。
-4. **工具调度**：`packages/core/agent-loop/src/tool-calls.ts` 全文（先读文件头注释），再看 `packages/core/tools/src/index.ts:1391-1714` 的管线。
-5. **配对与恢复**：`packages/core/session/src/repair.ts` → `agent.ts:331-357` → `packages/core/agent-loop/src/index.ts:816-890`。
-6. **扩展点的真实用法**：`packages/llm/llm-retry` → `packages/compaction/compaction-basic` → `packages/session/session-checkpoint-policy` → `packages/hooks/hooks-codex`。
+4. **工具调度**：`packages/core/agent-loop/src/tool-calls.ts` 全文（先读文件头注释），再看 `packages/core/tools/src/index.ts:1397-1720` 的管线。
+5. **配对与恢复**：`packages/core/session/src/repair.ts` → `agent.ts:333-359` → `packages/core/agent-loop/src/index.ts:852-926`。
+6. **扩展点的真实用法**：`packages/llm/llm-retry` → `packages/compaction/compaction-basic` → `packages/session/session-checkpoint-policy` → `packages/experimental/hooks-codex`。
 7. **组合**：`packages/bundle/base/cordis.patch.yml` 从头读到尾（关键行都有注释说明取舍），再看 `vendor/include/src/index.ts` 和 `vendor/loader/src/config/entry.ts`。
-8. **用测试核对边界**：`packages/core/agent-loop/tests/cancel.spec.ts`（取消与闩锁的全部窗口）、`request-error.spec.ts`、`tool-calls.spec.ts`、`resume.spec.ts`、`request-cache.e2e.ts`。
+8. **用测试核对边界**：`packages/core/agent-loop/tests/cancel.spec.ts`（取消与闩锁的全部窗口）、`request-error.spec.ts`、`tool-calls.spec.ts`、`resume.spec.ts`、`request-reconstruction.spec.ts`（请求由日志推导）、`request-cache.e2e.ts`。

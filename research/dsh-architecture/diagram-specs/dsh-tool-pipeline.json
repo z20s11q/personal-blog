@@ -3,14 +3,14 @@
   "diagram_type": "workflow",
   "meta": {
     "title": "dsh 工具执行管线：审批只管提权，沙箱在工具体内部",
-    "output": ".archify/workflow-dsh-tool-pipeline-20260929-1130/dsh-tool-pipeline.html",
+    "output": ".archify/workflow-dsh-tool-pipeline-20261012-2120/dsh-tool-pipeline.html",
     "locale": "zh-CN",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/deepseek-ai/deepseek-harness.git",
       "provider": "github",
       "link_mode": "web",
-      "revision": "4878cdabd87d4041bdaff61d04c966883b9fd07a"
+      "revision": "d743267388641bc76f17c45ce8b4c231aed1d32c"
     }
   },
   "lanes": [
@@ -80,8 +80,8 @@
         },
         {
           "path": "packages/core/tools/src/index.ts",
-          "line": 1391,
-          "end_line": 1481,
+          "line": 1397,
+          "end_line": 1487,
           "label": "快照并冻结参数"
         }
       ]
@@ -97,8 +97,8 @@
       "sources": [
         {
           "path": "packages/core/tools/src/index.ts",
-          "line": 1496,
-          "end_line": 1511,
+          "line": 1502,
+          "end_line": 1517,
           "label": "tools/pre-execute"
         }
       ]
@@ -114,8 +114,8 @@
       "sources": [
         {
           "path": "packages/core/tools/src/index.ts",
-          "line": 1727,
-          "end_line": 1768,
+          "line": 1733,
+          "end_line": 1774,
           "label": "询问转审批"
         },
         {
@@ -137,14 +137,14 @@
       "sources": [
         {
           "path": "packages/core/tools/src/index.ts",
-          "line": 1136,
-          "end_line": 1154,
+          "line": 1142,
+          "end_line": 1160,
           "label": "守卫注册与求值"
         },
         {
           "path": "packages/core/tools/src/index.ts",
-          "line": 1519,
-          "end_line": 1535,
+          "line": 1525,
+          "end_line": 1541,
           "label": "允许后才求值守卫"
         }
       ]
@@ -160,8 +160,8 @@
       "sources": [
         {
           "path": "packages/core/tools/src/index.ts",
-          "line": 1601,
-          "end_line": 1631,
+          "line": 1607,
+          "end_line": 1637,
           "label": "tools/execute"
         },
         {
@@ -189,8 +189,8 @@
       "sources": [
         {
           "path": "packages/core/tools/src/index.ts",
-          "line": 1564,
-          "end_line": 1592,
+          "line": 1570,
+          "end_line": 1598,
           "label": "调用工具体"
         },
         {
@@ -201,8 +201,8 @@
         },
         {
           "path": "packages/shell/tool-bash/src/index.ts",
-          "line": 478,
-          "end_line": 527,
+          "line": 477,
+          "end_line": 530,
           "label": "bash：沙箱与提权"
         }
       ]
@@ -258,14 +258,14 @@
       "sources": [
         {
           "path": "packages/core/tools/src/index.ts",
-          "line": 1519,
-          "end_line": 1531,
+          "line": 1525,
+          "end_line": 1537,
           "label": "拒绝转错误结果"
         },
         {
           "path": "packages/core/tools/src/index.ts",
-          "line": 1752,
-          "end_line": 1766,
+          "line": 1758,
+          "end_line": 1772,
           "label": "四种审批结果"
         }
       ]
@@ -310,8 +310,8 @@
       "sources": [
         {
           "path": "packages/core/tools/src/index.ts",
-          "line": 1641,
-          "end_line": 1659,
+          "line": 1647,
+          "end_line": 1665,
           "label": "tools/post-execute"
         },
         {

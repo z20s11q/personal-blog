@@ -2,15 +2,15 @@
 title: "DeepSeek Harness 架构调研：资料索引"
 description: "近两个月网上关于 DeepSeek Harness 的架构解析文章、书、视频、改写项目，以及它们的版本基线与可信度。"
 publishedAt: 2026-09-29T03:35:00.000Z
-reviewedAt: 2026-09-29
+reviewedAt: 2026-10-12
 category: "Agent 架构调研"
 tags: ["ai"]
-readingMinutes: 12
+readingMinutes: 13
 parent: "dsh-architecture-analysis"
 order: 5
 ---
 > 调研日期：2026-09-29。时间窗口：2026-07-29 ～ 2026-09-29。dsh 于 2026-08-13 首次开源，所以窗口内的资料全部在 8/13 之后。
-> 源码快照：deepseek-ai/deepseek-harness，tag `dsh-v0.2.0-rc.1`，commit `4878cdab`（2026-09-28）。
+> 源码快照：deepseek-ai/deepseek-harness，tag `dsh-v0.2.1-alpha.2`，commit `d7432673`（2026-10-09）。第 1 节的发版表随快照更新到 10-09；第 2 ～ 7 节的外部资料清单截至 09-29。
 > 可信度标记：**A** 源码级、钉了版本、抽查与源码一致；**B** 源码级但没钉版本，或是准确的文档解读；**C** 新闻、综述、上手向；**D** 有明显事实错误。
 
 本系列各篇的阅读顺序与递进关系见 [学习路线导引](/personal-blog/articles/dsh-architecture-analysis/)。
@@ -27,7 +27,7 @@ order: 5
 | 分发 | npm `@deepseek-ai/dsh`；PyPI `deepseek-harness-sdk`（stdio 驱动 + 内置 Node 可执行文件） |
 | Cordis 论文 | [arXiv 2608.25512 — A Programming Paradigm for Spatiotemporal Composability](https://arxiv.org/abs/2608.25512)，与 dsh 同日公开 |
 
-**发版节奏**：每周 1 ～ 3 个预发布，alpha 和 rc 双轨，一直没有 stable；仓库没有 CHANGELOG。
+**发版节奏**：每周 1 ～ 3 个预发布，alpha 和 rc 双轨，一直没有 stable；仓库没有 CHANGELOG，从 0.2.1-alpha.1 起用 `docs/upgrade-guide/` 下的升级指南说明不兼容变化。
 
 | Tag | 日期 | 说明 |
 |---|---|---|
@@ -39,7 +39,10 @@ order: 5
 | dsh-v0.1.5-alpha.1 ～ rc.2 | 09-08 ～ 09-10 | 没有 0.1.4 |
 | dsh-v0.1.6-alpha.1 / alpha.2 | 09-15 / 09-17 | |
 | dsh-v0.1.7-alpha.1 ～ rc.2 | 09-22 ～ 09-24 | 会话格式写入器升到 V4 |
-| **dsh-v0.2.0-rc.1** | **09-28** | 本调研快照。修复"工具调度失败导致会话无法继续"；定时任务移到可选 bundle |
+| dsh-v0.2.0-rc.1 | 09-28 | 修复"工具调度失败导致会话无法继续"；定时任务移到可选 bundle |
+| dsh-v0.2.0-rc.2 | 09-29 | 提问工具支持限时等待；桌面端内置 CLI；模型选择器支持模糊搜索 |
+| dsh-v0.2.1-alpha.1 | 10-03 | 删除运行时不变量插件；定时任务改由 Web 组合直接挂载；Claude Code mods、会话检查器 |
+| **dsh-v0.2.1-alpha.2** | **10-09** | 本调研快照。会话工作目录；子 agent 托管激活；hooks 桥、webhook 移入实验包；可选 bundle 增至 11 个 |
 
 ## 2. 架构 / 源码分析文章
 
@@ -124,7 +127,7 @@ B 站网页返回 412，标题、UP 主、日期、时长通过公开 API 核实
 
 ## 8. 调研结论
 
-1. **逐函数讲执行循环的文章有好几篇，但全部基于 8 月中下旬的早期版本**（0.1.0-rc.5 ～ 0.1.3）。版本最新的是 deepseekdocs（0.1.5-alpha.1）。**0.1.6、0.1.7、0.2.0-rc.1 的变化没有人分析过**，包括定时任务拆成可选 bundle、DeepSeek 认证拆包、工具调度失败的修复。
+1. **逐函数讲执行循环的文章有好几篇，但全部基于 8 月中下旬的早期版本**（0.1.0-rc.5 ～ 0.1.3）。版本最新的是 deepseekdocs（0.1.5-alpha.1）。**0.1.6 之后的变化没有人分析过**，包括定时任务拆成可选 bundle、DeepSeek 认证拆包、工具调度失败的修复，以及 0.2.1 的运行时不变量删除、工作目录、子 agent 托管激活。读早期资料时要注意：其中讲到的"请求 == 日志推导"运行时断言、默认安装的 hooks 桥、前台 / 后台两种子 agent 模式，在当前版本都已不同。
 2. **深水区覆盖很薄**：工具调度器的取消竞态、压缩内部机制、落盘、子 agent 的继承与隔离、预设的代次隔离，只有零星讲解。
 3. **安全与数据外发几乎没人系统讲**：沙箱只管文件写、审批只针对提权、默认同步会话日志给 DeepSeek，这些在本系列里第一次集中说明。
 4. **没有独立 benchmark**，分数只来自 DeepSeek 自己的模型卡。

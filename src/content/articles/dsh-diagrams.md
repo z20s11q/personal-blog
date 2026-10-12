@@ -2,14 +2,14 @@
 title: "DeepSeek Harness 交互式架构图"
 description: "DeepSeek Harness 的 5 张可交互架构图：组件总览、组合与装配、turn 状态机、一次 step 的时序、工具执行管线。点击节点可查看固定提交上的源码位置。"
 publishedAt: 2026-09-29T03:50:00.000Z
-reviewedAt: 2026-09-29
+reviewedAt: 2026-10-12
 category: "Agent 架构调研"
 tags: ["ai"]
 readingMinutes: 5
 parent: "dsh-architecture-analysis"
 order: 2
 ---
-这 5 张图是 [DeepSeek Harness 架构设计](/personal-blog/articles/dsh-architecture/) 的配图，用 [archify](https://github.com/tt-a1i/archify) 从类型化的 JSON 描述编译成单文件 HTML，并通过了结构校验和浏览器检查。本页按阅读顺序内嵌全部 5 张图，可以直接在页内操作。源码版本 [`4878cdab`](https://github.com/deepseek-ai/deepseek-harness/tree/4878cdabd87d4041bdaff61d04c966883b9fd07a)（tag `dsh-v0.2.0-rc.1`）。
+这 5 张图是 [DeepSeek Harness 架构设计](/personal-blog/articles/dsh-architecture/) 的配图，用 [archify](https://github.com/tt-a1i/archify) 从类型化的 JSON 描述编译成单文件 HTML，并通过了结构校验和浏览器检查。本页按阅读顺序内嵌全部 5 张图，可以直接在页内操作。源码版本 [`d7432673`](https://github.com/deepseek-ai/deepseek-harness/tree/d743267388641bc76f17c45ce8b4c231aed1d32c)（tag `dsh-v0.2.1-alpha.2`）。
 
 ## 怎么看
 
@@ -22,7 +22,7 @@ order: 2
 
 **架构图** · 对应 [DeepSeek Harness 架构设计](/personal-blog/articles/dsh-architecture/) 中「3. 组件视图」一节 · [新窗口打开 ↗](/personal-blog/diagrams/dsh/dsh-components.html)
 
-所有接入面都经 agent 注册表创建或恢复 agent；驱动器围绕会话日志运转，通过四个扩展点挂接重试、压缩、检查点等插件；工具注册表在流结束后调度，沙箱与审批在工具体内部。
+所有接入面都经 agent 注册表创建或恢复 agent；驱动器围绕会话日志运转，通过四个扩展点挂接重试、压缩、检查点等插件；工具注册表在流结束后调度，沙箱与审批在工具体内部；子 agent 由服务托管激活，工作目录由会话工作目录服务维护。
 
 <div class="archify-embed" id="dsh-components" data-src="/personal-blog/diagrams/dsh/dsh-components.html" data-title="组件总览：入口 → 注册表 → AgentLoop → 驱动器"><a href="/personal-blog/diagrams/dsh/dsh-components.html">打开交互图 →</a></div>
 
@@ -46,7 +46,7 @@ step 准入 → 请求准备 → 采样 → 执行工具 → 关 step 判定；�
 
 **时序图** · 对应 [DeepSeek Harness 架构设计](/personal-blog/articles/dsh-architecture/) 中「5.4 Turn 与 Step 状态机」一节 · [新窗口打开 ↗](/personal-blog/diagrams/dsh/dsh-step-sequence.html)
 
-收件箱认领、step 前扩展点、从日志推导并冻结请求、采样只记账、独占屏障与滚动池、按模型顺序提交工具结果。
+收件箱认领、step 前扩展点、每次尝试先刷新运行时上下文、从日志推导并冻结请求、采样只记账、独占屏障与滚动池、按模型顺序提交工具结果。
 
 <div class="archify-embed" id="dsh-step-sequence" data-src="/personal-blog/diagrams/dsh/dsh-step-sequence.html" data-title="一次 step：先落日志再推导请求，流结束后才调度工具"><a href="/personal-blog/diagrams/dsh/dsh-step-sequence.html">打开交互图 →</a></div>
 

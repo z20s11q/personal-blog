@@ -16,7 +16,7 @@ const articles = [
     file: '04-学习路线导引.md',
     slug: 'dsh-architecture-analysis',
     label: '学习路线导引',
-    description: 'DeepSeek Harness（0.2.0-rc.1）架构系列的阅读顺序：先建立组合内核与 Agent Loop 的全局，再看工具、安全、上下文与 LLM，最后对照官方文档并与 Codex、oh-my-pi 横向比较。',
+    description: 'DeepSeek Harness（0.2.1-alpha.2）架构系列的阅读顺序：先建立组合内核与 Agent Loop 的全局，再看工具、安全、上下文与 LLM，最后对照官方文档并与 Codex、oh-my-pi 横向比较。',
   },
   {
     file: '02-架构与AgentLoop.md',
@@ -84,7 +84,7 @@ const escapeAttribute = (text) => text.replaceAll('&', '&amp;').replaceAll('"', 
 
 const diagramArticle = (article) => {
   const lines = [
-    `这 ${group.items.length} 张图是 ${ref(group.article)} 的配图，用 [archify](https://github.com/tt-a1i/archify) 从类型化的 JSON 描述编译成单文件 HTML，并通过了结构校验和浏览器检查。本页按阅读顺序内嵌全部 ${group.items.length} 张图，可以直接在页内操作。源码版本 [\`${group.revision}\`](${repo})（tag \`dsh-v0.2.0-rc.1\`）。`,
+    `这 ${group.items.length} 张图是 ${ref(group.article)} 的配图，用 [archify](https://github.com/tt-a1i/archify) 从类型化的 JSON 描述编译成单文件 HTML，并通过了结构校验和浏览器检查。本页按阅读顺序内嵌全部 ${group.items.length} 张图，可以直接在页内操作。源码版本 [\`${group.revision}\`](${repo})（tag \`${group.tag}\`）。`,
     '',
     '## 怎么看',
     '',
@@ -206,7 +206,7 @@ for (const [index, article] of articles.entries()) {
     `title: ${JSON.stringify(title)}`,
     `description: ${JSON.stringify(article.description)}`,
     `publishedAt: ${publishedAt}`,
-    'reviewedAt: 2026-09-29',
+    'reviewedAt: 2026-10-12',
     'category: "Agent 架构调研"',
     'tags: ["ai"]',
     `readingMinutes: ${Math.max(1, Math.round(body.replace(/\]\([^)]*\)/g, ']').length / 500))}`,
