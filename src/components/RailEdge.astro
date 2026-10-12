@@ -8,7 +8,7 @@ const { side, label } = Astro.props;
 ---
 
 <div class="rail-edge" data-rail={side}>
-  <div class="rail-handle" role="separator" aria-orientation="vertical" tabindex="0" aria-label={`调整${label}宽度，左右两侧同步`} title="拖动调整两侧宽度，双击恢复默认"></div>
+  <div class="rail-handle" role="separator" aria-orientation="vertical" tabindex="0" aria-label="调整正文宽度，两侧同步" title="拖动调整正文宽度，双击恢复默认"></div>
   <button type="button" class="rail-toggle" aria-expanded="true" aria-label={`收起${label}`} title={`收起${label}`} data-label={label}></button>
 </div>
 
@@ -21,7 +21,7 @@ const { side, label } = Astro.props;
   .rail-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; transform: translateX(-50%); border-radius: 1px; background: transparent; transition: background .15s; }
   .rail-handle:hover::after,
   .rail-handle:focus-visible::after,
-  :global(:root[data-resizing="rail"]) .rail-handle::after { background: var(--accent); }
+  :global(:root[data-resizing]) .rail-handle::after { background: var(--accent); }
   .rail-handle:focus-visible { outline: none; }
 
   .rail-toggle { position: absolute; top: var(--toggle-top); left: 50%; z-index: 1; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 1px solid var(--divider); border-radius: 50%; background: var(--bg); color: var(--muted); cursor: pointer; transform: translateX(-50%); opacity: .7; transition: opacity .15s, color .15s, border-color .15s; }

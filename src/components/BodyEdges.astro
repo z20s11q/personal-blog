@@ -1,49 +1,54 @@
-<div class="body-edge" data-edge="left" role="separator" aria-orientation="vertical" tabindex="0" aria-label="调整正文左右边距，两侧同步" title="拖动调整正文宽度，双击恢复默认"></div>
-<div class="body-edge" data-edge="right" role="separator" aria-orientation="vertical" tabindex="0" aria-label="调整正文左右边距，两侧同步" title="拖动调整正文宽度，双击恢复默认"></div>
+<div class="body-edge" data-edge="left" role="separator" aria-orientation="vertical" tabindex="0" aria-label="调整正文宽度，两侧同步" title="拖动调整正文宽度，双击恢复默认"></div>
+<div class="body-edge" data-edge="right" role="separator" aria-orientation="vertical" tabindex="0" aria-label="调整正文宽度，两侧同步" title="拖动调整正文宽度，双击恢复默认"></div>
 
 <script>
-  type Kind = 'rail' | 'body';
   type Side = 'left' | 'right';
   const root = document.documentElement;
-  const limits: Record<Kind, [number, number]> = { rail: [-60, 240], body: [0, 600] };
-  const prop: Record<Kind, string> = { rail: '--rail-delta', body: '--body-inset' };
-  const railBase: Record<Side, number> = { left: 272, right: 220 };
-  const minContent = 420;
-  const value: Record<Kind, number> = {
-    rail: Number.parseFloat(root.style.getPropertyValue(prop.rail)) || 0,
-    body: Number.parseFloat(root.style.getPropertyValue(prop.body)) || 0,
-  };
+  // Matches --frame in global.css: the default layout width that sidebars and content share.
+  const frame = 272 + 40 + 752 + 40 + 220;
+  const minContent = 400;
+  const wide = matchMedia('(min-width: 901px)');
+  const wider = matchMedia('(min-width: 1181px)');
   const rails = [...document.querySelectorAll<HTMLElement>('[data-rail]')];
   const edges = [...document.querySelectorAll<HTMLElement>('.body-edge')];
   const key = (side: Side) => (side === 'left' ? 'railLeft' : 'railRight');
   const collapsed = (side: Side) => root.dataset[key(side)] === 'collapsed';
-  const shown = (element: HTMLElement) => element.offsetParent !== null;
+  let scale = Number.parseFloat(root.style.getPropertyValue('--body-scale')) || 1;
+
+  const px = (name: string) => Number.parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0;
+
+  // Default content width for the current page, and the scale range that keeps the content between minContent and the viewport.
+  const layout = () => {
+    const gap = px('--col-gap');
+    const sidebar = document.querySelector<HTMLElement>('.site-sidebar');
+    const toc = document.querySelector<HTMLElement>('.reading-toc');
+    const left = sidebar && wide.matches ? sidebar.getBoundingClientRect().width + gap : 0;
+    const right = toc && wider.matches ? toc.getBoundingClientRect().width + gap : 0;
+    const base = frame - left - right;
+    const room = root.clientWidth - 2 * px('--page-x') - left - right;
+    const lo = minContent / base;
+    return { base, lo, hi: Math.max(lo, room / base) };
+  };
 
   const sync = () => {
+    const percent = String(Math.round(scale * 100));
+    for (const handle of [...rails.map((rail) => rail.querySelector<HTMLElement>('.rail-handle')!), ...edges]) {
+      handle.setAttribute('aria-valuenow', percent);
+      handle.setAttribute('aria-valuetext', `正文宽度 ${percent}%`);
+    }
     for (const rail of rails) {
-      const side = rail.dataset.rail as Side;
-      const handle = rail.querySelector<HTMLElement>('.rail-handle')!;
       const toggle = rail.querySelector<HTMLButtonElement>('.rail-toggle')!;
-      handle.setAttribute('aria-valuenow', String(railBase[side] + value.rail));
-      handle.setAttribute('aria-valuemin', String(railBase[side] + limits.rail[0]));
-      handle.setAttribute('aria-valuemax', String(railBase[side] + limits.rail[1]));
-      const open = !collapsed(side);
+      const open = !collapsed(rail.dataset.rail as Side);
       const text = `${open ? '收起' : '展开'}${toggle.dataset.label}`;
       toggle.setAttribute('aria-expanded', String(open));
       toggle.setAttribute('aria-label', text);
       toggle.title = text;
     }
-    for (const edge of edges) {
-      edge.setAttribute('aria-valuenow', String(value.body));
-      edge.setAttribute('aria-valuemin', String(limits.body[0]));
-      edge.setAttribute('aria-valuemax', String(limits.body[1]));
-    }
   };
 
   const save = () => {
     try {
-      localStorage.setItem('rail-delta', String(value.rail));
-      localStorage.setItem('body-inset', String(value.body));
+      localStorage.setItem('body-scale', String(scale));
       for (const side of ['left', 'right'] as Side[]) {
         if (collapsed(side)) localStorage.setItem(`rail-${side}`, 'collapsed');
         else localStorage.removeItem(`rail-${side}`);
@@ -51,38 +56,23 @@
     } catch {}
   };
 
-  const apply = (kind: Kind, next: number) => {
-    value[kind] = Math.round(next);
-    root.style.setProperty(prop[kind], `${value[kind]}px`);
+  const apply = (next: number) => {
+    scale = Math.round(next * 10000) / 10000;
+    root.style.setProperty('--body-scale', String(scale));
     sync();
   };
 
-  // Every open sidebar edge or bare body edge moves by the same amount, so the content loses that amount once per moving edge.
-  const range = (kind: Kind) => {
-    const [lo, top] = limits[kind];
-    const main = document.querySelector<HTMLElement>('.site-main');
-    const moving = kind === 'rail'
-      ? rails.filter((rail) => shown(rail) && !collapsed(rail.dataset.rail as Side)).length
-      : edges.filter(shown).length;
-    if (!main || moving === 0) return { lo, hi: top };
-    const gap = Number.parseFloat(getComputedStyle(root).getPropertyValue('--col-gap')) || 40;
-    const box = main.getBoundingClientRect();
-    const toc = rails.find((rail) => rail.dataset.rail === 'right' && shown(rail))?.parentElement;
-    const content = (toc ? toc.getBoundingClientRect().left - gap : box.right) - box.left;
-    const hi = Math.min(top, value[kind] + Math.max(0, content - minContent) / moving);
-    return { lo, hi: Math.max(lo, hi) };
-  };
-
-  const attach = (handle: HTMLElement, kind: Kind, sign: number) => {
+  // Content is centred, so moving one edge by dx changes the width by 2 * dx.
+  const attach = (handle: HTMLElement, sign: number) => {
     handle.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
       event.preventDefault();
       const startX = event.clientX;
-      const start = value[kind];
-      const { lo, hi } = range(kind);
+      const { base, lo, hi } = layout();
+      const start = Math.min(scale, hi);
       handle.setPointerCapture(event.pointerId);
-      root.dataset.resizing = kind;
-      const move = (next: PointerEvent) => apply(kind, Math.min(hi, Math.max(lo, start + sign * (next.clientX - startX))));
+      root.dataset.resizing = '';
+      const move = (next: PointerEvent) => apply(Math.min(hi, Math.max(lo, start + (sign * 2 * (next.clientX - startX)) / base)));
       const end = () => {
         handle.removeEventListener('pointermove', move);
         handle.removeEventListener('pointerup', end);
@@ -94,20 +84,20 @@
       handle.addEventListener('pointerup', end);
       handle.addEventListener('pointercancel', end);
     });
-    handle.addEventListener('dblclick', () => { apply(kind, 0); save(); });
+    handle.addEventListener('dblclick', () => { apply(1); save(); });
     handle.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
       event.preventDefault();
-      const { lo, hi } = range(kind);
-      const step = (event.key === 'ArrowRight' ? 16 : -16) * sign;
-      apply(kind, Math.min(Math.max(hi, value[kind]), Math.max(lo, value[kind] + step)));
+      const { base, lo, hi } = layout();
+      const step = ((event.key === 'ArrowRight' ? 32 : -32) * sign) / base;
+      apply(Math.min(hi, Math.max(lo, Math.min(scale, hi) + step)));
       save();
     });
   };
 
   for (const rail of rails) {
     const side = rail.dataset.rail as Side;
-    attach(rail.querySelector<HTMLElement>('.rail-handle')!, 'rail', side === 'left' ? 1 : -1);
+    attach(rail.querySelector<HTMLElement>('.rail-handle')!, side === 'left' ? -1 : 1);
     rail.querySelector<HTMLButtonElement>('.rail-toggle')!.addEventListener('click', () => {
       if (collapsed(side)) delete root.dataset[key(side)];
       else root.dataset[key(side)] = 'collapsed';
@@ -115,7 +105,7 @@
       save();
     });
   }
-  for (const edge of edges) attach(edge, 'body', edge.dataset.edge === 'left' ? 1 : -1);
+  for (const edge of edges) attach(edge, edge.dataset.edge === 'left' ? -1 : 1);
   sync();
 </script>
 
@@ -126,7 +116,7 @@
   .body-edge::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; transform: translateX(-50%); border-radius: 1px; background: transparent; transition: background .15s; }
   .body-edge:hover::after,
   .body-edge:focus-visible::after,
-  :global(:root[data-resizing="body"]) .body-edge::after { background: var(--accent); }
+  :global(:root[data-resizing]) .body-edge::after { background: var(--accent); }
   .body-edge:focus-visible { outline: none; }
 
   @media (min-width: 901px) {

@@ -16,10 +16,9 @@
   --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
   --page-x: 48px;
   --header-h: 64px;
-  --rail-delta: 0px;
-  --body-inset: 0px;
-  --sidebar-w: calc(272px + var(--rail-delta));
-  --toc-w: calc(220px + var(--rail-delta));
+  --body-scale: 1;
+  --sidebar-w: 272px;
+  --toc-w: 220px;
   --content-w: 752px;
   --col-gap: 40px;
   --frame: calc(272px + var(--col-gap) + var(--content-w) + var(--col-gap) + 220px);
@@ -76,14 +75,17 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
 .site-body :is(.page-head, .entry-list, .site-footer, .search-wrap, .resource-groups, .resource-caveat, .home) { margin-inline: 0; }
 .site-footer { grid-column: 1 / -1; }
 .site-main { position: relative; min-width: 0; background: transparent; }
+/* Sidebars keep their width; the content column is the page's default width times --body-scale, so the sidebars move with it. */
 @media (min-width: 901px) {
-  .site-body:not(:has(.site-sidebar)) > .site-main,
-  :root[data-rail-left="collapsed"] .site-main { margin-left: var(--body-inset); }
-  .site-main:not(:has(.reading-toc)),
-  :root[data-rail-right="collapsed"] .site-main { margin-right: var(--body-inset); }
+  .site-body {
+    --left-col: 0px;
+    --right-col: 0px;
+    width: min(calc(100% - 2 * var(--page-x)), calc(var(--left-col) + var(--right-col) + (var(--frame) - var(--left-col) - var(--right-col)) * var(--body-scale)));
+  }
+  .site-body:has(.site-sidebar) { --left-col: calc(var(--sidebar-w) + var(--col-gap)); }
 }
-@media (min-width: 901px) and (max-width: 1180px) {
-  .site-main { margin-right: var(--body-inset); }
+@media (min-width: 1181px) {
+  .site-body:has(.reading-toc) { --right-col: calc(var(--toc-w) + var(--col-gap)); }
 }
 @media (max-width: 900px) {
   .frame { width: auto; }
