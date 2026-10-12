@@ -1,4 +1,6 @@
 ---
+import RailEdge from './RailEdge.astro';
+
 export interface TocItem {
   id: string;
   text: string;
@@ -23,6 +25,7 @@ const { items, label = '本页目录', back, namespaceSections = false } = Astro
       {back && <a class="toc-back" href={back.href}>{back.text}</a>}
     </div>
   </details>
+  <RailEdge side="right" label="目录" />
 </nav>
 
 <script>
@@ -92,6 +95,10 @@ const { items, label = '本页目录', back, namespaceSections = false } = Astro
   .toc-links a:hover { color: var(--ink); }
   .toc-links a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
   .toc-links a.toc-back { margin-top: 14px; padding-left: 0; border: 0; color: var(--ink); font-weight: 700; }
+
+  @media (min-width: 1181px) {
+    :global(:root[data-rail-right="collapsed"]) .reading-toc > details { display: none; }
+  }
 
   @media (max-width: 1180px) {
     .reading-toc { top: 0; z-index: 20; margin: 0 calc(-1 * var(--page-x)) 24px; padding: 0 var(--page-x); border-bottom: 1px solid var(--line); background: var(--bg); }

@@ -1,0 +1,42 @@
+---
+interface Props {
+  side: 'left' | 'right';
+  label: string;
+}
+
+const { side, label } = Astro.props;
+---
+
+<div class="rail-edge" data-rail={side}>
+  <div class="rail-handle" role="separator" aria-orientation="vertical" tabindex="0" aria-label={`调整${label}宽度，左右两侧同步`} title="拖动调整两侧宽度，双击恢复默认"></div>
+  <button type="button" class="rail-toggle" aria-expanded="true" aria-label={`收起${label}`} title={`收起${label}`} data-label={label}></button>
+</div>
+
+<style>
+  .rail-edge { position: absolute; top: 0; bottom: 0; z-index: 5; width: var(--col-gap); }
+  [data-rail="left"] { left: 100%; --toggle-top: 14px; }
+  [data-rail="right"] { right: 100%; top: -24px; bottom: auto; height: calc(100vh - var(--header-h)); --toggle-top: 22px; }
+
+  .rail-handle { position: absolute; top: 0; bottom: 0; left: 50%; width: 12px; transform: translateX(-50%); cursor: col-resize; touch-action: none; }
+  .rail-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; transform: translateX(-50%); border-radius: 1px; background: transparent; transition: background .15s; }
+  .rail-handle:hover::after,
+  .rail-handle:focus-visible::after,
+  :global(:root[data-resizing="rail"]) .rail-handle::after { background: var(--accent); }
+  .rail-handle:focus-visible { outline: none; }
+
+  .rail-toggle { position: absolute; top: var(--toggle-top); left: 50%; z-index: 1; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 1px solid var(--divider); border-radius: 50%; background: var(--bg); color: var(--muted); cursor: pointer; transform: translateX(-50%); opacity: .7; transition: opacity .15s, color .15s, border-color .15s; }
+  .rail-toggle:hover,
+  .rail-toggle:focus-visible { color: var(--accent); border-color: var(--accent); opacity: 1; }
+  .rail-toggle::before { content: ""; width: 6px; height: 6px; border-bottom: 1.5px solid currentColor; border-left: 1.5px solid currentColor; }
+  [data-rail="left"] .rail-toggle::before { transform: translateX(1px) rotate(45deg); }
+  [data-rail="right"] .rail-toggle::before { transform: translateX(-1px) rotate(-135deg); }
+  :global(:root[data-rail-left="collapsed"]) [data-rail="left"] .rail-toggle::before { transform: translateX(-1px) rotate(-135deg); }
+  :global(:root[data-rail-right="collapsed"]) [data-rail="right"] .rail-toggle::before { transform: translateX(1px) rotate(45deg); }
+  :global(:root[data-rail-left="collapsed"]) [data-rail="left"] .rail-handle,
+  :global(:root[data-rail-right="collapsed"]) [data-rail="right"] .rail-handle { display: none; }
+  :global(:root[data-rail-left="collapsed"]) [data-rail="left"] .rail-toggle,
+  :global(:root[data-rail-right="collapsed"]) [data-rail="right"] .rail-toggle { opacity: 1; }
+
+  @media (max-width: 900px) { [data-rail="left"] { display: none; } }
+  @media (max-width: 1180px) { [data-rail="right"] { display: none; } }
+</style>

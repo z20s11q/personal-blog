@@ -1,6 +1,7 @@
 ---
 import { domainLabel } from '../data/domains';
 import { filterByTag, type Entry } from '../data/entries';
+import RailEdge from './RailEdge.astro';
 
 interface Props {
   entries: Entry[];
@@ -38,6 +39,7 @@ const current = (entry: Entry) => (isCurrent(entry) ? 'page' : undefined);
         </ul>
       </nav>
     </details>
+    <RailEdge side="left" label="分类导航" />
   </aside>
 )}
 
@@ -112,6 +114,10 @@ const current = (entry: Entry) => (isCurrent(entry) ? 'page' : undefined);
   .side-collection > ul a { display: block; padding: 4px 0; font-size: 14px; font-weight: 400; line-height: 1.6; }
   .side-collection > ul a[aria-current="page"],
   .side-leaf[aria-current="page"] { color: var(--accent); font-weight: 600; }
+
+  @media (min-width: 901px) {
+    :global(:root[data-rail-left="collapsed"]) .sidebar-toggle { display: none; }
+  }
 
   @media (max-width: 900px) {
     .site-sidebar { position: static; display: block; height: auto; padding: 0 var(--page-x); border-right: 0; border-bottom: 1px solid var(--divider); }
