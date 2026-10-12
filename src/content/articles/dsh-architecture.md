@@ -57,7 +57,7 @@ dsh 是一个**全插件化的 agent 运行时**。它没有写死的主程序�
 
 ### 3. 组件视图
 
-> **交互图**：[组件总览：入口 → 注册表 → AgentLoop → 驱动器](/personal-blog/diagrams/dsh/dsh-components.html)（架构图，点击节点可查看源码位置）
+> **交互图**：[组件总览：入口 → 注册表 → AgentLoop → 驱动器](/personal-blog/articles/dsh-diagrams/#dsh-components)（架构图，点击节点可查看源码位置）
 
 ```mermaid
 flowchart TB
@@ -146,7 +146,7 @@ flowchart TB
 
 #### 4.2 Profile → Bundle → Patch
 
-> **交互图**：[组合与装配：五层补丁 → 行表 → Loader → 服务与预设](/personal-blog/diagrams/dsh/dsh-composition.html)（数据流图，点击节点可查看源码位置）
+> **交互图**：[组合与装配：五层补丁 → 行表 → Loader → 服务与预设](/personal-blog/articles/dsh-diagrams/#dsh-composition)（数据流图，点击节点可查看源码位置）
 
 ```text
 Profile（有序 bundle 列表 + 用户补丁）
@@ -227,9 +227,9 @@ dsh 没有 Codex 那样独立的"任务"层：驱动器的"一段活动"就是"�
 
 #### 5.4 Turn 与 Step 状态机
 
-> **交互图**：[turn / step 状态机](/personal-blog/diagrams/dsh/dsh-turn-lifecycle.html)（状态图，点击节点可查看源码位置）
+> **交互图**：[turn / step 状态机](/personal-blog/articles/dsh-diagrams/#dsh-turn-lifecycle)（状态图，点击节点可查看源码位置）
 
-> **交互图**：[一次 step：先落日志再推导请求，流结束后才调度工具](/personal-blog/diagrams/dsh/dsh-step-sequence.html)（时序图，点击节点可查看源码位置）
+> **交互图**：[一次 step：先落日志再推导请求，流结束后才调度工具](/personal-blog/articles/dsh-diagrams/#dsh-step-sequence)（时序图，点击节点可查看源码位置）
 
 | # | 状态 | 做什么 | 转移 |
 |---|---|---|---|
@@ -313,7 +313,7 @@ loop 的所有策略决策都交给插件，loop 本身只负责"执行结果"�
 
 #### 6.1 统一管线
 
-> **交互图**：[工具执行管线：审批只管提权，沙箱在工具体内部](/personal-blog/diagrams/dsh/dsh-tool-pipeline.html)（流程图，点击节点可查看源码位置）
+> **交互图**：[工具执行管线：审批只管提权，沙箱在工具体内部](/personal-blog/articles/dsh-diagrams/#dsh-tool-pipeline)（流程图，点击节点可查看源码位置）
 
 内置工具、MCP 工具、代码执行里的子调用，全部经过同一个注册表、同一条管线：
 

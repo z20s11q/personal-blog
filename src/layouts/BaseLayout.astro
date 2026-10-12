@@ -173,6 +173,36 @@ const home = path === base || path === `${base}articles/`;
     update();
   }
 
+  const embeds = [...document.querySelectorAll<HTMLElement>('.prose .archify-embed[data-src]')];
+  if (embeds.length) {
+    const theme = () => (root.dataset.theme === 'dark' ? 'dark' : 'light');
+    const fit = (frame: HTMLIFrameElement) => {
+      const doc = frame.contentDocument;
+      if (doc?.body) frame.style.height = `${doc.documentElement.scrollHeight}px`;
+    };
+    // Frames grow to their content height after loading, which moves any #anchor below them.
+    let pending = embeds.length;
+    const frames = embeds.map((embed) => {
+      const url = new URL(embed.dataset.src!, location.href);
+      url.searchParams.set('theme', theme());
+      const frame = document.createElement('iframe');
+      frame.className = 'archify-frame';
+      frame.title = embed.dataset.title ?? '';
+      frame.src = url.href;
+      frame.addEventListener('load', () => {
+        fit(frame);
+        const body = frame.contentDocument?.body;
+        if (body) new ResizeObserver(() => fit(frame)).observe(body);
+        if (--pending === 0 && location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();
+      }, { once: true });
+      embed.replaceChildren(frame);
+      return frame;
+    });
+    new MutationObserver(() => {
+      for (const frame of frames) frame.contentDocument?.documentElement.setAttribute('data-theme', theme());
+    }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  }
+
   const diagrams = [...document.querySelectorAll<HTMLElement>('.prose pre.mermaid')];
   if (diagrams.length) {
     const sources = diagrams.map((block) => block.textContent ?? '');

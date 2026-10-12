@@ -77,27 +77,35 @@ const archRef = ref('dsh-architecture');
 /** Heading text each diagram is attached to, filled while converting 02. */
 const calloutHeadings = new Map();
 
+const diagramUrl = (file) => `${base}${dshDiagramDir}${file}`;
+/** Anchor of a diagram's embed block on the diagram article; the 02 callouts link here. */
+const diagramAnchor = (file) => basename(file, '.html');
+const escapeAttribute = (text) => text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+
 const diagramArticle = (article) => {
   const lines = [
-    `这 ${group.items.length} 张图是 ${ref(group.article)} 的配图，用 [archify](https://github.com/tt-a1i/archify) 从类型化的 JSON 描述编译成单文件 HTML，并通过了结构校验和浏览器检查。每张图都是独立页面，下面的链接直接打开原图。源码版本 [\`${group.revision}\`](${repo})（tag \`dsh-v0.2.0-rc.1\`）。`,
+    `这 ${group.items.length} 张图是 ${ref(group.article)} 的配图，用 [archify](https://github.com/tt-a1i/archify) 从类型化的 JSON 描述编译成单文件 HTML，并通过了结构校验和浏览器检查。本页按阅读顺序内嵌全部 ${group.items.length} 张图，可以直接在页内操作。源码版本 [\`${group.revision}\`](${repo})（tag \`dsh-v0.2.0-rc.1\`）。`,
     '',
     '## 怎么看',
     '',
-    '- **点击节点**：查看对应的源码文件和行号。链接固定在具体提交上，不会随仓库更新而漂移。',
-    '- **点击连线**：高亮这条关系；右下角可以缩放、追踪路径。',
+    '- **点击节点**：弹出来源面板，列出对应的源码文件和行号。链接固定在具体提交上，不会随仓库更新而漂移。',
+    '- **点击连线**：高亮这条关系；图下方的工具栏可以缩放、追踪路径。',
     '- **阅读顺序**：先看组件总览和组合装配建立整体印象，再看状态机理解 turn 何时继续、何时结束，然后看时序图里一次 step 的先后顺序，最后看工具管线里审批与沙箱的位置。',
-    '- 图按桌面宽度设计，手机上需要横向拖动。',
+    '- 图按桌面宽度设计。页内显示偏窄时，点图右上角的全屏按钮，或用标题下的「新窗口打开」单独查看。',
     '',
   ];
   for (const item of group.items) {
     const heading = calloutHeadings.get(item.file);
     if (!heading) throw new Error(`No article section links to ${item.file}`);
+    const url = diagramUrl(item.file);
     lines.push(
       `## ${item.title}`,
       '',
-      `**${item.kind}** · [打开交互图 →](${base}${dshDiagramDir}${item.file}) · 对应 ${ref(group.article)} 中「${heading}」一节`,
+      `**${item.kind}** · 对应 ${ref(group.article)} 中「${heading}」一节 · [新窗口打开 ↗](${url})`,
       '',
       item.description,
+      '',
+      `<div class="archify-embed" id="${diagramAnchor(item.file)}" data-src="${url}" data-title="${escapeAttribute(item.title)}"><a href="${url}">打开交互图 →</a></div>`,
       '',
     );
   }
@@ -145,7 +153,7 @@ const insertCallouts = (text, callouts, name) => {
     const index = lines.findIndex((line) => /^#{2,5} /.test(line) && line.replace(/^#+ /, '').startsWith(prefix));
     if (index < 0) throw new Error(`${name}: heading starting with "${prefix}" not found`);
     calloutHeadings.set(file, lines[index].replace(/^#+ /, ''));
-    const callout = `> **交互图**：[${diagram.title}](${base}${dshDiagramDir}${file})（${diagram.kind}，点击节点可查看源码位置）`;
+    const callout = `> **交互图**：[${diagram.title}](${articleUrl('dsh-diagrams')}#${diagramAnchor(file)})（${diagram.kind}，点击节点可查看源码位置）`;
     lines = [...lines.slice(0, index + 1), '', callout, ...lines.slice(index + 1)];
   }
   return lines.join('\n');
@@ -200,7 +208,7 @@ for (const [index, article] of articles.entries()) {
     `publishedAt: ${publishedAt}`,
     'reviewedAt: 2026-09-29',
     'category: "Agent 架构调研"',
-    'tags: ["ai", "development"]',
+    'tags: ["ai"]',
     `readingMinutes: ${Math.max(1, Math.round(body.replace(/\]\([^)]*\)/g, ']').length / 500))}`,
     ...(article.parent ? [`parent: ${JSON.stringify(article.parent)}`, `order: ${article.order}`] : []),
     '---',

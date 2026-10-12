@@ -251,7 +251,7 @@ for (const [index, article] of articles.entries()) {
     `publishedAt: ${publishedAt}`,
     'reviewedAt: 2026-09-28',
     'category: "Agent 架构调研"',
-    'tags: ["ai", "development"]',
+    'tags: ["ai"]',
     `readingMinutes: ${Math.max(1, Math.round(body.replace(/\]\([^)]*\)/g, ']').length / 500))}`,
     ...(article.parent ? [`parent: ${JSON.stringify(article.parent)}`, `order: ${article.order}`] : []),
     '---',
