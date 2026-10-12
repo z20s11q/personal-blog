@@ -3,7 +3,7 @@
   'use strict'
 
   const { J } = ArchPage.util
-  const REPO = 'https://github.com/z20s11q/personal-blog/blob/main/'
+  const REPO = 'https://github.com/z20s11q/personal-blog/blob/02719e10a4d9737d43d28eda2aa8dd6d88649226/'
   const CONFIG = JSON.parse(document.getElementById('example-config').textContent)
 
   /* ---------- overview captions: one per Archify node id ---------- */
@@ -15,7 +15,7 @@
     data: { kicker: '输入', title: '数据文件', text: '抓取结果、录制日志等大块数据，各写成一个 JSON 数据块，由内容脚本按元素 id 读取。', src: ['templates/arch-page/build_page.py:72-85'], pano: [['build', 'data', '详细架构流程：写入数据']] },
     scripts: { kicker: '输入', title: '脚本', text: '按顺序内联：先引擎 engine.js，再本页内容 arch.data.js，最后是本页额外章节的脚本。', src: ['templates/arch-page/example/arch.data.js'], pano: [['build', 'scripts', '详细架构流程：内联脚本']] },
     build: { kicker: '合成', title: 'build_page.py', text: '读清单，依次填文字、内联总体图、写数据块和脚本，输出单文件页面；漏填的占位符直接报错。', src: ['templates/arch-page/build_page.py:88-115'], pano: [['build', 'build', '详细架构流程：构建']] },
-    page: { kicker: '输出', title: '单文件页面', text: '样式、图、数据和脚本都在一个 html 里，离线可开。', src: ['templates/arch-page/example/example.html'], pano: [['render', 'page', '详细架构流程：打开页面']] },
+    page: { kicker: '输出', title: '单文件页面', text: '样式、图、数据和脚本都在一个 html 里，离线可开。', src: ['templates/arch-page/example/page.config.json'], pano: [['render', 'page', '详细架构流程：打开页面']] },
     engine: { kicker: '浏览器', title: 'ArchPage 引擎', text: '`ArchPage.init(config)` 先校验内容，再渲染总体架构的说明、详细架构流程和对象架构。', src: ['templates/arch-page/engine.js:480-489'], pano: [['render', 'engine', '详细架构流程：渲染']] },
   }
 
@@ -121,7 +121,7 @@
     { id: 'datatag', graph: 'data', kind: '函数', title: 'data_tag', object: 'build_page.py', plain: '把数据文件写成 JSON 数据块。', methods: [{ sig: 'data_tag(element_id, spec) -> str', name: '写数据块', in: '元素 id 和 `{file, type, notice}`', out: '`<script type="application/json">`', effect: '校验 JSON 或 JSONL，转义 `</` 和 `<!--`' }], src: ['templates/arch-page/build_page.py:72-85'] },
     { id: 'content', graph: 'scripts', kind: '脚本', title: 'arch.data.js', object: 'example/arch.data.js', plain: '本页内容：总体说明、全景图、流程、对象，最后调用 `ArchPage.init`。', rel: [['调用', 'init', '交出配置']], src: ['templates/arch-page/example/arch.data.js'] },
     { id: 'main', graph: 'build', kind: '函数', title: 'main', object: 'build_page.py', plain: '构建入口。', methods: [{ sig: 'main() -> None', name: '构建', in: '页面目录下的 page.config.json', out: '单文件页面', effect: '填文字、内联图、写数据块和脚本' }], rel: [['调用', 'datatag', '写数据块']], src: ['templates/arch-page/build_page.py:88-115'] },
-    { id: 'html', graph: 'page', kind: '文件', title: 'example.html', object: 'example/example.html', plain: '构建输出。', src: ['templates/arch-page/example/example.html'] },
+    { id: 'html', graph: 'page', kind: '文件', title: 'example.html', object: 'example/example.html', plain: '构建输出。', src: ['templates/arch-page/example/page.config.json'] },
     { id: 'init', graph: 'engine', kind: '函数', title: 'ArchPage.init', object: 'engine.js', plain: '引擎入口：校验后渲染三个部分。', methods: [{ sig: 'ArchPage.init(config)', name: '初始化', in: '`{repo, overview, pano, components}`', out: '返回 undefined，结果直接写进页面 DOM', effect: '`validate` 后依次调用 `initOverview`、`initPano`、`initInspector`' }], src: ['templates/arch-page/engine.js:480-489'] },
   ]
 

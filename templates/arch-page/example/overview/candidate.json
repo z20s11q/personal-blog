@@ -10,7 +10,7 @@
       "url": "https://github.com/z20s11q/personal-blog.git",
       "provider": "github",
       "link_mode": "web",
-      "revision": "7835032d50cf4659674b7d7f40080b5acccc29d3"
+      "revision": "02719e10a4d9737d43d28eda2aa8dd6d88649226"
     }
   },
   "components": [
@@ -146,7 +146,7 @@
       ],
       "size": [
         180,
-        64
+        160
       ]
     },
     {
@@ -157,9 +157,8 @@
       "tag": "输出",
       "sources": [
         {
-          "path": "templates/arch-page/example/example.html",
-          "line": 1,
-          "label": "示例输出"
+          "path": "templates/arch-page/example/page.config.json",
+          "label": "示例清单"
         }
       ],
       "pos": [
