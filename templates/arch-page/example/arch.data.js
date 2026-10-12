@@ -3,7 +3,7 @@
   'use strict'
 
   const { J } = ArchPage.util
-  const REPO = 'https://github.com/z20s11q/personal-blog/blob/02719e10a4d9737d43d28eda2aa8dd6d88649226/'
+  const REPO = 'https://github.com/z20s11q/personal-blog/blob/63377584af68d0c88d1294928af4e7552cbaf898/'
   const CONFIG = JSON.parse(document.getElementById('example-config').textContent)
 
   /* ---------- overview captions: one per Archify node id ---------- */
