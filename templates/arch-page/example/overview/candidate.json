@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "arch-page 模版：五类输入合成一页，引擎在浏览器里渲染三个部分",
+    "output": "overview.html",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/z20s11q/personal-blog.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "7835032d50cf4659674b7d7f40080b5acccc29d3"
+    }
+  },
+  "components": [
+    {
+      "id": "config",
+      "type": "backend",
+      "label": "page.config.json",
+      "sublabel": "输出路径 · 文字 · 数据 · 脚本",
+      "tag": "构建清单",
+      "sources": [
+        {
+          "path": "templates/arch-page/example/page.config.json",
+          "line": 1,
+          "label": "示例配置"
+        }
+      ],
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "template",
+      "type": "frontend",
+      "label": "page.template.html",
+      "sublabel": "样式 · 三个章节 · 占位符",
+      "tag": "页面骨架",
+      "sources": [
+        {
+          "path": "templates/arch-page/page.template.html",
+          "line": 302,
+          "end_line": 358,
+          "label": "页面骨架"
+        }
+      ],
+      "pos": [
+        40,
+        160
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "overview",
+      "type": "external",
+      "label": "Archify 总体图",
+      "sublabel": "candidate.json → overview.html",
+      "tag": "图源",
+      "sources": [
+        {
+          "path": "templates/arch-page/example/overview/candidate.json",
+          "line": 1,
+          "label": "图源"
+        }
+      ],
+      "pos": [
+        40,
+        280
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "data",
+      "type": "database",
+      "label": "数据文件",
+      "sublabel": "抓取结果 · 录制日志",
+      "tag": "data",
+      "sources": [
+        {
+          "path": "templates/arch-page/build_page.py",
+          "line": 72,
+          "end_line": 85,
+          "label": "data_tag"
+        }
+      ],
+      "pos": [
+        40,
+        400
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "scripts",
+      "type": "backend",
+      "label": "脚本",
+      "sublabel": "engine.js · arch.data.js · page.js",
+      "tag": "scripts",
+      "sources": [
+        {
+          "path": "templates/arch-page/example/arch.data.js",
+          "line": 1,
+          "label": "示例内容"
+        }
+      ],
+      "pos": [
+        40,
+        520
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "build",
+      "type": "backend",
+      "label": "build_page.py",
+      "sublabel": "填文字 · 内联图 · 写数据与脚本",
+      "tag": "合成",
+      "sources": [
+        {
+          "path": "templates/arch-page/build_page.py",
+          "line": 88,
+          "end_line": 115,
+          "label": "main"
+        }
+      ],
+      "pos": [
+        360,
+        280
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "page",
+      "type": "frontend",
+      "label": "单文件页面",
+      "sublabel": "离线可开 · 无外部依赖",
+      "tag": "输出",
+      "sources": [
+        {
+          "path": "templates/arch-page/example/example.html",
+          "line": 1,
+          "label": "示例输出"
+        }
+      ],
+      "pos": [
+        680,
+        280
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "engine",
+      "type": "backend",
+      "label": "ArchPage 引擎",
+      "sublabel": "校验 · 总体 · 流程 · 对象",
+      "tag": "浏览器",
+      "sources": [
+        {
+          "path": "templates/arch-page/engine.js",
+          "line": 466,
+          "end_line": 475,
+          "label": "init"
+        }
+      ],
+      "pos": [
+        980,
+        280
+      ],
+      "size": [
+        170,
+        64
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "c-config-build",
+      "from": "config",
+      "to": "build",
+      "label": "清单",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c-template-build",
+      "from": "template",
+      "to": "build",
+      "label": "骨架",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c-overview-build",
+      "from": "overview",
+      "to": "build",
+      "label": "svg",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c-data-build",
+      "from": "data",
+      "to": "build",
+      "label": "JSON 数据块",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c-scripts-build",
+      "from": "scripts",
+      "to": "build",
+      "label": "按序内联",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c-build-page",
+      "from": "build",
+      "to": "page",
+      "label": "写出",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c-page-engine",
+      "from": "page",
+      "to": "engine",
+      "label": "ArchPage.init",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "三个部分",
+      "items": [
+        "总体架构：Archify 图加每个方框的说明",
+        "详细架构流程：组件卡片、连线、按步骤前进的流程",
+        "对象架构：每个方框里的对象、方法与关系"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "内容约束",
+      "items": [
+        "流程数据来自真实运行或仓库录制",
+        "组件卡片写职责、要点和关键概念",
+        "引擎校验引用关系，缺项在控制台报错"
+      ]
+    }
+  ]
+}

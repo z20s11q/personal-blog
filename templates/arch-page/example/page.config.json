@@ -1,0 +1,28 @@
+{
+  "out": "example.html",
+  "template": "../page.template.html",
+  "overview": "overview/overview.html",
+  "text": {
+    "TITLE": "arch-page 模版示例：一页架构文档是怎样合成和渲染的",
+    "EYEBROW": "ARCH-PAGE / EXAMPLE",
+    "LEAD": "这一页用模版描述模版自己：构建脚本把配置、页面骨架、Archify 总体图、数据文件和脚本合成一个单文件页面；浏览器打开后，引擎先校验内容，再渲染总体架构、详细架构流程和对象架构三个部分。",
+    "EVIDENCE": "<span>源码：<a href=\"https://github.com/z20s11q/personal-blog/tree/main/templates/arch-page\">z20s11q/personal-blog · templates/arch-page</a></span><span>流程数据：取自本页自己的配置和渲染结果</span>",
+    "DOC_SCOPE": "<code>templates/arch-page</code> 下的 <code>engine.js</code>、<code>build_page.py</code>、<code>page.template.html</code>",
+    "DOC_REQUIREMENT": "沉淀可复用的架构分析网页模版",
+    "DOC_GOAL": "给出一个能直接构建、能通过引擎校验的最小示例",
+    "DOC_READERS": "用这个模版写架构分析的人",
+    "DOC_SHOWS": "模版的构建过程与浏览器渲染过程",
+    "DOC_EXCLUDES": "引擎内部的连线布局算法",
+    "DOC_BUILD": "<code>python3 templates/arch-page/build_page.py templates/arch-page/example</code>；总体图由 Archify 从 <code>example/overview/candidate.json</code> 生成",
+    "OVERVIEW_TITLE": "五类输入合成一页",
+    "OVERVIEW_PROVENANCE": "由 Archify 生成，源码行号已对照仓库校验",
+    "OVERVIEW_SUB": "左边一列是构建的五类输入，中间是构建脚本，右边是输出页面和在浏览器里运行的引擎。点任一方框，右侧显示它的职责、源码位置和跳转。",
+    "PANO_TITLE": "从配置到三个部分",
+    "PANO_PROVENANCE": "数据取自本页的配置文件与渲染结果",
+    "PANO_LEAD": "每个方框是构建或渲染中的一个参与者，线上写着两边之间传的是什么。选一个流程，一直点“下一步”：每一大步的说明页先列出全部小步的说明，之后逐个小步前进，右侧显示这一小步的数据并逐层拆开。"
+  },
+  "data": {
+    "example-config": { "file": "page.config.json", "type": "json" }
+  },
+  "scripts": ["../engine.js", "arch.data.js"]
+}
