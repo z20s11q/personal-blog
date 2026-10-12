@@ -68,16 +68,20 @@
     return { layers, body: { key: path ? path.split('.').pop() : '', value: cur } }
   }
   const preview = (x) => x === null ? 'null' : typeof x === 'string' ? (x.length > 120 ? `${JSON.stringify(x.slice(0, 120))}…（共 ${x.length} 字）` : JSON.stringify(x))
-    : Array.isArray(x) ? `[${x.length} 项]` : typeof x === 'object' ? `{${Object.keys(x).length} 个字段}` : String(x)
-  function fieldRows(v, depth = 0, out = []) {
-    const kids = Array.isArray(v) ? v.slice(0, 3).map((x, i) => [`[${i}]`, x, null]) : Object.entries(v).map(([k, x]) => [k, x, k])
+    : Array.isArray(x) ? `列表，共 ${x.length} 项` : typeof x === 'object' ? `${Object.keys(x).length} 个字段` : String(x)
+  function fieldRows(v, budget = { n: 80 }, depth = 0, lv = 0, out = []) {
+    const arr = Array.isArray(v)
+    const kids = arr ? v.slice(0, 3).map((x, i) => [i, x, null]) : Object.entries(v).map(([k, x]) => [k, x, k])
     for (const [label, x, k] of kids) {
-      if (out.length >= 80) break
-      const nest = x && typeof x === 'object' && Object.keys(x).length && depth < 4
-      out.push({ label, x, k, depth, group: !!nest })
-      if (nest) fieldRows(x, depth + 1, out)
+      if (budget.n-- <= 0) break
+      const nest = !!(x && typeof x === 'object' && Object.keys(x).length && lv < 5)
+      if (arr && nest && isObj(x)) out.push({ box: true, label, depth, inner: fieldRows(x, budget, 0, lv + 1) })
+      else {
+        out.push({ label, x, k, depth, group: nest })
+        if (nest) fieldRows(x, budget, depth + 1, lv + 1, out)
+      }
     }
-    if (Array.isArray(v) && v.length > 3 && out.length < 80) out.push({ label: '…', x: `其余 ${v.length - 3} 项见原文`, depth, note: true })
+    if (arr && v.length > 3 && budget.n > 0) out.push({ label: '…', x: `其余 ${v.length - 3} 项见原文`, depth, note: true })
     return out
   }
   function treeRows(rows) {
@@ -91,15 +95,19 @@
     const own = r.depth === 0 && r.first ? (r.more ? 'start' : '') : r.more ? 'full' : 'end'
     return r.rails.map((on, L) => on ? `<i class="tv" style="left:${COL(L)}px"></i>` : '').join('')
       + (own ? `<i class="tv ${own}" style="left:${COL(d)}px"></i>` : '')
-      + `<i class="tl" style="left:${COL(d)}px"></i><i class="dot${r.kids ? ' grp' : ''}" style="left:${COL(d + 1)}px"></i>`
+      + `<i class="tl" style="left:${COL(d)}px"></i>`
+      + (r.box ? '' : `<i class="dot${r.kids ? ' grp' : ''}" style="left:${COL(d + 1)}px"></i>`)
       + (r.kids ? `<i class="tv down" style="left:${COL(d + 1)}px"></i>` : '')
   }
-  const fieldRow = (r) => `<tr class="d${Math.min(r.depth, 4)}${r.kids ? ' grp' : ''}"><th style="padding-left:${COL(r.depth + 1) + 9}px">${treeCell(r)}${esc(r.label)}</th>`
-    + `<td>${r.group || r.note ? `<span class="dbox-type">${esc(r.note ? r.x : preview(r.x))}</span>` : esc(preview(r.x))}</td><td class="doc">${esc(FIELD_DOC[r.k] ?? '')}</td></tr>`
+  const valueKind = (x) => x === null ? 'z' : typeof x === 'string' ? 's' : typeof x === 'number' ? 'n' : typeof x === 'boolean' ? 'b' : ''
+  const rowsHtml = (rows) => treeRows(rows).map((r) => r.box ? boxRow(r) : fieldRow(r)).join('')
+  const boxRow = (r) => `<tr class="box"><td colspan="3" style="padding-left:${COL(r.depth + 1)}px">${treeCell(r)}<div class="arr-box"><span class="arr-idx">${r.label}</span><table class="dbox-fields">${rowsHtml(r.inner)}</table></div></td></tr>`
+  const fieldRow = (r) => `<tr class="d${Math.min(r.depth, 4)}${r.kids ? ' grp' : ''}"><th style="padding-left:${COL(r.depth + 1) + 9}px">${treeCell(r)}<span class="${r.k == null ? 'fk-i' : 'fk'}">${esc(r.label)}</span></th>`
+    + `<td>${r.group || r.note ? `<span class="dbox-type">${esc(r.note ? r.x : preview(r.x))}</span>` : `<span class="fv-${valueKind(r.x)}">${esc(preview(r.x))}</span>`}</td><td class="doc">${esc(FIELD_DOC[r.k] ?? '')}</td></tr>`
   function fieldTable(v) {
     if (!v || typeof v !== 'object') return `<table class="dbox-fields"><tr><td>${esc(preview(v))}</td></tr></table>`
     const rows = fieldRows(v)
-    return rows.length ? `<table class="dbox-fields">${treeRows(rows).map(fieldRow).join('')}</table>` : '<p class="dbox-note">空对象 {}</p>'
+    return rows.length ? `<table class="dbox-fields">${rowsHtml(rows)}</table>` : '<p class="dbox-note">空对象 {}</p>'
   }
   const headTable = (head) => `<table class="dbox-fields">${treeRows(Object.entries(head).map(([k, x]) => ({ label: k, x, k, depth: 0 }))).map(fieldRow).join('')}</table>`
   function kindLine(x) {
