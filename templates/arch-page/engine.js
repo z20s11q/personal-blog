@@ -22,7 +22,8 @@
     return lines ? `${file}:${lines}` : file
   }
   function srcLink(ref) {
-    return `<a class="src" href="${srcHref(ref)}" title="${esc(ref)}" target="_blank" rel="noopener">${esc(srcText(ref))}</a>`
+    const [label, r] = Array.isArray(ref) ? ref : [null, ref]
+    return `<a class="src" href="${srcHref(r)}" title="${esc(r)}" target="_blank" rel="noopener">${esc(label ?? srcText(r))}</a>`
   }
   function fillSrcLinks(root = document) {
     for (const a of $$('a.src[data-src]', root)) {
@@ -47,7 +48,7 @@
       },
     )
   }
-  const fmt = (s) => esc(s ?? '').replace(/`([^`]+)`/g, '<code>$1</code>')
+  const fmt = (s) => esc(s ?? '').replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\[([^\]]+)\]\((#[\w-]+)\)/g, '<a href="$2">$1</a>')
   const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x)
   const pre = (v) => `<pre class="json">${highlightJson(v)}</pre>`
   const srcList = (list) => list?.length ? `<div class="pp-src"><span>源码</span>${list.map(srcLink).join('')}</div>` : ''
@@ -105,7 +106,7 @@
     const info = KINDS[x.k]
     if (!info) return ''
     const [medium, how] = info, m = MEDIA[medium]
-    return ` · <span title="${esc(m?.[1] ?? '')}">${esc(m?.[0] ?? medium)}</span> · ${fmt(how)}`
+    return ` · <span title="${esc(m?.[1] ?? '')}">${esc(m?.[0] ?? medium)}</span>${how ? ` · ${fmt(how)}` : ''}`
   }
   function jsonAnatomy(v, k) {
     const { layers, body } = peel(v, PEEL[k] ?? [])
@@ -119,7 +120,10 @@
     const note = x.note ? `<p class="dbox-note">${fmt(x.note)}</p>` : ''
     if (x.t === 'json') return note + jsonAnatomy(x.v, x.k)
     if (x.t === 'jsonl') return `${note}<div class="dbox-lines">${x.v.map((line, i) => `<details class="dbox-line"><summary><b>第 ${i + 1} 行</b><code>${esc(line?.type ?? '')}</code>${line?.seq !== undefined ? `<span>seq ${esc(line.seq)}</span>` : ''}</summary>${jsonAnatomy(line, x.line ?? x.k)}</details>`).join('')}</div>`
-    return `${note}<pre class="text">${esc(x.v)}</pre>`
+    const line = String(x.v).split('\n').find((l) => l.startsWith('data: '))
+    let parsed = null
+    try { parsed = line && JSON.parse(line.slice(6)) } catch { parsed = null }
+    return `${note}<pre class="text">${esc(x.v)}</pre>${isObj(parsed) || Array.isArray(parsed) ? `<div class="dbox-sub">data 行的 JSON 字段</div>${fieldTable(parsed)}` : ''}`
   }
   const dataBox = (label, x) => `<div class="dbox"><div class="dbox-h"><b>${esc(label)}</b><span class="dbox-meta">${esc(DATA_TAG)}${kindLine(x)}</span></div>${anatomy(x)}</div>`
   const J = (v, k, note) => ({ t: 'json', v, k, note })
@@ -135,10 +139,17 @@
       const n = NODES[id]
       if (!n) return
       for (const g of groups) g.setAttribute('aria-pressed', String(g.dataset.nodeId === id))
-      caption.innerHTML = `<div class="oc-kicker">${esc(n.kicker)}</div><h3>${esc(n.title)}</h3><p>${esc(n.text)}</p>`
+      caption.innerHTML = `<div class="oc-kicker">${esc(n.kicker)}</div><h3>${esc(n.title)}</h3><p>${fmt(n.text)}</p>`
         + `<div class="oc-src">${(n.src ?? []).map(srcLink).join('')}</div>`
-        + `<div class="oc-jump">${(n.pano ?? []).map(([story, node, label]) => `<a href="#intro" data-pano-to="${story}:${node}">${esc(label)}</a>`).join('')}${(n.jump ?? []).map(([href, label]) => `<a href="${href}">${esc(label)}</a>`).join('')}</div>`
+        + `<div class="oc-jump">${(n.pano ?? []).map(([story, node, label]) => `<a href="#intro" data-pano-to="${story}:${node}">${esc(label ?? window.__panoLabel?.(story, String(node)) ?? '')}</a>`).join('')}${(n.jump ?? []).map(([href, label]) => `<a href="${href}">${esc(label)}</a>`).join('')}</div>`
     }
+    function showIntro() {
+      const it = ov.intro
+      for (const g of groups) g.setAttribute('aria-pressed', 'false')
+      caption.innerHTML = `<div class="oc-kicker">${esc(it.kicker ?? '怎么读')}</div><h3>${esc(it.title)}</h3>${(it.text ?? []).map((t) => `<p>${fmt(t)}</p>`).join('')}`
+    }
+    const notes = $('#overview-notes')
+    if (notes) notes.innerHTML = (ov.notes ?? []).map(([title, text, color]) => `<div style="--nc:${color ?? '#23786a'}"><b>${esc(title)}</b>${fmt(text)}</div>`).join('')
     caption.addEventListener('click', (e) => {
       const a = e.target.closest('[data-pano-to]')
       if (!a || !window.__panoJump) return
@@ -149,15 +160,16 @@
       g.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); show(g.dataset.nodeId) }, true)
       g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(g.dataset.nodeId) } })
     }
-    show(ov.initial ?? Object.keys(NODES)[0])
+    if (ov.initial || !ov.intro) show(ov.initial ?? Object.keys(NODES)[0])
+    else showIntro()
   }
 
   function normalizeStories(stories, edgeById) {
     return stories.map((st) => ({
       ...st,
-      steps: st.steps.filter((s) => s.subs?.length).map((s) => {
-        const subs = s.subs.map((x) => ({ ...x, n: x.n ?? [], e: (x.e ?? []).filter((id) => edgeById.has(id)), data: x.data ?? [] }))
-        return { ...s, subs, n: s.n ?? [...new Set(subs.flatMap((x) => x.n))], e: (s.e ?? [...new Set(subs.flatMap((x) => x.e))]).filter((id) => edgeById.has(id)) }
+      steps: st.steps.filter((s) => s.text || s.subs?.length).map((s) => {
+        const subs = (s.subs ?? []).map((x) => ({ ...x, n: x.n ?? [], e: (x.e ?? []).filter((id) => edgeById.has(id)), data: x.data ?? [] }))
+        return { ...s, subs, data: s.data ?? [], n: s.n ?? [...new Set(subs.flatMap((x) => x.n))], e: (s.e ?? [...new Set(subs.flatMap((x) => x.e))]).filter((id) => edgeById.has(id)) }
       }),
     }))
   }
@@ -219,6 +231,7 @@
       const plan = EDGES.map((e) => {
         const A = R[e.from], B = R[e.to]
         if (!A || !B) return null
+        if (e.route) return { e, A, B }
         const [sa, sb] = A.row === B.row ? (A.cx < B.cx ? ['top', 'top'] : ['bottom', 'bottom']) : A.row < B.row ? ['bottom', 'top'] : ['top', 'bottom']
         const p = { e, A, B, sa, sb }
         ;(sides[`${e.from}:${sa}`] ??= []).push([p, 'a', B]); (sides[`${e.to}:${sb}`] ??= []).push([p, 'b', A])
@@ -233,6 +246,14 @@
       }
       const paths = plan.map((p) => {
         let d, at
+        if (p.e.route === 'left') {
+          const xl = 14 + 12 * (p.e.lane ?? 0), y1 = p.A.cy, y2 = (p.B.t + p.B.b) / 2 + 14
+          return { e: p.e, d: `M${p.A.l},${y1} H${xl} V${y2} H${p.B.l}`, cls: wireClass(p.e) }
+        }
+        if (p.e.route === 'right') {
+          const lane = p.e.lane ?? 0, xr = box.width - 12 - 12 * lane, y1 = p.A.t + (p.A.b - p.A.t) * (0.62 + 0.18 * lane)
+          return { e: p.e, d: `M${p.A.r},${y1} H${xr} V${p.B.cy} H${p.B.r}`, cls: wireClass(p.e) }
+        }
         const [x1, y1] = p.a, [x2, y2] = p.b
         if (p.sa === p.sb) {
           const y = p.sa === 'top' ? Math.min(y1, y2) - BRACKET : Math.max(y1, y2) + BRACKET
@@ -273,7 +294,7 @@
         el.classList.toggle('on', on.has(id) && !hot.has(id)); el.classList.toggle('hot', hot.has(id)); el.classList.toggle('dim', (!!s || !!E) && !on.has(id))
       }
       root.querySelectorAll('[data-pano-story]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.panoStory === story.id)))
-      $('#pano-steps').innerHTML = `<button type="button" data-pano-step="-1" class="${stepIdx === -1 ? 'on' : ''}">总览</button>${story.steps.map((st, i) => `<button type="button" data-pano-step="${i}" class="${i === stepIdx ? 'on' : ''}"><b>${i + 1}</b>${esc(st.t)}<small>${st.subs.length} 小步</small></button>`).join('')}`
+      $('#pano-steps').innerHTML = `<button type="button" data-pano-step="-1" class="${stepIdx === -1 ? 'on' : ''}">总览</button>${story.steps.map((st, i) => `<button type="button" data-pano-step="${i}" class="${i === stepIdx ? 'on' : ''}"><b>${i + 1}</b>${esc(st.t)}${st.subs.length ? `<small>${st.subs.length} 小步</small>` : ''}</button>`).join('')}`
     }
     const routeText = (x) => x.n.length > 1 ? `${shortName(x.n[0])} → ${shortName(x.n.at(-1))}` : shortName(x.n[0])
     function subDetail(x) {
@@ -282,7 +303,10 @@
     }
     function stepHtml(s, list) {
       const path = s.n.length ? `<div class="pp-path">${s.n.map(nodeChip).join('')}</div>` : ''
-      return `${path}<p class="pp-text">${fmt(s.text)}</p>
+      const extra = typeof s.extra === 'function' ? s.extra() : s.extra ?? ''
+      const data = s.data.map(([label, v]) => dataBox(label, v)).join('')
+      if (!list.length) return `${path}<p class="pp-text">${fmt(s.text)}</p>${extra}${data}${srcList(s.src)}<p class="pp-note">这一步讲整体规则，点“下一步”继续。</p>`
+      return `${path}<p class="pp-text">${fmt(s.text)}</p>${extra}${data}
         ${srcList(s.src)}
         <h4>这一步的 ${list.length} 个小步</h4>
         <p class="pp-note">先通读，再点任一条在下方展开它的数据，同一时间只展开一条。左图线上的数字是经过它的小步序号；鼠标停在某条上，左图只亮这一小步经过的线和组件。</p>
@@ -293,12 +317,14 @@
     function edgeHtml(id) {
       const e = edgeById.get(id)
       edgeList = edgeSubs(id)
+      const steps = STORIES.flatMap((st) => st.steps.map((s, i) => ({ st, s, i })).filter((x) => x.s.e.includes(id)))
       return `<div class="pp-kicker">连线</div><h3>${esc(shortName(e.from))} → ${esc(shortName(e.to))}</h3>
         <div class="pp-path">${nodeChip(e.from)}<i>→</i>${nodeChip(e.to)}</div>
         <p class="pp-text">图上写的是“${esc(e.label)}”。${fmt(e.how ?? '')}</p>
         ${edgeList.length ? `<h4>${STORIES.length} 个流程里经过这根线的 ${edgeList.length} 个小步（点开看原文）</h4>
           ${edgeList.slice(0, 120).map((o, j) => `<details class="pp-edge-msg" data-edge-sub="${j}"><summary><span class="pp-tag">${esc(o.st.title.replace(/（.*$/, ''))}</span><code>${esc(o.x.t)}</code><small>第 ${o.i + 1} 步 · 小步 ${o.k + 1}</small></summary><div class="pp-edge-body"></div></details>`).join('')}${edgeList.length > 120 ? `<p class="pp-note">只列前 120 个。</p>` : ''}`
-          : `<p class="pp-note">${fmt(e.empty ?? '经过这根线的小步数为 0。')}</p>`}`
+          : `<p class="pp-note">${fmt(e.empty ?? '经过这根线的小步数为 0。')}</p>`}
+        ${steps.length ? `<h4>讲到这根线的大步</h4><ol class="pp-outline">${steps.map((x) => `<li><button type="button" data-pano-jump="${x.st.id}:${x.i}">${esc(x.st.title)} · 第 ${x.i + 1} 步：${esc(x.s.t)}</button></li>`).join('')}</ol>` : ''}`
     }
     function edgeSubBody(o) {
       return `<p class="pp-text">${fmt(o.x.text)}</p>${o.x.data.map(([label, v]) => dataBox(label, v)).join('')}
@@ -340,6 +366,14 @@
       const open = panel.querySelector('.pp-digest li.open')
       if (open) panel.scrollTop += open.getBoundingClientRect().top - panel.getBoundingClientRect().top - 56
       else if (prev !== stepIdx || wasEdge) panel.scrollTop = 0
+      if (prev !== stepIdx) reveal()
+    }
+    function reveal() {
+      const lit = $$('.pnode.on,.pnode.hot', canvas).map((el) => el.getBoundingClientRect())
+      if (!lit.length) return
+      const top = Math.min(...lit.map((r) => r.top)), bottom = Math.max(...lit.map((r) => r.bottom)), room = innerHeight - 70
+      if (top >= 60 && bottom <= innerHeight - 10) return
+      scrollTo({ top: scrollY + (bottom - top <= room ? top - 60 - (room - (bottom - top)) / 2 : top - 60), behavior: 'instant' })
     }
     function setStory(id) { edgeSel = null; story = STORIES.find((s) => s.id === id) ?? STORIES[0]; stepIdx = -1; subIdx = 0; render() }
     function go(d) {
@@ -376,9 +410,13 @@
     document.fonts?.ready.then(drawWires)
     window.__panoJump = (id, node) => {
       story = STORIES.find((s) => s.id === id) ?? story
-      const i = story.steps.findIndex((s) => node.startsWith('title=') ? s.t.includes(node.slice(6)) : s.n.includes(node))
       $('#intro').scrollIntoView({ behavior: 'instant' })
-      setStep(Math.max(i, 0))
+      setStep(Math.max(stepOf(story, node), 0))
+    }
+    const stepOf = (st, node) => /^\d+$/.test(node) ? Number(node) : st.steps.findIndex((s) => node.startsWith('title=') ? s.t.includes(node.slice(6)) : s.n.includes(node))
+    window.__panoLabel = (id, node) => {
+      const st = STORIES.find((s) => s.id === id), i = st ? stepOf(st, node) : -1
+      return i >= 0 ? `详细架构流程 · ${st.title} · 第 ${i + 1} 步：${st.steps[i].t}` : id
     }
   }
 
@@ -393,9 +431,9 @@
     function sigHtml(sig) {
       const m = sig.match(/^(.*?)\((.*)\)(.*)$/)
       if (!m) return `<span class="tk-fn">${esc(sig)}</span>`
-      const [, head, args, tail] = m, parts = head.split('.'), fn = parts.pop()
-      const path = parts.length ? `<span class="tk-type">${esc(parts.join('.'))}</span><span class="tk-p">.</span>` : ''
-      const argHtml = args.split(/(,\s*)/).map((a) => /^,/.test(a) ? `<span class="tk-p">${esc(a)}</span>` : `<span class="tk-arg">${esc(a)}</span>`).join('')
+      const [, head, args, tail] = m, sep = head.includes('::') ? '::' : '.', parts = head.split(sep), fn = parts.pop()
+      const path = parts.length ? `<span class="tk-type">${esc(parts.join(sep))}</span><span class="tk-p">${sep}</span>` : ''
+      const argHtml = args.split(/(,\s*)/).map((a) => /^,/.test(a) ? `<span class="tk-p">${esc(a)}</span>` : a === '…' ? `<span class="tk-dim">…</span>` : `<span class="tk-arg">${esc(a)}</span>`).join('')
       const ret = tail.replace(/^\s*->\s*/, '').trim()
       return `${path}<span class="tk-fn">${esc(fn)}</span><span class="tk-p">(</span>${argHtml}<span class="tk-p">)</span>${ret ? `<span class="tk-p"> → </span><span class="tk-type">${esc(ret)}</span>` : ''}`
     }
@@ -482,9 +520,11 @@
     validate(cfg)
     const P = cfg.pano ?? {}
     MEDIA = P.media ?? {}; KINDS = P.kinds ?? {}; PEEL = P.peel ?? {}; FIELD_DOC = P.fieldDoc ?? {}; DATA_TAG = P.dataTag ?? '录制'
-    initOverview(cfg.overview)
     initPano(cfg.pano)
+    initOverview(cfg.overview)
     initInspector(cfg.components)
+    const strip = $('#arch-strip')
+    if (strip) strip.innerHTML = (cfg.componentNotes ?? []).map(([term, text]) => `<span><b>${esc(term)}</b>${fmt(text)}</span>`).join('')
     fillSrcLinks()
   }
 

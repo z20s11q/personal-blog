@@ -307,6 +307,29 @@ ol.steps li{margin:4px 0}
 pre.json,pre.text{margin:4px 0 0;background:#f7f9f8;color:#23302c;border:1px solid #e6ebe9;border-radius:5px;padding:8px 10px;font-size:11.5px;line-height:1.55;max-height:380px;overflow:auto;white-space:pre-wrap;word-break:break-word}
 pre.json .k{color:#1f4f7a}pre.json .s{color:#2f6b3e}pre.json .n{color:#9a4a12}pre.json .b{color:#8b3a7a}pre.json .z{color:#8a9692}
 .dbox>pre.text{margin:8px 10px}
+/* 总体图下方的说明条、对象图下方的名词条、大步附表 */
+.flow-notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.flow-notes div{border-top:3px solid var(--nc);background:#f8faf9;padding:9px 12px;font-size:13px;line-height:1.7;color:#33413d}
+.flow-notes b{display:block;font-size:12.5px;color:#1f3b36;margin-bottom:2px}
+.ownership-strip{display:flex;flex-wrap:wrap;gap:10px 24px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0;margin-top:14px;color:#5d6965;font-size:12px}
+.ownership-strip b{color:#283f36;margin-right:5px}
+.flow-notes:empty,.ownership-strip:empty{display:none}
+.pp-table{width:100%;border-collapse:collapse;font-size:12.5px;margin:8px 0}
+.pp-pipe{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:10px 0}
+.pp-pipe span{border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;background:#fff;text-align:center;line-height:1.45}
+.pp-pipe small{display:block;font-size:10.5px;color:#7b8783}
+.pp-pipe i{font-style:normal;color:#e0592a}
+.pp-table th,.pp-table td{border-bottom:1px solid #e3e9e7;padding:6px 5px;text-align:left;vertical-align:top;line-height:1.6}
+.pp-table th{background:#f3f7f6;font-size:12px}
+.dbox-sub{margin:8px 10px 0;font-size:11px;color:#97a29e}
+.decision{display:inline-block;border-radius:4px;padding:0 6px;font-size:12px;font-weight:600}
+.d-run{background:#e3f3ea;color:#1f6b45}.d-ask{background:#fdf1dc;color:#8a5a12}.d-deny{background:#fbe6e6;color:#9b2c2c}
+.muted{color:var(--mute)}
+.archify-canvas .c-lane{fill:rgba(24,119,107,.03);stroke:#d4e0dc;stroke-dasharray:6 4}
+.archify-canvas .c-region{fill:rgba(201,163,92,.05);stroke:#c9a35c;stroke-dasharray:8 4}
+.archify-canvas .t-edge-security{fill:#a45569}
+.archify-canvas .a-security{fill:none;stroke:#a45569}
+@media (max-width:900px){.flow-notes{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -343,6 +366,7 @@ pre.json .k{color:#1f4f7a}pre.json .s{color:#2f6b3e}pre.json .n{color:#9a4a12}pr
     <div class="archify-canvas" id="overview-canvas"><!--OVERVIEW_SVG--></div>
     <aside id="overview-caption" aria-live="polite"></aside>
   </div>
+  <div class="flow-notes" id="overview-notes"></div>
 </section>
 
 <section id="intro">
@@ -353,7 +377,7 @@ pre.json .k{color:#1f4f7a}pre.json .s{color:#2f6b3e}pre.json .n{color:#9a4a12}pr
 
 <section id="arch">
   <div class="section-heading"><div><h2>对象架构：图上每个方框里有哪些对象</h2></div><span class="provenance" id="component-count"></span></div>
-  <p class="sub">图与“总体架构”相同。点任一方框，右侧列出它包含的对象：属性、方法的输入输出和加工、与其他对象的关系、使用时要注意的边界，以及源码位置。</p>
+  <p class="sub">{{ARCH_SUB}}</p>
   <div class="architecture-layout">
     <div class="archify-canvas" id="architecture-canvas"><!--COMPONENTS_SVG--></div>
     <aside id="component-inspector" aria-label="对象详情">
@@ -362,6 +386,7 @@ pre.json .k{color:#1f4f7a}pre.json .s{color:#2f6b3e}pre.json .n{color:#9a4a12}pr
       <article id="component-detail" aria-live="polite"></article>
     </aside>
   </div>
+  <div class="ownership-strip" id="arch-strip"></div>
 </section>
 <!--EXTRA_SECTIONS-->
 </main>

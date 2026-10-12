@@ -27,15 +27,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_CORE || 'playwright-core')
   }
   for (const id of await page.$$eval('[data-pano-story]', (b) => b.map((x) => x.dataset.panoStory))) {
     await page.click(`[data-pano-story="${id}"]`)
-    let subs = 0, intros = 0
+    let subs = 0, intros = 0, steps = 0
     for (let guard = 0; guard < 2000; guard++) {
       const next = page.locator('#pano-panel [data-pano-go="1"]')
       if (await next.isDisabled()) break
       await next.click()
       const where = async () => `story ${id} "${await page.locator('#pano-panel h3').textContent()}"`
-      if (!(await page.locator('#pano-panel .pp-digest').count())) { errors.push(`${await where()}: step page without sub list`); continue }
+      steps++
+      if ((await page.locator('#pano-panel .pp-kicker').textContent()).indexOf(`第 ${steps} /`) < 0) errors.push(`${await where()}: next does not land on step ${steps}`)
+      if (!(await page.locator('#pano-panel .pp-digest').count())) {
+        if (!(await page.locator('#pano-panel .pp-text').count())) errors.push(`${await where()}: rule step without text`)
+        continue
+      }
       intros++
-      if ((await page.locator('#pano-panel .pp-kicker').textContent()).indexOf(`第 ${intros} /`) < 0) errors.push(`${await where()}: next does not land on step ${intros}`)
       if (await page.locator('#pano-panel li.open').count()) errors.push(`${await where()}: next opens a sub`)
       const n = await page.locator('#pano-panel .pp-digest [data-pano-sub]').count()
       await page.locator('#pano-panel .pp-digest [data-pano-sub="1"]').hover()
@@ -55,7 +59,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_CORE || 'playwright-core')
         await page.locator('#intro').screenshot({ path: path.join(shots, `pano-${id}.png`) })
       }
     }
-    report.stories[id] = { steps: intros, subs }
+    report.stories[id] = { steps, withSubs: intros, subs }
   }
   const edges = await page.$$eval('#pano-wires [data-pano-edge]', (p) => [...new Set(p.map((x) => x.dataset.panoEdge))])
   for (const id of edges) {

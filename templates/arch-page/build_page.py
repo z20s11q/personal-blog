@@ -46,11 +46,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-def extract_svg(html_path: Path) -> str:
-    html = html_path.read_text(encoding="utf-8")
+def extract_svg(path: Path) -> str:
+    html = path.read_text(encoding="utf-8")
+    if path.suffix == ".svg":
+        return html.strip()
     match = re.search(r"<svg viewBox=\"[^\"]*\" role=\"img\".*?</svg>", html, re.S)
     if match is None:
-        raise SystemExit(f"no diagram svg in {html_path}")
+        raise SystemExit(f"no diagram svg in {path}")
     return match.group(0)
 
 
@@ -87,8 +89,11 @@ def data_tag(element_id: str, spec: dict) -> str:
 
 def main() -> None:
     cfg = json.loads((HERE / "page.config.json").read_text(encoding="utf-8"))
-    svg = extract_svg(HERE / cfg.get("overview", "overview/overview.html"))
-    (HERE / "overview" / "overview.svg").write_text(svg, encoding="utf-8")
+    overview = HERE / cfg.get("overview", "overview/overview.html")
+    svg = extract_svg(overview)
+    if overview.suffix != ".svg":
+        overview.with_suffix(".svg").write_text(svg, encoding="utf-8")
+    components = extract_svg(HERE / cfg["components"]) if cfg.get("components") else svg
     page = (HERE / cfg.get("template", "page.template.html")).read_text(encoding="utf-8")
     for key, value in cfg.get("text", {}).items():
         page = page.replace("{{" + key + "}}", value)
@@ -103,7 +108,7 @@ def main() -> None:
     scripts = "\n".join(f"<script>\n{src}\n</script>" for src in sources)
     for marker, value in [
         ("<!--OVERVIEW_SVG-->", scoped_svg(svg, "ov")),
-        ("<!--COMPONENTS_SVG-->", scoped_svg(svg, "cp")),
+        ("<!--COMPONENTS_SVG-->", scoped_svg(components, "cp")),
         ("<!--DATA-->", data),
         ("<!--SCRIPTS-->", scripts),
     ]:

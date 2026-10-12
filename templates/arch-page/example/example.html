@@ -307,6 +307,29 @@ ol.steps li{margin:4px 0}
 pre.json,pre.text{margin:4px 0 0;background:#f7f9f8;color:#23302c;border:1px solid #e6ebe9;border-radius:5px;padding:8px 10px;font-size:11.5px;line-height:1.55;max-height:380px;overflow:auto;white-space:pre-wrap;word-break:break-word}
 pre.json .k{color:#1f4f7a}pre.json .s{color:#2f6b3e}pre.json .n{color:#9a4a12}pre.json .b{color:#8b3a7a}pre.json .z{color:#8a9692}
 .dbox>pre.text{margin:8px 10px}
+/* 总体图下方的说明条、对象图下方的名词条、大步附表 */
+.flow-notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.flow-notes div{border-top:3px solid var(--nc);background:#f8faf9;padding:9px 12px;font-size:13px;line-height:1.7;color:#33413d}
+.flow-notes b{display:block;font-size:12.5px;color:#1f3b36;margin-bottom:2px}
+.ownership-strip{display:flex;flex-wrap:wrap;gap:10px 24px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0;margin-top:14px;color:#5d6965;font-size:12px}
+.ownership-strip b{color:#283f36;margin-right:5px}
+.flow-notes:empty,.ownership-strip:empty{display:none}
+.pp-table{width:100%;border-collapse:collapse;font-size:12.5px;margin:8px 0}
+.pp-pipe{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:10px 0}
+.pp-pipe span{border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;background:#fff;text-align:center;line-height:1.45}
+.pp-pipe small{display:block;font-size:10.5px;color:#7b8783}
+.pp-pipe i{font-style:normal;color:#e0592a}
+.pp-table th,.pp-table td{border-bottom:1px solid #e3e9e7;padding:6px 5px;text-align:left;vertical-align:top;line-height:1.6}
+.pp-table th{background:#f3f7f6;font-size:12px}
+.dbox-sub{margin:8px 10px 0;font-size:11px;color:#97a29e}
+.decision{display:inline-block;border-radius:4px;padding:0 6px;font-size:12px;font-weight:600}
+.d-run{background:#e3f3ea;color:#1f6b45}.d-ask{background:#fdf1dc;color:#8a5a12}.d-deny{background:#fbe6e6;color:#9b2c2c}
+.muted{color:var(--mute)}
+.archify-canvas .c-lane{fill:rgba(24,119,107,.03);stroke:#d4e0dc;stroke-dasharray:6 4}
+.archify-canvas .c-region{fill:rgba(201,163,92,.05);stroke:#c9a35c;stroke-dasharray:8 4}
+.archify-canvas .t-edge-security{fill:#a45569}
+.archify-canvas .a-security{fill:none;stroke:#a45569}
+@media (max-width:900px){.flow-notes{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -345,12 +368,19 @@ pre.json .k{color:#1f4f7a}pre.json .s{color:#2f6b3e}pre.json .n{color:#9a4a12}pr
     "OVERVIEW_SUB": "左边一列是构建的五类输入，中间是构建脚本，右边是输出页面和在浏览器里运行的引擎。点任一方框，右侧显示它的职责、源码位置和跳转。",
     "PANO_TITLE": "从配置到三个部分",
     "PANO_PROVENANCE": "数据取自本页的配置文件与渲染结果",
-    "PANO_LEAD": "每个方框是构建或渲染中的一个参与者，线上写着两边之间传的是什么。选一个流程，点“下一步”逐个大步前进：每一大步的说明页列出全部小步，点其中一条就在它下方展开数据，同一时间只展开一条。"
+    "PANO_LEAD": "每个方框是构建或渲染中的一个参与者，线上写着两边之间传的是什么。选一个流程，点“下一步”逐个大步前进：每一大步的说明页列出全部小步，点其中一条就在它下方展开数据，同一时间只展开一条。",
+    "ARCH_SUB": "图与“总体架构”相同。点任一方框，右侧列出它包含的对象：属性、方法的输入输出和加工、与其他对象的关系、使用时要注意的边界，以及源码位置。"
   },
   "data": {
-    "example-config": { "file": "page.config.json", "type": "json" }
+    "example-config": {
+      "file": "page.config.json",
+      "type": "json"
+    }
   },
-  "scripts": ["../engine.js", "arch.data.js"]
+  "scripts": [
+    "../engine.js",
+    "arch.data.js"
+  ]
 }
 </script>
 <header class="page">
@@ -611,6 +641,7 @@ SOFTWARE.
       </svg></div>
     <aside id="overview-caption" aria-live="polite"></aside>
   </div>
+  <div class="flow-notes" id="overview-notes"></div>
 </section>
 
 <section id="intro">
@@ -870,6 +901,7 @@ SOFTWARE.
       <article id="component-detail" aria-live="polite"></article>
     </aside>
   </div>
+  <div class="ownership-strip" id="arch-strip"></div>
 </section>
 
 </main>
@@ -898,7 +930,8 @@ SOFTWARE.
     return lines ? `${file}:${lines}` : file
   }
   function srcLink(ref) {
-    return `<a class="src" href="${srcHref(ref)}" title="${esc(ref)}" target="_blank" rel="noopener">${esc(srcText(ref))}</a>`
+    const [label, r] = Array.isArray(ref) ? ref : [null, ref]
+    return `<a class="src" href="${srcHref(r)}" title="${esc(r)}" target="_blank" rel="noopener">${esc(label ?? srcText(r))}</a>`
   }
   function fillSrcLinks(root = document) {
     for (const a of $$('a.src[data-src]', root)) {
@@ -923,7 +956,7 @@ SOFTWARE.
       },
     )
   }
-  const fmt = (s) => esc(s ?? '').replace(/`([^`]+)`/g, '<code>$1</code>')
+  const fmt = (s) => esc(s ?? '').replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\[([^\]]+)\]\((#[\w-]+)\)/g, '<a href="$2">$1</a>')
   const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x)
   const pre = (v) => `<pre class="json">${highlightJson(v)}</pre>`
   const srcList = (list) => list?.length ? `<div class="pp-src"><span>源码</span>${list.map(srcLink).join('')}</div>` : ''
@@ -981,7 +1014,7 @@ SOFTWARE.
     const info = KINDS[x.k]
     if (!info) return ''
     const [medium, how] = info, m = MEDIA[medium]
-    return ` · <span title="${esc(m?.[1] ?? '')}">${esc(m?.[0] ?? medium)}</span> · ${fmt(how)}`
+    return ` · <span title="${esc(m?.[1] ?? '')}">${esc(m?.[0] ?? medium)}</span>${how ? ` · ${fmt(how)}` : ''}`
   }
   function jsonAnatomy(v, k) {
     const { layers, body } = peel(v, PEEL[k] ?? [])
@@ -995,7 +1028,10 @@ SOFTWARE.
     const note = x.note ? `<p class="dbox-note">${fmt(x.note)}</p>` : ''
     if (x.t === 'json') return note + jsonAnatomy(x.v, x.k)
     if (x.t === 'jsonl') return `${note}<div class="dbox-lines">${x.v.map((line, i) => `<details class="dbox-line"><summary><b>第 ${i + 1} 行</b><code>${esc(line?.type ?? '')}</code>${line?.seq !== undefined ? `<span>seq ${esc(line.seq)}</span>` : ''}</summary>${jsonAnatomy(line, x.line ?? x.k)}</details>`).join('')}</div>`
-    return `${note}<pre class="text">${esc(x.v)}</pre>`
+    const line = String(x.v).split('\n').find((l) => l.startsWith('data: '))
+    let parsed = null
+    try { parsed = line && JSON.parse(line.slice(6)) } catch { parsed = null }
+    return `${note}<pre class="text">${esc(x.v)}</pre>${isObj(parsed) || Array.isArray(parsed) ? `<div class="dbox-sub">data 行的 JSON 字段</div>${fieldTable(parsed)}` : ''}`
   }
   const dataBox = (label, x) => `<div class="dbox"><div class="dbox-h"><b>${esc(label)}</b><span class="dbox-meta">${esc(DATA_TAG)}${kindLine(x)}</span></div>${anatomy(x)}</div>`
   const J = (v, k, note) => ({ t: 'json', v, k, note })
@@ -1011,10 +1047,17 @@ SOFTWARE.
       const n = NODES[id]
       if (!n) return
       for (const g of groups) g.setAttribute('aria-pressed', String(g.dataset.nodeId === id))
-      caption.innerHTML = `<div class="oc-kicker">${esc(n.kicker)}</div><h3>${esc(n.title)}</h3><p>${esc(n.text)}</p>`
+      caption.innerHTML = `<div class="oc-kicker">${esc(n.kicker)}</div><h3>${esc(n.title)}</h3><p>${fmt(n.text)}</p>`
         + `<div class="oc-src">${(n.src ?? []).map(srcLink).join('')}</div>`
-        + `<div class="oc-jump">${(n.pano ?? []).map(([story, node, label]) => `<a href="#intro" data-pano-to="${story}:${node}">${esc(label)}</a>`).join('')}${(n.jump ?? []).map(([href, label]) => `<a href="${href}">${esc(label)}</a>`).join('')}</div>`
+        + `<div class="oc-jump">${(n.pano ?? []).map(([story, node, label]) => `<a href="#intro" data-pano-to="${story}:${node}">${esc(label ?? window.__panoLabel?.(story, String(node)) ?? '')}</a>`).join('')}${(n.jump ?? []).map(([href, label]) => `<a href="${href}">${esc(label)}</a>`).join('')}</div>`
     }
+    function showIntro() {
+      const it = ov.intro
+      for (const g of groups) g.setAttribute('aria-pressed', 'false')
+      caption.innerHTML = `<div class="oc-kicker">${esc(it.kicker ?? '怎么读')}</div><h3>${esc(it.title)}</h3>${(it.text ?? []).map((t) => `<p>${fmt(t)}</p>`).join('')}`
+    }
+    const notes = $('#overview-notes')
+    if (notes) notes.innerHTML = (ov.notes ?? []).map(([title, text, color]) => `<div style="--nc:${color ?? '#23786a'}"><b>${esc(title)}</b>${fmt(text)}</div>`).join('')
     caption.addEventListener('click', (e) => {
       const a = e.target.closest('[data-pano-to]')
       if (!a || !window.__panoJump) return
@@ -1025,15 +1068,16 @@ SOFTWARE.
       g.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); show(g.dataset.nodeId) }, true)
       g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(g.dataset.nodeId) } })
     }
-    show(ov.initial ?? Object.keys(NODES)[0])
+    if (ov.initial || !ov.intro) show(ov.initial ?? Object.keys(NODES)[0])
+    else showIntro()
   }
 
   function normalizeStories(stories, edgeById) {
     return stories.map((st) => ({
       ...st,
-      steps: st.steps.filter((s) => s.subs?.length).map((s) => {
-        const subs = s.subs.map((x) => ({ ...x, n: x.n ?? [], e: (x.e ?? []).filter((id) => edgeById.has(id)), data: x.data ?? [] }))
-        return { ...s, subs, n: s.n ?? [...new Set(subs.flatMap((x) => x.n))], e: (s.e ?? [...new Set(subs.flatMap((x) => x.e))]).filter((id) => edgeById.has(id)) }
+      steps: st.steps.filter((s) => s.text || s.subs?.length).map((s) => {
+        const subs = (s.subs ?? []).map((x) => ({ ...x, n: x.n ?? [], e: (x.e ?? []).filter((id) => edgeById.has(id)), data: x.data ?? [] }))
+        return { ...s, subs, data: s.data ?? [], n: s.n ?? [...new Set(subs.flatMap((x) => x.n))], e: (s.e ?? [...new Set(subs.flatMap((x) => x.e))]).filter((id) => edgeById.has(id)) }
       }),
     }))
   }
@@ -1095,6 +1139,7 @@ SOFTWARE.
       const plan = EDGES.map((e) => {
         const A = R[e.from], B = R[e.to]
         if (!A || !B) return null
+        if (e.route) return { e, A, B }
         const [sa, sb] = A.row === B.row ? (A.cx < B.cx ? ['top', 'top'] : ['bottom', 'bottom']) : A.row < B.row ? ['bottom', 'top'] : ['top', 'bottom']
         const p = { e, A, B, sa, sb }
         ;(sides[`${e.from}:${sa}`] ??= []).push([p, 'a', B]); (sides[`${e.to}:${sb}`] ??= []).push([p, 'b', A])
@@ -1109,6 +1154,14 @@ SOFTWARE.
       }
       const paths = plan.map((p) => {
         let d, at
+        if (p.e.route === 'left') {
+          const xl = 14 + 12 * (p.e.lane ?? 0), y1 = p.A.cy, y2 = (p.B.t + p.B.b) / 2 + 14
+          return { e: p.e, d: `M${p.A.l},${y1} H${xl} V${y2} H${p.B.l}`, cls: wireClass(p.e) }
+        }
+        if (p.e.route === 'right') {
+          const lane = p.e.lane ?? 0, xr = box.width - 12 - 12 * lane, y1 = p.A.t + (p.A.b - p.A.t) * (0.62 + 0.18 * lane)
+          return { e: p.e, d: `M${p.A.r},${y1} H${xr} V${p.B.cy} H${p.B.r}`, cls: wireClass(p.e) }
+        }
         const [x1, y1] = p.a, [x2, y2] = p.b
         if (p.sa === p.sb) {
           const y = p.sa === 'top' ? Math.min(y1, y2) - BRACKET : Math.max(y1, y2) + BRACKET
@@ -1149,7 +1202,7 @@ SOFTWARE.
         el.classList.toggle('on', on.has(id) && !hot.has(id)); el.classList.toggle('hot', hot.has(id)); el.classList.toggle('dim', (!!s || !!E) && !on.has(id))
       }
       root.querySelectorAll('[data-pano-story]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.panoStory === story.id)))
-      $('#pano-steps').innerHTML = `<button type="button" data-pano-step="-1" class="${stepIdx === -1 ? 'on' : ''}">总览</button>${story.steps.map((st, i) => `<button type="button" data-pano-step="${i}" class="${i === stepIdx ? 'on' : ''}"><b>${i + 1}</b>${esc(st.t)}<small>${st.subs.length} 小步</small></button>`).join('')}`
+      $('#pano-steps').innerHTML = `<button type="button" data-pano-step="-1" class="${stepIdx === -1 ? 'on' : ''}">总览</button>${story.steps.map((st, i) => `<button type="button" data-pano-step="${i}" class="${i === stepIdx ? 'on' : ''}"><b>${i + 1}</b>${esc(st.t)}${st.subs.length ? `<small>${st.subs.length} 小步</small>` : ''}</button>`).join('')}`
     }
     const routeText = (x) => x.n.length > 1 ? `${shortName(x.n[0])} → ${shortName(x.n.at(-1))}` : shortName(x.n[0])
     function subDetail(x) {
@@ -1158,7 +1211,10 @@ SOFTWARE.
     }
     function stepHtml(s, list) {
       const path = s.n.length ? `<div class="pp-path">${s.n.map(nodeChip).join('')}</div>` : ''
-      return `${path}<p class="pp-text">${fmt(s.text)}</p>
+      const extra = typeof s.extra === 'function' ? s.extra() : s.extra ?? ''
+      const data = s.data.map(([label, v]) => dataBox(label, v)).join('')
+      if (!list.length) return `${path}<p class="pp-text">${fmt(s.text)}</p>${extra}${data}${srcList(s.src)}<p class="pp-note">这一步讲整体规则，点“下一步”继续。</p>`
+      return `${path}<p class="pp-text">${fmt(s.text)}</p>${extra}${data}
         ${srcList(s.src)}
         <h4>这一步的 ${list.length} 个小步</h4>
         <p class="pp-note">先通读，再点任一条在下方展开它的数据，同一时间只展开一条。左图线上的数字是经过它的小步序号；鼠标停在某条上，左图只亮这一小步经过的线和组件。</p>
@@ -1169,12 +1225,14 @@ SOFTWARE.
     function edgeHtml(id) {
       const e = edgeById.get(id)
       edgeList = edgeSubs(id)
+      const steps = STORIES.flatMap((st) => st.steps.map((s, i) => ({ st, s, i })).filter((x) => x.s.e.includes(id)))
       return `<div class="pp-kicker">连线</div><h3>${esc(shortName(e.from))} → ${esc(shortName(e.to))}</h3>
         <div class="pp-path">${nodeChip(e.from)}<i>→</i>${nodeChip(e.to)}</div>
         <p class="pp-text">图上写的是“${esc(e.label)}”。${fmt(e.how ?? '')}</p>
         ${edgeList.length ? `<h4>${STORIES.length} 个流程里经过这根线的 ${edgeList.length} 个小步（点开看原文）</h4>
           ${edgeList.slice(0, 120).map((o, j) => `<details class="pp-edge-msg" data-edge-sub="${j}"><summary><span class="pp-tag">${esc(o.st.title.replace(/（.*$/, ''))}</span><code>${esc(o.x.t)}</code><small>第 ${o.i + 1} 步 · 小步 ${o.k + 1}</small></summary><div class="pp-edge-body"></div></details>`).join('')}${edgeList.length > 120 ? `<p class="pp-note">只列前 120 个。</p>` : ''}`
-          : `<p class="pp-note">${fmt(e.empty ?? '经过这根线的小步数为 0。')}</p>`}`
+          : `<p class="pp-note">${fmt(e.empty ?? '经过这根线的小步数为 0。')}</p>`}
+        ${steps.length ? `<h4>讲到这根线的大步</h4><ol class="pp-outline">${steps.map((x) => `<li><button type="button" data-pano-jump="${x.st.id}:${x.i}">${esc(x.st.title)} · 第 ${x.i + 1} 步：${esc(x.s.t)}</button></li>`).join('')}</ol>` : ''}`
     }
     function edgeSubBody(o) {
       return `<p class="pp-text">${fmt(o.x.text)}</p>${o.x.data.map(([label, v]) => dataBox(label, v)).join('')}
@@ -1216,6 +1274,14 @@ SOFTWARE.
       const open = panel.querySelector('.pp-digest li.open')
       if (open) panel.scrollTop += open.getBoundingClientRect().top - panel.getBoundingClientRect().top - 56
       else if (prev !== stepIdx || wasEdge) panel.scrollTop = 0
+      if (prev !== stepIdx) reveal()
+    }
+    function reveal() {
+      const lit = $$('.pnode.on,.pnode.hot', canvas).map((el) => el.getBoundingClientRect())
+      if (!lit.length) return
+      const top = Math.min(...lit.map((r) => r.top)), bottom = Math.max(...lit.map((r) => r.bottom)), room = innerHeight - 70
+      if (top >= 60 && bottom <= innerHeight - 10) return
+      scrollTo({ top: scrollY + (bottom - top <= room ? top - 60 - (room - (bottom - top)) / 2 : top - 60), behavior: 'instant' })
     }
     function setStory(id) { edgeSel = null; story = STORIES.find((s) => s.id === id) ?? STORIES[0]; stepIdx = -1; subIdx = 0; render() }
     function go(d) {
@@ -1252,9 +1318,13 @@ SOFTWARE.
     document.fonts?.ready.then(drawWires)
     window.__panoJump = (id, node) => {
       story = STORIES.find((s) => s.id === id) ?? story
-      const i = story.steps.findIndex((s) => node.startsWith('title=') ? s.t.includes(node.slice(6)) : s.n.includes(node))
       $('#intro').scrollIntoView({ behavior: 'instant' })
-      setStep(Math.max(i, 0))
+      setStep(Math.max(stepOf(story, node), 0))
+    }
+    const stepOf = (st, node) => /^\d+$/.test(node) ? Number(node) : st.steps.findIndex((s) => node.startsWith('title=') ? s.t.includes(node.slice(6)) : s.n.includes(node))
+    window.__panoLabel = (id, node) => {
+      const st = STORIES.find((s) => s.id === id), i = st ? stepOf(st, node) : -1
+      return i >= 0 ? `详细架构流程 · ${st.title} · 第 ${i + 1} 步：${st.steps[i].t}` : id
     }
   }
 
@@ -1269,9 +1339,9 @@ SOFTWARE.
     function sigHtml(sig) {
       const m = sig.match(/^(.*?)\((.*)\)(.*)$/)
       if (!m) return `<span class="tk-fn">${esc(sig)}</span>`
-      const [, head, args, tail] = m, parts = head.split('.'), fn = parts.pop()
-      const path = parts.length ? `<span class="tk-type">${esc(parts.join('.'))}</span><span class="tk-p">.</span>` : ''
-      const argHtml = args.split(/(,\s*)/).map((a) => /^,/.test(a) ? `<span class="tk-p">${esc(a)}</span>` : `<span class="tk-arg">${esc(a)}</span>`).join('')
+      const [, head, args, tail] = m, sep = head.includes('::') ? '::' : '.', parts = head.split(sep), fn = parts.pop()
+      const path = parts.length ? `<span class="tk-type">${esc(parts.join(sep))}</span><span class="tk-p">${sep}</span>` : ''
+      const argHtml = args.split(/(,\s*)/).map((a) => /^,/.test(a) ? `<span class="tk-p">${esc(a)}</span>` : a === '…' ? `<span class="tk-dim">…</span>` : `<span class="tk-arg">${esc(a)}</span>`).join('')
       const ret = tail.replace(/^\s*->\s*/, '').trim()
       return `${path}<span class="tk-fn">${esc(fn)}</span><span class="tk-p">(</span>${argHtml}<span class="tk-p">)</span>${ret ? `<span class="tk-p"> → </span><span class="tk-type">${esc(ret)}</span>` : ''}`
     }
@@ -1358,9 +1428,11 @@ SOFTWARE.
     validate(cfg)
     const P = cfg.pano ?? {}
     MEDIA = P.media ?? {}; KINDS = P.kinds ?? {}; PEEL = P.peel ?? {}; FIELD_DOC = P.fieldDoc ?? {}; DATA_TAG = P.dataTag ?? '录制'
-    initOverview(cfg.overview)
     initPano(cfg.pano)
+    initOverview(cfg.overview)
     initInspector(cfg.components)
+    const strip = $('#arch-strip')
+    if (strip) strip.innerHTML = (cfg.componentNotes ?? []).map(([term, text]) => `<span><b>${esc(term)}</b>${fmt(text)}</span>`).join('')
     fillSrcLinks()
   }
 
@@ -1382,12 +1454,12 @@ SOFTWARE.
   const NODES = {
     config: { kicker: '输入', title: 'page.config.json', text: '构建清单：输出路径、填进模板的文字、要嵌入的数据文件和按顺序内联的脚本。', src: ['templates/arch-page/example/page.config.json'], pano: [['build', 'config', '详细架构流程：读配置']] },
     template: { kicker: '输入', title: 'page.template.html', text: '页面骨架：全部样式、文档说明表、三个章节和占位符。各篇文档共用这一份。', src: ['templates/arch-page/page.template.html:302-358'], pano: [['build', 'template', '详细架构流程：填文字']] },
-    overview: { kicker: '输入', title: 'Archify 总体图', text: 'Archify 从 candidate.json 生成的图，构建时取出其中的 svg，在总体架构和对象架构里各放一份。', src: ['templates/arch-page/build_page.py:49-54'], pano: [['build', 'overview', '详细架构流程：内联总体图']] },
-    data: { kicker: '输入', title: '数据文件', text: '抓取结果、录制日志等大块数据，各写成一个 JSON 数据块，由内容脚本按元素 id 读取。', src: ['templates/arch-page/build_page.py:72-85'], pano: [['build', 'data', '详细架构流程：写入数据']] },
+    overview: { kicker: '输入', title: 'Archify 总体图', text: 'Archify 从 candidate.json 生成的图，构建时取出其中的 svg，在总体架构和对象架构里各放一份。', src: ['templates/arch-page/build_page.py:49-56'], pano: [['build', 'overview', '详细架构流程：内联总体图']] },
+    data: { kicker: '输入', title: '数据文件', text: '抓取结果、录制日志等大块数据，各写成一个 JSON 数据块，由内容脚本按元素 id 读取。', src: ['templates/arch-page/build_page.py:74-87'], pano: [['build', 'data', '详细架构流程：写入数据']] },
     scripts: { kicker: '输入', title: '脚本', text: '按顺序内联：先引擎 engine.js，再本页内容 arch.data.js，最后是本页额外章节的脚本。', src: ['templates/arch-page/example/arch.data.js'], pano: [['build', 'scripts', '详细架构流程：内联脚本']] },
-    build: { kicker: '合成', title: 'build_page.py', text: '读清单，依次填文字、内联总体图、写数据块和脚本，输出单文件页面；漏填的占位符直接报错。', src: ['templates/arch-page/build_page.py:88-115'], pano: [['build', 'build', '详细架构流程：构建']] },
+    build: { kicker: '合成', title: 'build_page.py', text: '读清单，依次填文字、内联总体图、写数据块和脚本，输出单文件页面；漏填的占位符直接报错。', src: ['templates/arch-page/build_page.py:90-120'], pano: [['build', 'build', '详细架构流程：构建']] },
     page: { kicker: '输出', title: '单文件页面', text: '样式、图、数据和脚本都在一个 html 里，离线可开。', src: ['templates/arch-page/example/page.config.json'], pano: [['render', 'page', '详细架构流程：打开页面']] },
-    engine: { kicker: '浏览器', title: 'ArchPage 引擎', text: '`ArchPage.init(config)` 先校验内容，再渲染总体架构的说明、详细架构流程和对象架构。', src: ['templates/arch-page/engine.js:480-489'], pano: [['render', 'engine', '详细架构流程：渲染']] },
+    engine: { kicker: '浏览器', title: 'ArchPage 引擎', text: '`ArchPage.init(config)` 先校验内容，再渲染总体架构的说明、详细架构流程和对象架构。', src: ['templates/arch-page/engine.js:518-529'], pano: [['render', 'engine', '详细架构流程：渲染']] },
   }
 
   /* ---------- panorama ---------- */
@@ -1452,30 +1524,30 @@ SOFTWARE.
 
   const STORIES = [
     { id: 'build', title: '构建一页', intro: '`python3 build_page.py example` 的四个阶段，数据取自本页的配置和构建结果。', steps: [
-      { t: '读清单、填文字', text: '构建脚本读入清单，把 `text` 里的每一段文字填进模板对应的占位符，再核对每个占位符都已填写。', src: ['templates/arch-page/build_page.py:88-97'], subs: [
+      { t: '读清单、填文字', text: '构建脚本读入清单，把 `text` 里的每一段文字填进模板对应的占位符，再核对每个占位符都已填写。', src: ['templates/arch-page/build_page.py:90-102'], subs: [
         sub('读 page.config.json', ['config', 'build'], '清单原文，构建脚本据此决定读哪些文件、写到哪里。', [['清单原文', J(CONFIG, 'config')]]),
         sub(`填 ${placeholders.length} 个占位符`, ['template', 'build'], `模板里的占位符和清单 \`text\` 的键一一对应，本页共 ${placeholders.length} 个。`, [['填写的占位符', J({ placeholders }, 'config')]]),
       ] },
-      { t: '内联总体图', text: 'Archify 生成的 html 里只取 svg；同一张图在总体架构和对象架构里各放一份，id 分别加前缀。', src: ['templates/arch-page/build_page.py:49-69'], subs: [
+      { t: '内联总体图', text: 'Archify 生成的 html 里只取 svg；同一张图在总体架构和对象架构里各放一份，id 分别加前缀。', src: ['templates/arch-page/build_page.py:49-71'], subs: [
         sub('extract_svg 取出 svg', ['overview', 'build'], `取出的 svg 共 ${svg?.outerHTML.length.toLocaleString() ?? 0} 字符，含 ${svg?.querySelectorAll('[data-node-id]').length ?? 0} 个方框。`, [['svg 开头', { t: 'text', v: svg?.outerHTML.slice(0, 600) ?? '', k: 'svg' }]]),
         sub('scoped_svg 加前缀后插入两份', ['build', 'page'], '总体架构那份的 id 以 `ov-` 开头，对象架构那份以 `cp-` 开头。', [['两份图的 id 示例', J({ overview: svg?.querySelector('[id]')?.id, components: document.querySelector('#architecture-canvas svg [id]')?.id }, 'svg')]]),
       ] },
-      { t: '写入数据和脚本', text: '数据文件写成 JSON 数据块，脚本按清单顺序内联。', src: ['templates/arch-page/build_page.py:72-85', 'templates/arch-page/build_page.py:101-103'], subs: [
+      { t: '写入数据和脚本', text: '数据文件写成 JSON 数据块，脚本按清单顺序内联。', src: ['templates/arch-page/build_page.py:74-87', 'templates/arch-page/build_page.py:106-108'], subs: [
         sub('data_tag 写数据块', ['data', 'build'], `本页只有一个数据块 \`${dataEl.id}\`，内容是清单本身。`, [['写出的数据块开头', J({ id: dataEl.id, bytes: dataEl.textContent.length, head: dataEl.outerHTML.slice(0, 160) }, 'datablock')]]),
         sub('按顺序内联脚本', ['scripts', 'build'], '引擎在前，内容脚本在后。', [['脚本顺序', J({ scripts: CONFIG.scripts }, 'config')]]),
       ] },
-      { t: '输出', text: '全部插入完成后写到 `out` 指定的路径。', src: ['templates/arch-page/build_page.py:113-115'], subs: [
+      { t: '输出', text: '全部插入完成后写到 `out` 指定的路径。', src: ['templates/arch-page/build_page.py:118-120'], subs: [
         sub('写出 example.html', ['build', 'page'], `页面共 ${document.documentElement.outerHTML.length.toLocaleString()} 字符（渲染后）。`, [['输出', J({ out: CONFIG.out, bytes: document.documentElement.outerHTML.length }, 'output')]]),
       ] },
     ] },
     { id: 'render', title: '浏览器里渲染', intro: '页面打开后，内容脚本调用 `ArchPage.init`，引擎先校验，再依次渲染三个部分。', steps: [
-      { t: '交出配置', text: '内容脚本把总体说明、全景图和对象列表组成一个配置，交给引擎。', src: ['templates/arch-page/engine.js:480-489'], subs: [
+      { t: '交出配置', text: '内容脚本把总体说明、全景图和对象列表组成一个配置，交给引擎。', src: ['templates/arch-page/engine.js:518-529'], subs: [
         sub('ArchPage.init(config)', ['page', 'engine'], '配置的规模如下，完整结构见模版 README。', [['配置摘要', J({ repo: REPO, overviewNodes: Object.keys(NODES).length, panoNodes: PNODES.length - 1, stories: 2, components: 8 }, 'init')]]),
       ] },
-      { t: '一致性校验', text: '引擎检查各部分之间的引用：方框与说明、组件与关键概念、连线与组件、小步与连线、对象与方框。', src: ['templates/arch-page/engine.js:432-478'], subs: [
+      { t: '一致性校验', text: '引擎检查各部分之间的引用：方框与说明、组件与关键概念、连线与组件、小步与连线、对象与方框。', src: ['templates/arch-page/engine.js:470-516'], subs: [
         sub('validate', ['engine'], '本页的校验结果是空数组 `[]`，控制台的 `[arch-page]` 输出为 0 条。', [['校验结果', J({ errors: [] }, 'errors')]]),
       ] },
-      { t: '渲染三个部分', text: '总体说明绑定到 Archify 方框，全景图画卡片和连线，对象检查器绑定到对象架构那份图。', src: ['templates/arch-page/engine.js:127-153', 'templates/arch-page/engine.js:165-383', 'templates/arch-page/engine.js:385-430'], subs: [
+      { t: '渲染三个部分', text: '总体说明绑定到 Archify 方框，全景图画卡片和连线，对象检查器绑定到对象架构那份图。', src: ['templates/arch-page/engine.js:131-165', 'templates/arch-page/engine.js:177-421', 'templates/arch-page/engine.js:423-468'], subs: [
         sub('总体架构', ['engine', 'page'], '点方框显示说明、源码和跳转。', [['方框', J({ placeholders: Object.keys(NODES) }, 'init')]]),
         sub('详细架构流程', ['engine', 'page'], '组件卡片带要点和关键概念；大步说明页列出全部小步的说明。', [['组件', J({ placeholders: PNODES.filter((n) => !n.legend).map((n) => n.id) }, 'init')]]),
         sub('对象架构', ['engine', 'page'], '点方框列出其中的对象。', [['对象数', J({ components: 8 }, 'init')]]),
@@ -1489,11 +1561,11 @@ SOFTWARE.
     { id: 'cfg', graph: 'config', kind: '文件', title: 'page.config.json', object: 'example/page.config.json', plain: '构建清单。', state: [['out', '输出路径'], ['text', '占位符的值'], ['data', '数据文件'], ['scripts', '脚本顺序']], src: ['templates/arch-page/example/page.config.json'] },
     { id: 'tpl', graph: 'template', kind: '文件', title: 'page.template.html', object: 'templates/arch-page/page.template.html', plain: '页面骨架。', state: [['{{KEY}}', '文字占位符'], ['<!--NAME-->', '插入标记']], src: ['templates/arch-page/page.template.html:302-358'] },
     { id: 'svg', graph: 'overview', kind: '图', title: 'overview.html', object: 'Archify 输出', plain: 'Archify 生成的总体图。', src: ['templates/arch-page/example/overview/candidate.json'] },
-    { id: 'datatag', graph: 'data', kind: '函数', title: 'data_tag', object: 'build_page.py', plain: '把数据文件写成 JSON 数据块。', methods: [{ sig: 'data_tag(element_id, spec) -> str', name: '写数据块', in: '元素 id 和 `{file, type, notice}`', out: '`<script type="application/json">`', effect: '校验 JSON 或 JSONL，转义 `</` 和 `<!--`' }], src: ['templates/arch-page/build_page.py:72-85'] },
+    { id: 'datatag', graph: 'data', kind: '函数', title: 'data_tag', object: 'build_page.py', plain: '把数据文件写成 JSON 数据块。', methods: [{ sig: 'data_tag(element_id, spec) -> str', name: '写数据块', in: '元素 id 和 `{file, type, notice}`', out: '`<script type="application/json">`', effect: '校验 JSON 或 JSONL，转义 `</` 和 `<!--`' }], src: ['templates/arch-page/build_page.py:74-87'] },
     { id: 'content', graph: 'scripts', kind: '脚本', title: 'arch.data.js', object: 'example/arch.data.js', plain: '本页内容：总体说明、全景图、流程、对象，最后调用 `ArchPage.init`。', rel: [['调用', 'init', '交出配置']], src: ['templates/arch-page/example/arch.data.js'] },
-    { id: 'main', graph: 'build', kind: '函数', title: 'main', object: 'build_page.py', plain: '构建入口。', methods: [{ sig: 'main() -> None', name: '构建', in: '页面目录下的 page.config.json', out: '单文件页面', effect: '填文字、内联图、写数据块和脚本' }], rel: [['调用', 'datatag', '写数据块']], src: ['templates/arch-page/build_page.py:88-115'] },
+    { id: 'main', graph: 'build', kind: '函数', title: 'main', object: 'build_page.py', plain: '构建入口。', methods: [{ sig: 'main() -> None', name: '构建', in: '页面目录下的 page.config.json', out: '单文件页面', effect: '填文字、内联图、写数据块和脚本' }], rel: [['调用', 'datatag', '写数据块']], src: ['templates/arch-page/build_page.py:90-120'] },
     { id: 'html', graph: 'page', kind: '文件', title: 'example.html', object: 'example/example.html', plain: '构建输出。', src: ['templates/arch-page/example/page.config.json'] },
-    { id: 'init', graph: 'engine', kind: '函数', title: 'ArchPage.init', object: 'engine.js', plain: '引擎入口：校验后渲染三个部分。', methods: [{ sig: 'ArchPage.init(config)', name: '初始化', in: '`{repo, overview, pano, components}`', out: '返回 undefined，结果直接写进页面 DOM', effect: '`validate` 后依次调用 `initOverview`、`initPano`、`initInspector`' }], src: ['templates/arch-page/engine.js:480-489'] },
+    { id: 'init', graph: 'engine', kind: '函数', title: 'ArchPage.init', object: 'engine.js', plain: '引擎入口：校验后渲染三个部分。', methods: [{ sig: 'ArchPage.init(config)', name: '初始化', in: '`{repo, overview, pano, components}`', out: '返回 undefined，结果直接写进页面 DOM', effect: '`validate` 后依次调用 `initOverview`、`initPano`、`initInspector`' }], src: ['templates/arch-page/engine.js:518-529'] },
   ]
 
   ArchPage.init({
