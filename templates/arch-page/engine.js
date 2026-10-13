@@ -61,27 +61,30 @@
       const { k, name } = step(cur)
       if (!k || !isObj(cur[k])) break
       const { [k]: inner, ...head } = cur
-      layers.push({ name, key: path ? path.split('.').pop() : '最外层', head })
+      layers.push({ name, key: path ? path.split('.').pop() : '最外层', path, head })
       path = path ? `${path}.${k}` : k
       cur = inner
     }
-    return { layers, body: { key: path ? path.split('.').pop() : '', value: cur } }
+    return { layers, body: { key: path ? path.split('.').pop() : '', path, value: cur } }
   }
-  const preview = (x) => x === null ? 'null' : typeof x === 'string' ? (x.length > 120 ? `${JSON.stringify(x.slice(0, 120))}…（共 ${x.length} 字）` : JSON.stringify(x))
-    : Array.isArray(x) ? `列表，共 ${x.length} 项` : typeof x === 'object' ? `${Object.keys(x).length} 个字段` : String(x)
-  function fieldRows(v, budget = { n: 80 }, depth = 0, lv = 0, out = []) {
-    const arr = Array.isArray(v)
-    const kids = arr ? v.slice(0, 3).map((x, i) => [i, x, null]) : Object.entries(v).map(([k, x]) => [k, x, k])
+  const preview = (x) => x === null ? 'null' : typeof x === 'string' ? (x.length > 120 ? `${JSON.stringify(x.slice(0, 120))}…（共 ${x.length} 字）` : JSON.stringify(x)) : String(x)
+  const shape = (x) => Array.isArray(x) ? `<b>[ ]</b> 列表 · ${x.length} 项` : `<b>{ }</b> 对象 · ${Object.keys(x).length} 个字段`
+  const ARR_SHOW = 3, ARR_STEP = 5
+  let arrSeq = 0
+  function fieldRows(v, path = '', depth = 0, out = []) {
+    const arr = Array.isArray(v), id = arr ? `a${++arrSeq}` : null
+    const kids = arr ? v.map((x, i) => [i, x, null]) : Object.entries(v).map(([k, x]) => [k, x, k])
     for (const [label, x, k] of kids) {
-      if (budget.n-- <= 0) break
-      const nest = !!(x && typeof x === 'object' && Object.keys(x).length && lv < 5)
-      if (arr && nest && isObj(x)) out.push({ box: true, label, depth, inner: fieldRows(x, budget, 0, lv + 1) })
+      const p = path ? `${path}.${label}` : String(label)
+      const nest = !!(x && typeof x === 'object' && Object.keys(x).length)
+      const el = arr ? { arr: id, ai: label } : {}
+      if (arr && nest) out.push({ box: true, label, x, depth, path: p, ...el, inner: fieldRows(x, p) })
       else {
-        out.push({ label, x, k, depth, group: nest })
-        if (nest) fieldRows(x, budget, depth + 1, lv + 1, out)
+        out.push({ label, x, k, depth, path: p, group: nest, ...el })
+        if (nest) fieldRows(x, p, depth + 1, out)
       }
     }
-    if (arr && v.length > 3 && budget.n > 0) out.push({ label: '…', x: `其余 ${v.length - 3} 项见原文`, depth, note: true })
+    if (arr && v.length > ARR_SHOW) out.push({ ctl: true, arr: id, total: v.length, depth })
     return out
   }
   function treeRows(rows) {
@@ -96,20 +99,42 @@
     return r.rails.map((on, L) => on ? `<i class="tv" style="left:${COL(L)}px"></i>` : '').join('')
       + (own ? `<i class="tv ${own}" style="left:${COL(d)}px"></i>` : '')
       + `<i class="tl" style="left:${COL(d)}px"></i>`
-      + (r.box ? '' : `<i class="dot${r.kids ? ' grp' : ''}" style="left:${COL(d + 1)}px"></i>`)
+      + (r.box || r.ctl ? '' : `<i class="dot${r.kids ? ' grp' : ''}" style="left:${COL(d + 1)}px"></i>`)
       + (r.kids ? `<i class="tv down" style="left:${COL(d + 1)}px"></i>` : '')
   }
   const valueKind = (x) => x === null ? 'z' : typeof x === 'string' ? 's' : typeof x === 'number' ? 'n' : typeof x === 'boolean' ? 'b' : ''
-  const rowsHtml = (rows) => treeRows(rows).map((r) => r.box ? boxRow(r) : fieldRow(r)).join('')
-  const boxRow = (r) => `<tr class="box"><td colspan="3" style="padding-left:${COL(r.depth + 1)}px">${treeCell(r)}<div class="arr-box"><span class="arr-idx">${r.label}</span><table class="dbox-fields">${rowsHtml(r.inner)}</table></div></td></tr>`
-  const fieldRow = (r) => `<tr class="d${Math.min(r.depth, 4)}${r.kids ? ' grp' : ''}"><th style="padding-left:${COL(r.depth + 1) + 9}px">${treeCell(r)}<span class="${r.k == null ? 'fk-i' : 'fk'}">${esc(r.label)}</span></th>`
-    + `<td>${r.group || r.note ? `<span class="dbox-type">${esc(r.note ? r.x : preview(r.x))}</span>` : `<span class="fv-${valueKind(r.x)}">${esc(preview(r.x))}</span>`}</td><td class="doc">${esc(FIELD_DOC[r.k] ?? '')}</td></tr>`
-  function fieldTable(v) {
+  const rowsHtml = (rows, ctx) => treeRows(rows).map((r) => r.ctl ? ctlRow(r) : r.box ? boxRow(r, ctx) : fieldRow(r, ctx)).join('')
+  function rowAttr(r, ctx, cls) {
+    const f = ctx.focus
+    if (f && r.path === f) cls.push('focus')
+    else if (f && r.path.startsWith(`${f}.`)) cls.push('inf')
+    return `${cls.length ? ` class="${cls.join(' ')}"` : ''}${r.arr ? ` data-a="${r.arr}" data-ai="${r.ai}"${r.ai >= ARR_SHOW ? ' hidden' : ''}` : ''}`
+  }
+  const boxRow = (r, ctx) => `<tr${rowAttr(r, ctx, ['box'])}><td colspan="3" style="padding-left:${COL(r.depth + 1)}px">${treeCell(r)}<div class="arr-box"><span class="arr-idx">${r.label}</span><span class="arr-shape">${shape(r.x)}</span><table class="dbox-fields">${rowsHtml(r.inner, ctx)}</table></div></td></tr>`
+  function fieldRow(r, ctx) {
+    const doc = ctx.layer?.[r.path] ?? FIELD_DOC[r.k] ?? ''
+    const tag = r.path === ctx.focus ? '<em class="fk-tag">本步数据</em>' : ''
+    return `<tr${rowAttr(r, ctx, [`d${Math.min(r.depth, 4)}`, ...(r.kids ? ['grp'] : [])])}><th style="padding-left:${COL(r.depth + 1) + 9}px">${treeCell(r)}<span class="${r.k == null ? 'fk-i' : 'fk'}">${esc(r.label)}</span>${tag}</th>`
+      + `<td>${r.group ? `<span class="dbox-type">${shape(r.x)}</span>` : `<span class="fv-${valueKind(r.x)}">${esc(preview(r.x))}</span>`}</td><td class="doc">${esc(doc)}</td></tr>`
+  }
+  const ctlInner = (n, total) => `<span class="arr-n">显示 ${n} / ${total} 项</span>`
+    + `<button type="button" data-more="${ARR_STEP}"${n >= total ? ' hidden' : ''}>再显示 ${Math.min(ARR_STEP, total - n)} 项</button><button type="button" data-more="all"${n >= total ? ' hidden' : ''}>显示全部</button>`
+    + `<button type="button" data-more="-${ARR_STEP}"${n <= ARR_SHOW ? ' hidden' : ''}>少显示 ${Math.min(ARR_STEP, n - ARR_SHOW)} 项</button><button type="button" data-more="reset"${n <= ARR_SHOW ? ' hidden' : ''}>收起</button>`
+  const ctlRow = (r) => `<tr class="ctl" data-ctl="${r.arr}" data-total="${r.total}" data-shown="${ARR_SHOW}"><td colspan="3" style="padding-left:${COL(r.depth + 1)}px">${treeCell(r)}<span class="arr-ctl">${ctlInner(ARR_SHOW, r.total)}</span></td></tr>`
+  function arrMore(ev) {
+    const b = ev.target.closest('.arr-ctl button')
+    if (!b) return
+    const tr = b.closest('tr.ctl'), total = Number(tr.dataset.total), cur = Number(tr.dataset.shown), m = b.dataset.more
+    const n = m === 'all' ? total : m === 'reset' ? ARR_SHOW : Math.min(total, Math.max(ARR_SHOW, cur + Number(m)))
+    tr.dataset.shown = n
+    for (const row of tr.parentElement.children) if (row.dataset.a === tr.dataset.ctl) row.hidden = Number(row.dataset.ai) >= n
+    tr.querySelector('.arr-ctl').innerHTML = ctlInner(n, total)
+  }
+  function fieldTable(v, ctx = {}) {
     if (!v || typeof v !== 'object') return `<table class="dbox-fields"><tr><td>${esc(preview(v))}</td></tr></table>`
     const rows = fieldRows(v)
-    return rows.length ? `<table class="dbox-fields">${rowsHtml(rows)}</table>` : '<p class="dbox-note">空对象 {}</p>'
+    return rows.length ? `<table class="dbox-fields">${rowsHtml(rows, ctx)}</table>` : `<p class="dbox-note">${Array.isArray(v) ? '空列表 []' : '空对象 {}'}</p>`
   }
-  const headTable = (head) => `<table class="dbox-fields">${treeRows(Object.entries(head).map(([k, x]) => ({ label: k, x, k, depth: 0 }))).map(fieldRow).join('')}</table>`
   function kindLine(x) {
     const info = KINDS[x.k]
     if (!info) return ''
@@ -119,10 +144,9 @@
   function jsonAnatomy(v, k) {
     const { layers, body } = peel(v, PEEL[k] ?? [])
     const raw = JSON.stringify(v) ?? ''
-    const envCount = layers.reduce((n, L) => n + Object.keys(L.head).length, 0)
-    const env = layers.length ? `<div class="dbox-path"><span>位置</span>${layers.map((L) => `<code title="${esc(L.name)}">${esc(L.key)}</code>`).join('<i>›</i>')}<i>›</i><b>${esc(body.key)}</b></div>
-      <details class="dbox-env"><summary>外层信封字段 ${envCount} 个</summary>${layers.map((L) => `<div class="dbox-envl"><div>${esc(L.key)} <small>${esc(L.name)}</small></div>${headTable(L.head)}</div>`).join('')}</details>` : ''
-    return `${env}${fieldTable(body.value)}<details class="dbox-raw"><summary>原文 JSON · ${raw.length.toLocaleString()} 字符</summary>${pre(v)}</details>`
+    const path = layers.length ? `<div class="dbox-path"><span>位置</span>${layers.map((L) => `<code>${esc(L.key)}</code>`).join('<i>›</i>')}<i>›</i><b>${esc(body.key)}</b><small>最外层：${esc(layers[0].name)}</small></div>` : ''
+    const ctx = layers.length ? { focus: body.path, layer: Object.fromEntries(layers.slice(1).map((L) => [L.path, L.name])) } : {}
+    return `${path}${fieldTable(v, ctx)}<details class="dbox-raw"><summary>原文 JSON · ${raw.length.toLocaleString()} 字符</summary>${pre(v)}</details>`
   }
   function anatomy(x) {
     const note = x.note ? `<p class="dbox-note">${fmt(x.note)}</p>` : ''
@@ -391,6 +415,7 @@
       const i = stepIdx + d
       if (i < story.steps.length) setStep(i)
     }
+    root.addEventListener('click', arrMore)
     root.addEventListener('click', (ev) => {
       const t = ev.target.closest('[data-pano-story],[data-pano-step],[data-pano-sub],[data-pano-go],[data-pano-edge],[data-pano-edge-close],[data-pano-jump]')
       if (!t) return
