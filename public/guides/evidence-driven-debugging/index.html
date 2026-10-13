@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Cindy Sridharan 经典调试长文通俗解读：当人已经看不懂 AI 生成的代码时，如何用证据驱动排查真实疑难故障。包含核心观点、三步方法、三大经典案例与配套可复用 Skill。">
+  <title>当代码复杂到看不懂时，到底该怎么 Debug？—— 证据驱动调试法精读与实操指南</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1f2937;
+      --muted: #4b5563;
+      --line: #e5e7eb;
+      --accent: #0f766e;
+      --accent-dark: #115e59;
+      --accent-light: #f0fdfa;
+      --soft: #f8fafc;
+      --red: #b91c1c;
+      --red-bg: #fef2f2;
+      --yellow: #b45309;
+      --yellow-bg: #fffbeb;
+      --blue: #1d4ed8;
+      --blue-bg: #eff6ff;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 30px; }
+    body {
+      margin: 0;
+      background: #ffffff;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font-size: 15px;
+      line-height: 1.8;
+      letter-spacing: 0.01em;
+    }
+    a { color: var(--accent); text-decoration: none; overflow-wrap: anywhere; }
+    a:hover { text-decoration: underline; }
+    .layout {
+      max-width: 1320px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      gap: 50px;
+      padding: 40px 36px 80px;
+    }
+    aside {
+      position: sticky;
+      top: 32px;
+      align-self: start;
+      border-right: 1px solid var(--line);
+      padding-right: 24px;
+      max-height: calc(100vh - 64px);
+      overflow-y: auto;
+    }
+    .series {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+    nav a {
+      display: block;
+      color: var(--muted);
+      padding: 8px 10px;
+      font-size: 13.5px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      margin-bottom: 2px;
+    }
+    nav a:hover {
+      color: var(--ink);
+      background: #f3f4f6;
+      text-decoration: none;
+    }
+    nav a.active {
+      color: var(--accent-dark);
+      background: var(--accent-light);
+      font-weight: 700;
+    }
+    .nav-rule {
+      border-top: 1px solid var(--line);
+      margin-top: 16px;
+      padding-top: 16px;
+    }
+    .aside-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 24px;
+      line-height: 1.6;
+      padding: 10px 12px;
+      background: var(--soft);
+      border-radius: 6px;
+    }
+    main { min-width: 0; }
+    .eyebrow {
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 32px;
+      line-height: 1.35;
+      margin: 0 0 14px;
+      font-weight: 800;
+      color: #111827;
+      overflow-wrap: anywhere;
+    }
+    .original-title {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 0 0 18px;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 20px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    header {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 28px;
+    }
+    section {
+      padding: 38px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    h2 {
+      font-size: 22px;
+      line-height: 1.45;
+      margin: 0 0 18px;
+      font-weight: 750;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h2 .number {
+      font-size: 13px;
+      color: var(--accent);
+      background: var(--accent-light);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+    h3 {
+      font-size: 16.5px;
+      line-height: 1.5;
+      margin: 28px 0 12px;
+      font-weight: 700;
+      color: #1f2937;
+    }
+    p { margin: 12px 0; color: #374151; }
+    .lead {
+      font-size: 17.5px;
+      line-height: 1.8;
+      font-weight: 500;
+      color: #111827;
+      margin: 0 0 16px;
+    }
+    .callout {
+      border-left: 4px solid var(--accent);
+      padding: 14px 18px;
+      background: var(--accent-light);
+      font-size: 14px;
+      margin: 18px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .callout-title {
+      font-weight: 750;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .callout.caution {
+      border-color: #f59e0b;
+      background: var(--yellow-bg);
+      color: #92400e;
+    }
+    .callout.danger {
+      border-color: #ef4444;
+      background: var(--red-bg);
+      color: #991b1b;
+    }
+    .callout.info {
+      border-color: #3b82f6;
+      background: var(--blue-bg);
+      color: #1e40af;
+    }
+    .small { font-size: 13px; color: var(--muted); }
+    .source { font-size: 12px; color: var(--muted); margin: 18px 0 0; }
+    .table-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin: 18px 0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 14px;
+      text-align: left;
+    }
+    th {
+      background: #f9fafb;
+      font-size: 13px;
+      color: #4b5563;
+      font-weight: 700;
+      border-bottom: 1px solid var(--line);
+    }
+    td, th {
+      padding: 12px 16px;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+    }
+    tr:last-child td { border-bottom: 0; }
+    tr:hover td { background: #fafafa; }
+    .facts td:first-child { width: 22%; font-weight: 650; color: #111827; }
+    .matrix { min-width: 580px; }
+    .matrix th:first-child { width: 32%; }
+    .yes { color: #047857; font-weight: 700; }
+    .no { color: var(--red); font-weight: 700; }
+    .unknown { color: var(--yellow); font-weight: 700; }
+    .status {
+      font-size: 12px;
+      font-weight: 700;
+      color: #047857;
+      background: #d1fae5;
+      padding: 3px 10px;
+      border-radius: 9999px;
+    }
+    .status.partial {
+      color: #b45309;
+      background: #fef3c7;
+    }
+    .case-heading {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 18px;
+    }
+    .case-heading h2 { margin: 0; }
+    .case-body {
+      display: grid;
+      grid-template-columns: minmax(240px, 0.85fr) minmax(0, 1.15fr);
+      gap: 26px;
+      align-items: start;
+    }
+    figure { margin: 0; min-width: 0; }
+    .diagram {
+      padding: 18px 8px;
+      background: #fbfdfd;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .diagram svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-width: 100%;
+    }
+    .diagram .nodeLabel p { margin: 0; }
+    figcaption {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 10px;
+      text-align: center;
+    }
+    .loop { max-width: 520px; margin: 20px auto; }
+    ul, ol { padding-left: 22px; margin: 12px 0; color: #374151; }
+    li { margin-bottom: 6px; }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      border-radius: 4px;
+      overflow-wrap: anywhere;
+    }
+    pre {
+      padding: 16px 20px;
+      overflow-x: auto;
+      background: #1e293b;
+      color: #f8fafc;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.65;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      margin: 16px 0;
+    }
+    pre code { background: none; color: inherit; padding: 0; }
+    details {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 14px 0;
+      background: #ffffff;
+    }
+    summary {
+      cursor: pointer;
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 14px;
+      outline: none;
+    }
+    details[open] summary { margin-bottom: 12px; }
+    .tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 18px;
+    }
+    button {
+      font: inherit;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #ffffff;
+      background: var(--accent);
+      border: 1px solid var(--accent-dark);
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    button:hover { background: var(--accent-dark); }
+    .btn-outline {
+      color: var(--accent-dark);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      padding: 8px 16px;
+      border-radius: 6px;
+      display: inline-block;
+      font-weight: 600;
+      font-size: 13.5px;
+    }
+    .btn-outline:hover {
+      background: #f9fafb;
+      text-decoration: none;
+    }
+    button:focus-visible, a:focus-visible, summary:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    #copy-status { font-size: 13px; color: #059669; font-weight: 600; }
+    footer {
+      font-size: 13px;
+      color: var(--muted);
+      padding-top: 32px;
+      text-align: center;
+    }
+    @media (max-width: 1000px) {
+      .layout { gap: 32px; padding: 30px 24px; grid-template-columns: 190px minmax(0, 1fr); }
+      .case-body { grid-template-columns: 1fr; }
+      .case-body figure { max-width: 580px; width: 100%; margin: 0 auto 20px; }
+    }
+    @media (max-width: 768px) {
+      .layout { display: block; padding: 20px 16px 48px; }
+      aside {
+        position: static;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 0 0 16px;
+        margin-bottom: 24px;
+        max-height: none;
+      }
+      .series { margin-bottom: 8px; }
+      nav { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+      nav a { font-size: 12.5px; padding: 4px 6px; }
+      .nav-rule { margin: 0; padding: 0; border: 0; }
+      .aside-note { display: none; }
+      h1 { font-size: 25px; }
+      h2 { font-size: 19px; }
+      .lead { font-size: 16px; }
+      td, th { padding: 9px 11px; }
+      .facts td:first-child { width: 28%; }
+      section { padding: 26px 0; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside aria-label="文章目录">
+    <div class="series">DEBUGGING GUIDE · 精选精读</div>
+    <nav>
+      <a href="#overview">01 核心结论：摆脱 AI 盲目自嗨</a>
+      <a href="#ideas">02 五大心法：AI 时代如何调试</a>
+      <a href="#method">03 三步工作流：用证据做排除法</a>
+      <a href="#latency">04 案例一：P99 暴涨与用错客户端</a>
+      <a href="#memory">05 案例二：无凭证引发 50GB OOM</a>
+      <a href="#hang">06 案例三：神秘卡死与内核断案</a>
+      <a href="#factory">07 工程化启示：让系统天生好查</a>
+      <a href="#skill" class="nav-rule">08 可复用 Skill：直接在项目中使用</a>
+      <a href="#sources">09 来源出处与整理口径</a>
+    </nav>
+    <div class="aside-note">
+      <strong>人话精读版</strong><br>
+      改编自 Cindy Sridharan 经典文章<br>
+      附带开箱即用的 Codex Skill
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <div class="eyebrow">架构精读 / 故障排查 / AI 原生研发</div>
+      <h1>当代码复杂到看不懂时，到底该怎么 Debug？</h1>
+      <p class="original-title">How to effectively debug when you no longer understand the code —— 证据驱动调试法（Evidence-Driven Debugging）深度拆解</p>
+      <div class="meta">
+        <span><strong>原作者</strong>：Cindy Sridharan（分布式系统专家）</span>
+        <span><strong>原文发布</strong>：2026-10-10</span>
+        <span><strong>精读整理</strong>：2026-10-13</span>
+      </div>
+    </header>
+
+    <!-- 01 核心结论 -->
+    <section id="overview">
+      <h2><span class="number">01</span>核心结论：摆脱 AI 盲目自嗨</h2>
+      <p class="lead">在 AI 动辄一次性写出数千行代码的时代，人类的心智模型已经跟不上代码的膨胀速度。当线上出故障时，绝不能靠 AI“头头是道”地脑补自圆其说，而必须回归真实世界的客观证据，用排除法打靶。</p>
+      <p>作者 Cindy Sridharan 用她亲身经历的三个严重生产故障（尾延迟飙升、50GB 内存打爆、间歇性 60 秒死等）证明了一个残酷的现实：<strong>无论 AI 解释得多么合情合理、哪怕同行评审全票通过、甚至本地复现出了完全一模一样的报错，都极有可能是彻底错误的结论！</strong></p>
+      
+      <div class="callout danger">
+        <div class="callout-title">🚨 常见的三大 Debug 致命陷阱</div>
+        <ul>
+          <li><strong>陷阱一（AI 幻觉编故事）</strong>：把报错抛给 LLM，LLM 凭借高超的语言组织能力，捏造出一个看似极有说服力的假因果，子 Agent 评审还跟着点头认同（回音室效应），结果一上线根本没用；</li>
+          <li><strong>陷阱二（对着静态代码生搬硬套）</strong>：面对动辄上万行的陌生代码库，仅凭看代码根本无法确定线上真实跑了哪条分支，静态代码只代表可能性，不代表事实；</li>
+          <li><strong>陷阱三（假复现带偏全场）</strong>：在本地随便构造了一个场景，也触发了同样的 Timeout 或 OOM，便误以为“复现了线上事故”，写了补丁上线才发现真正的线上火情纹丝未动。</li>
+        </ul>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">💡 破局之道：证据驱动调试（三步走）</div>
+        将 Debug 组织成<strong>约束满足问题（Constraint Satisfaction）</strong>：拿线上的客观铁证（日志、抓包、堆内存、系统调用）充当考卷，把各种怀疑的假说拿来逐个打靶——<strong>只要任何一个客观事实与假说冲突，无论这个假说听起来多么诱人，坚决一票否决！</strong>
+      </div>
+    </section>
+
+    <!-- 02 观点与适用边界 -->
+    <section id="ideas">
+      <h2><span class="number">02</span>五大心法：AI 时代如何调试</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 28%;">作者核心观点</th>
+              <th>通俗人话拆解与落地边界</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. 读 AI 生成的代码，不等于获得手写时的理解深度。</strong></td>
+              <td>自己一行行敲代码时，大脑在权衡每个边界；而阅读 AI 批量吐出的几千行代码，往往只是“扫一眼觉得挺顺眼”。别高估自己的心智模型，承认自己不懂，不要凭主观直觉猜 Bug。</td>
+            </tr>
+            <tr>
+              <td><strong>2. 静态代码只描述可能性，现场数据才描述真实发生。</strong></td>
+              <td>代码里写了 10 条 <code>if/else</code>，线上真实跑了哪一条？只有现场的 Trace 和指标说了算。把“通读代码找 Bug”挪到调查的后半段，先拿到证据把范围缩小到单一模块，再去精准读代码。</td>
+            </tr>
+            <tr>
+              <td><strong>3. 调试的本质是“做排除法”，而非“自圆其说”。</strong></td>
+              <td>很多工程师习惯“提出一个猜测，然后千方百计找理由证明自己是对的”。科学的 Debug 恰恰相反：<strong>尽全力找一个能否定这个猜测的客观反例</strong>。只要有一个反例冲突，立刻淘汰该假设。</td>
+            </tr>
+            <tr>
+              <td><strong>4. 必须核验底层机制信号，警惕“假复现”。</strong></td>
+              <td>“报错一样、都是超时”根本不叫复现。复现实验必须核验底层强信号（如抓包特征、内存分配栈帧、端口状态）。如果底层信号分叉，说明你抓到的是另一个无关 Bug。</td>
+            </tr>
+            <tr>
+              <td><strong>5. 对抗式评审（找茬）远好于求同评审（点头）。</strong></td>
+              <td>让另一个 Agent 或工程师评审时，不要问“你看这个分析合理吗”，而要命令它：“<strong>请从现有证据里找出 3 个能证明这个假设是胡扯的反例！</strong>”</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="source">对应原文：Do we need to still understand the code?；Code is an Unreliable Narrator；Agentic Repros Require Additional Scrutiny；Pitfalls of “Adversarial” Reviews。</p>
+    </section>
+
+    <!-- 03 调试方法 -->
+    <section id="method">
+      <h2><span class="number">03</span>三步工作流：用证据做排除法</h2>
+      <h3>第一步：区分两层信息，确立对照组</h3>
+      <div class="table-wrap">
+        <table class="facts">
+          <thead>
+            <tr>
+              <th>核心概念</th>
+              <th>通俗解释与使用指南</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>客观事实层</strong></td>
+              <td>外部采集的冷冰冰数据：日志、网络抓包 PCAP、Heap Profile、配置版本、DNS 记录、内核连接。必须带时间窗、机器、采集方式；事实不迎合任何人的喜好。</td>
+            </tr>
+            <tr>
+              <td><strong>主观推测层</strong></td>
+              <td>人类或 AI 对现象的解释、怀疑的代码、编织的故事。推测必须单独记录，绝不能和事实混为一谈。</td>
+            </tr>
+            <tr>
+              <td><strong>对照组（Control）</strong></td>
+              <td><strong>Debug 最重要的一步就是找对照组！</strong> 孤立看故障机器常常毫无头绪；找一台“没有出这个故障的最相近机器”（如关掉了特性的机器、上一个正常版本），对比二者的细微差异。</td>
+            </tr>
+            <tr>
+              <td><strong>强信号（High-fidelity）</strong></td>
+              <td>能把候选假说迅速区分开的独特现象。例如：“P99 变高”不是强信号（几十种原因都能让 P99 变高）；而“DNS 解析出的 IP 数量翻了 80 倍”就是无可辩驳的强信号。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>三步调查闭环流程图</h3>
+      <figure class="loop">
+        <div class="diagram"><svg id="diagram-debug-loop" width="645.5078125" xmlns="http://www.w3.org/2000/svg" class="flowchart" height="1514.03125" viewBox="0 0 645.5078125 1514.03125" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#diagram-debug-loop{font-size:15px;fill:#333;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#diagram-debug-loop .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#diagram-debug-loop .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#diagram-debug-loop .error-icon{fill:hsl(220.5882352941, 100%, 98.3333333333%);}#diagram-debug-loop .error-text{fill:rgb(8.5000000002, 5.7500000001, 0);stroke:rgb(8.5000000002, 5.7500000001, 0);}#diagram-debug-loop .edge-thickness-normal{stroke-width:1px;}#diagram-debug-loop .edge-thickness-thick{stroke-width:3.5px;}#diagram-debug-loop .edge-pattern-solid{stroke-dasharray:0;}#diagram-debug-loop .edge-thickness-invisible{stroke-width:0;fill:none;}#diagram-debug-loop .edge-pattern-dashed{stroke-dasharray:3;}#diagram-debug-loop .edge-pattern-dotted{stroke-dasharray:2;}#diagram-debug-loop .marker{fill:#0b0b0b;stroke:#0b0b0b;}#diagram-debug-loop .marker.cross{stroke:#0b0b0b;}#diagram-debug-loop svg{font-size:15px;}#diagram-debug-loop p{margin:0;}#diagram-debug-loop .label{color:#333;}#diagram-debug-loop .cluster-label text{fill:rgb(8.5000000002, 5.7500000001, 0);}#diagram-debug-loop .cluster-label span{color:rgb(8.5000000002, 5.7500000001, 0);}#diagram-debug-loop .cluster-label span p{background-color:transparent;}#diagram-debug-loop .label text,#diagram-debug-loop span{fill:#333;color:#333;}#diagram-debug-loop .node rect,#diagram-debug-loop .node circle,#diagram-debug-loop .node ellipse,#diagram-debug-loop .node polygon,#diagram-debug-loop .node path{fill:#fff4dd;stroke:hsl(40.5882352941, 60%, 83.3333333333%);stroke-width:1px;}#diagram-debug-loop .rough-node .label text,#diagram-debug-loop .node .label text,#diagram-debug-loop .image-shape .label,#diagram-debug-loop .icon-shape .label{text-anchor:middle;}#diagram-debug-loop .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#diagram-debug-loop .rough-node .label,#diagram-debug-loop .node .label,#diagram-debug-loop .image-shape .label,#diagram-debug-loop .icon-shape .label{text-align:center;}#diagram-debug-loop .node.clickable{cursor:pointer;}#diagram-debug-loop .root .anchor path{fill:#0b0b0b!important;stroke-width:0;stroke:#0b0b0b;}#diagram-debug-loop .arrowheadPath{fill:#0b0b0b;}#diagram-debug-loop .edgePaths .path{stroke:#0b0b0b;stroke-width:1px;}#diagram-debug-loop .flowchart-link{stroke:#0b0b0b;fill:none;}#diagram-debug-loop .edgeLabel{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);text-align:center;}#diagram-debug-loop .edgeLabel p{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);}#diagram-debug-loop .edgeLabel rect{opacity:0.5;background-color:hsl(-79.4117647059, 100%, 93.3333333333%);fill:hsl(-79.4117647059, 100%, 93.3333333333%);}#diagram-debug-loop .labelBkg{background-color:rgba(243.9999999999, 220.9999999998, 255, 0.5);}#diagram-debug-loop .cluster rect{fill:hsl(220.5882352941, 100%, 98.3333333333%);stroke:hsl(220.5882352941, 60%, 88.3333333333%);stroke-width:1px;}#diagram-debug-loop .cluster text{fill:rgb(8.5000000002, 5.7500000001, 0);}#diagram-debug-loop .cluster span{color:rgb(8.5000000002, 5.7500000001, 0);}#diagram-debug-loop .node .collapsed-indicator{fill:hsl(220.5882352941, 60%, 88.3333333333%);stroke:none;opacity:0.6;}#diagram-debug-loop .node .collapsed-separator{stroke:hsl(220.5882352941, 60%, 88.3333333333%);stroke-width:0.75px;}#diagram-debug-loop div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-size:12px;background:hsl(220.5882352941, 100%, 98.3333333333%);border:1px solid hsl(220.5882352941, 60%, 88.3333333333%);border-radius:2px;pointer-events:none;z-index:100;}#diagram-debug-loop .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#diagram-debug-loop rect.text{fill:none;stroke-width:0;}#diagram-debug-loop .icon-shape,#diagram-debug-loop .image-shape{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);text-align:center;}#diagram-debug-loop .icon-shape p,#diagram-debug-loop .image-shape p{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);padding:2px;}#diagram-debug-loop .icon-shape .label rect,#diagram-debug-loop .image-shape .label rect{opacity:0.5;background-color:hsl(-79.4117647059, 100%, 93.3333333333%);fill:hsl(-79.4117647059, 100%, 93.3333333333%);}#diagram-debug-loop .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#diagram-debug-loop .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#diagram-debug-loop .node .neo-node{stroke:hsl(40.5882352941, 60%, 83.3333333333%);}#diagram-debug-loop [data-look="neo"].node rect,#diagram-debug-loop [data-look="neo"].cluster rect,#diagram-debug-loop [data-look="neo"].node polygon{stroke:url(#diagram-debug-loop-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-debug-loop [data-look="neo"].swimlane.cluster rect{filter:none;}#diagram-debug-loop [data-look="neo"].node path{stroke:url(#diagram-debug-loop-gradient);stroke-width:1px;}#diagram-debug-loop [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-debug-loop [data-look="neo"].node .neo-line path{stroke:hsl(40.5882352941, 60%, 83.3333333333%);filter:none;}#diagram-debug-loop [data-look="neo"].node circle{stroke:url(#diagram-debug-loop-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-debug-loop [data-look="neo"].node circle .state-start{fill:#000000;}#diagram-debug-loop [data-look="neo"].icon-shape .icon{fill:url(#diagram-debug-loop-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-debug-loop [data-look="neo"].icon-shape .icon-neo path{stroke:url(#diagram-debug-loop-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-debug-loop :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}#diagram-debug-loop .base>*{fill:rgb(245, 247, 248)!important;stroke:rgb(130, 144, 154)!important;color:rgb(32, 43, 50)!important;}#diagram-debug-loop .base span{fill:rgb(245, 247, 248)!important;stroke:rgb(130, 144, 154)!important;color:rgb(32, 43, 50)!important;}#diagram-debug-loop .base tspan{fill:rgb(32, 43, 50)!important;}#diagram-debug-loop .decision>*{fill:rgb(255, 244, 215)!important;stroke:rgb(182, 139, 41)!important;color:rgb(32, 43, 50)!important;}#diagram-debug-loop .decision span{fill:rgb(255, 244, 215)!important;stroke:rgb(182, 139, 41)!important;color:rgb(32, 43, 50)!important;}#diagram-debug-loop .decision tspan{fill:rgb(32, 43, 50)!important;}#diagram-debug-loop .result>*{fill:rgb(228, 243, 237)!important;stroke:rgb(49, 132, 110)!important;color:rgb(32, 43, 50)!important;}#diagram-debug-loop .result span{fill:rgb(228, 243, 237)!important;stroke:rgb(49, 132, 110)!important;color:rgb(32, 43, 50)!important;}#diagram-debug-loop .result tspan{fill:rgb(32, 43, 50)!important;}</style><g><marker id="diagram-debug-loop_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-debug-loop_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-debug-loop_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-debug-loop_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></polygon></marker><marker id="diagram-debug-loop_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-debug-loop_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-debug-loop_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-debug-loop_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-debug-loop_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-debug-loop_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-debug-loop_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"></path></marker><marker id="diagram-debug-loop_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"></path></marker><g class="root"><g class="clusters"></g><g class="edges edgePaths"><path d="M346.375,64.5L346.375,100.5" id="diagram-debug-loop-L_A_B_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_A_B_0" data-points="W3sieCI6MzQ2LjM3NSwieSI6NjQuNX0seyJ4IjozNDYuMzc1LCJ5IjoxMDQuNX1d" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M307.20572916666674,157L307.20572916666674,169.92893218813452Q307.20572916666674,177 300.13466135480127,177L222.15570322853216,177Q215.08463541666669,177 215.08463541666669,184.07106781186548L215.08463541666669,193" id="diagram-debug-loop-L_B_C_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_B_C_0" data-points="W3sieCI6MzA3LjIwNTcyOTE2NjY2Njc0LCJ5IjoxNTd9LHsieCI6MzA3LjIwNTcyOTE2NjY2Njc0LCJ5IjoxNzd9LHsieCI6MjE1LjA4NDYzNTQxNjY2NjY5LCJ5IjoxNzd9LHsieCI6MjE1LjA4NDYzNTQxNjY2NjY5LCJ5IjoxOTd9XQ==" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M254.3268229166667,249.5L254.3268229166667,262.4289321881345Q254.3268229166667,269.5 261.39789072853216,269.5L282.05653635480127,269.5Q289.12760416666674,269.5 289.12760416666674,276.5710678118655L289.12760416666674,285.5" id="diagram-debug-loop-L_C_D_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_C_D_0" data-points="W3sieCI6MjU0LjMyNjgyMjkxNjY2NjcsInkiOjI0OS41fSx7IngiOjI1NC4zMjY4MjI5MTY2NjY3LCJ5IjoyNjkuNX0seyJ4IjoyODkuMTI3NjA0MTY2NjY2NzQsInkiOjI2OS41fSx7IngiOjI4OS4xMjc2MDQxNjY2NjY3NCwieSI6Mjg5LjV9XQ==" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M258.70833333333337,461.5963518694043L258.70833333333337,492.015625L258.70833333333337,504.9445571881345Q258.70833333333337,512.015625 251.6372655214679,512.015625L173.57106781186548,512.015625Q166.5,512.015625 166.5,519.0866928118655L166.5,543.265625L166.5,795.7734375L166.5,955.78125L166.5,979.9601821881345Q166.5,987.03125 159.42893218813452,987.03125L144.73773447853213,987.03125Q137.66666666666666,987.03125 137.66666666666666,994.1023178118655L137.66666666666666,1003.03125" id="diagram-debug-loop-L_D_E_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_D_E_0" data-points="W3sieCI6MjU4LjcwODMzMzMzMzMzMzM3LCJ5Ijo0NjEuNTk2MzUxODY5NDA0M30seyJ4IjoyNTguNzA4MzMzMzMzMzMzMzcsInkiOjQ5Mi4wMTU2MjV9LHsieCI6MjU4LjcwODMzMzMzMzMzMzM3LCJ5Ijo1MTIuMDE1NjI1fSx7IngiOjE2Ni41LCJ5Ijo1MTIuMDE1NjI1fSx7IngiOjE2Ni41LCJ5Ijo1NDMuMjY1NjI1fSx7IngiOjE2Ni41LCJ5Ijo3OTUuNzczNDM3NX0seyJ4IjoxNjYuNSwieSI6OTU1Ljc4MTI1fSx7IngiOjE2Ni41LCJ5Ijo5ODcuMDMxMjV9LHsieCI6MTM3LjY2NjY2NjY2NjY2NjY2LCJ5Ijo5ODcuMDMxMjV9LHsieCI6MTM3LjY2NjY2NjY2NjY2NjY2LCJ5IjoxMDA3LjAzMTI1fV0=" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M181,1082.03125L181,1094.9601821881345Q181,1102.03125 173.92893218813452,1102.03125L132.98773447853213,1102.03125Q125.91666666666666,1102.03125 125.91666666666666,1109.1023178118655L125.91666666666666,1122.03125L125.91666666666666,1143.4479448795319" id="diagram-debug-loop-L_E_F_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_E_F_0" data-points="W3sieCI6MTgxLCJ5IjoxMDgyLjAzMTI1fSx7IngiOjE4MSwieSI6MTEwMi4wMzEyNX0seyJ4IjoxMjUuOTE2NjY2NjY2NjY2NjYsInkiOjExMDIuMDMxMjV9LHsieCI6MTI1LjkxNjY2NjY2NjY2NjY2LCJ5IjoxMTIyLjAzMTI1fSx7IngiOjEyNS45MTY2NjY2NjY2NjY2NiwieSI6MTE0Ny40NDc5NDQ4Nzk1MzE5fV0=" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M100.5,1294.53125L100.5,1422.4601821881345Q100.5,1429.53125 107.57106781186548,1429.53125L295.7219009381345,1429.53125Q302.79296875,1429.53125 302.79296875,1436.6023178118655L302.79296875,1445.53125" id="diagram-debug-loop-L_F_G_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_F_G_0" data-points="W3sieCI6MTAwLjUsInkiOjEyOTQuNTMxMjV9LHsieCI6MTAwLjUsInkiOjE0MjkuNTMxMjV9LHsieCI6MzAyLjc5Mjk2ODc1LCJ5IjoxNDI5LjUzMTI1fSx7IngiOjMwMi43OTI5Njg3NSwieSI6MTQ0OS41MzEyNX1d" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M376.13151041666663,1449.53125L376.13151041666663,1436.6023178118655Q376.13151041666663,1429.53125 383.2025782285321,1429.53125L626.4367446881345,1429.53125Q633.5078125,1429.53125 633.5078125,1422.4601821881345L633.5078125,1372.03125L633.5078125,1208.28125L633.5078125,1044.53125L633.5078125,955.78125L633.5078125,795.7734375L633.5078125,620.765625L633.5078125,543.265625L633.5078125,390.7578125L633.5078125,223.25L633.5078125,184.07106781186548Q633.5078125,177 626.4367446881345,177L392.61533864519885,177Q385.54427083333337,177 385.54427083333337,169.92893218813452L385.54427083333337,161" id="diagram-debug-loop-L_G_B_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_G_B_0" data-points="W3sieCI6Mzc2LjEzMTUxMDQxNjY2NjYzLCJ5IjoxNDQ5LjUzMTI1fSx7IngiOjM3Ni4xMzE1MTA0MTY2NjY2MywieSI6MTQyOS41MzEyNX0seyJ4Ijo2MzMuNTA3ODEyNSwieSI6MTQyOS41MzEyNX0seyJ4Ijo2MzMuNTA3ODEyNSwieSI6MTM3Mi4wMzEyNX0seyJ4Ijo2MzMuNTA3ODEyNSwieSI6MTIwOC4yODEyNX0seyJ4Ijo2MzMuNTA3ODEyNSwieSI6MTA0NC41MzEyNX0seyJ4Ijo2MzMuNTA3ODEyNSwieSI6OTU1Ljc4MTI1fSx7IngiOjYzMy41MDc4MTI1LCJ5Ijo3OTUuNzczNDM3NX0seyJ4Ijo2MzMuNTA3ODEyNSwieSI6NjIwLjc2NTYyNX0seyJ4Ijo2MzMuNTA3ODEyNSwieSI6NTQzLjI2NTYyNX0seyJ4Ijo2MzMuNTA3ODEyNSwieSI6MzkwLjc1NzgxMjV9LHsieCI6NjMzLjUwNzgxMjUsInkiOjIyMy4yNX0seyJ4Ijo2MzMuNTA3ODEyNSwieSI6MTc3fSx7IngiOjM4NS41NDQyNzA4MzMzMzMzNywieSI6MTc3fSx7IngiOjM4NS41NDQyNzA4MzMzMzMzNywieSI6MTU3fV0=" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M75.08333333333331,1147.4479448795319L75.08333333333331,1122.03125L75.08333333333331,1109.1023178118655Q75.08333333333331,1102.03125 68.01226552146784,1102.03125L27.071067811865476,1102.03125Q20,1102.03125 20,1094.9601821881345L20,1044.53125L20,955.78125L20,795.7734375L20,543.265625L20,390.7578125L20,276.5710678118655Q20,269.5 27.071067811865476,269.5L168.7713801048012,269.5Q175.84244791666669,269.5 175.84244791666669,262.4289321881345L175.84244791666669,253.5" id="diagram-debug-loop-L_F_C_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_F_C_0" data-points="W3sieCI6NzUuMDgzMzMzMzMzMzMzMzEsInkiOjExNDcuNDQ3OTQ0ODc5NTMxOX0seyJ4Ijo3NS4wODMzMzMzMzMzMzMzMSwieSI6MTEyMi4wMzEyNX0seyJ4Ijo3NS4wODMzMzMzMzMzMzMzMSwieSI6MTEwMi4wMzEyNX0seyJ4IjoyMCwieSI6MTEwMi4wMzEyNX0seyJ4IjoyMCwieSI6MTA0NC41MzEyNX0seyJ4IjoyMCwieSI6OTU1Ljc4MTI1fSx7IngiOjIwLCJ5Ijo3OTUuNzczNDM3NX0seyJ4IjoyMCwieSI6NTQzLjI2NTYyNX0seyJ4IjoyMCwieSI6MzkwLjc1NzgxMjV9LHsieCI6MjAsInkiOjI2OS41fSx7IngiOjE3NS44NDI0NDc5MTY2NjY2OSwieSI6MjY5LjV9LHsieCI6MTc1Ljg0MjQ0NzkxNjY2NjY5LCJ5IjoyNDkuNX1d" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M319.546875,461.5963518694043L319.546875,492.015625L319.546875,504.9445571881345Q319.546875,512.015625 326.6179428118655,512.015625L369.31825510480127,512.015625Q376.38932291666674,512.015625 376.38932291666674,519.0866928118655L376.38932291666674,590.515625" id="diagram-debug-loop-L_D_H_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_D_H_0" data-points="W3sieCI6MzE5LjU0Njg3NSwieSI6NDYxLjU5NjM1MTg2OTQwNDN9LHsieCI6MzE5LjU0Njg3NSwieSI6NDkyLjAxNTYyNX0seyJ4IjozMTkuNTQ2ODc1LCJ5Ijo1MTIuMDE1NjI1fSx7IngiOjM3Ni4zODkzMjI5MTY2NjY3NCwieSI6NTEyLjAxNTYyNX0seyJ4IjozNzYuMzg5MzIyOTE2NjY2NzQsInkiOjU5NC41MTU2MjV9XQ==" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M376.38932291666674,647.015625L376.38932291666674,683.015625" id="diagram-debug-loop-L_H_I_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_H_I_0" data-points="W3sieCI6Mzc2LjM4OTMyMjkxNjY2Njc0LCJ5Ijo2NDcuMDE1NjI1fSx7IngiOjM3Ni4zODkzMjI5MTY2NjY3NCwieSI6Njg3LjAxNTYyNX1d" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M343.47005208333337,871.6119150221348L343.47005208333337,904.53125L343.47005208333337,917.4601821881345Q343.47005208333337,924.53125 336.3989842714679,924.53125L258.8731511451988,924.53125Q251.80208333333334,924.53125 251.80208333333334,931.6023178118655L251.80208333333334,979.9601821881345Q251.80208333333334,987.03125 244.73101552146787,987.03125L231.40440114519882,987.03125Q224.33333333333334,987.03125 224.33333333333334,994.1023178118655L224.33333333333334,1003.03125" id="diagram-debug-loop-L_I_E_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_I_E_0" data-points="W3sieCI6MzQzLjQ3MDA1MjA4MzMzMzM3LCJ5Ijo4NzEuNjExOTE1MDIyMTM0OH0seyJ4IjozNDMuNDcwMDUyMDgzMzMzMzcsInkiOjkwNC41MzEyNX0seyJ4IjozNDMuNDcwMDUyMDgzMzMzMzcsInkiOjkyNC41MzEyNX0seyJ4IjoyNTEuODAyMDgzMzMzMzMzMzQsInkiOjkyNC41MzEyNX0seyJ4IjoyNTEuODAyMDgzMzMzMzMzMzQsInkiOjk4Ny4wMzEyNX0seyJ4IjoyMjQuMzMzMzMzMzMzMzMzMzQsInkiOjk4Ny4wMzEyNX0seyJ4IjoyMjQuMzMzMzMzMzMzMzMzMzQsInkiOjEwMDcuMDMxMjV9XQ==" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M409.30859375,871.6119150221348L409.30859375,904.53125L409.30859375,917.4601821881345Q409.30859375,924.53125 416.3796615618655,924.53125L466.4367446881345,924.53125Q473.5078125,924.53125 473.5078125,931.6023178118655L473.5078125,1014.28125" id="diagram-debug-loop-L_I_J_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_I_J_0" data-points="W3sieCI6NDA5LjMwODU5Mzc1LCJ5Ijo4NzEuNjExOTE1MDIyMTM0OH0seyJ4Ijo0MDkuMzA4NTkzNzUsInkiOjkwNC41MzEyNX0seyJ4Ijo0MDkuMzA4NTkzNzUsInkiOjkyNC41MzEyNX0seyJ4Ijo0NzMuNTA3ODEyNSwieSI6OTI0LjUzMTI1fSx7IngiOjQ3My41MDc4MTI1LCJ5IjoxMDE4LjI4MTI1fV0=" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M473.5078125,1070.78125L473.5078125,1166.78125" id="diagram-debug-loop-L_J_K_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_J_K_0" data-points="W3sieCI6NDczLjUwNzgxMjUsInkiOjEwNzAuNzgxMjV9LHsieCI6NDczLjUwNzgxMjUsInkiOjExNzAuNzgxMjV9XQ==" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path><path d="M473.5078125,1245.78125L473.5078125,1330.53125" id="diagram-debug-loop-L_K_L_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_K_L_0" data-points="W3sieCI6NDczLjUwNzgxMjUsInkiOjEyNDUuNzgxMjV9LHsieCI6NDczLjUwNzgxMjUsInkiOjEzMzQuNTMxMjV9XQ==" data-look="classic" marker-end="url(#diagram-debug-loop_flowchart-v2-pointEnd)"></path></g><g class="edgeLabels"><g class="edgeLabel" transform="translate(166.0078125, 620.765625)"><g class="label" data-id="L_D_E_0" transform="translate(-7.5078125, -11.25)"><foreignObject width="15.015625" height="22.5"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>否</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(100.0078125, 1372.03125)"><g class="label" data-id="L_F_G_0" transform="translate(-7.5078125, -11.25)"><foreignObject width="15.015625" height="22.5"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>是</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(19.5078125, 620.765625)"><g class="label" data-id="L_F_C_0" transform="translate(-7.5078125, -11.25)"><foreignObject width="15.015625" height="22.5"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>否</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(375.89713541666674, 543.265625)"><g class="label" data-id="L_D_H_0" transform="translate(-7.5078125, -11.25)"><foreignObject width="15.015625" height="22.5"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>是</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(251.30989583333334, 955.78125)"><g class="label" data-id="L_I_E_0" transform="translate(-7.5078125, -11.25)"><foreignObject width="15.015625" height="22.5"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>是</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(473.015625, 955.78125)"><g class="label" data-id="L_I_J_0" transform="translate(-7.5078125, -11.25)"><foreignObject width="15.015625" height="22.5"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>否</p></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default base" id="diagram-debug-loop-flowchart-A-0" data-look="classic" transform="translate(346.375, 38.25)"><rect class="basic label-diagram-debug-loop" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-120.0078125" y="-26.25" width="240.015625" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-90.0078125, -11.25)"><rect></rect><foreignObject width="180.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>保存故障现场与采集上下文</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-debug-loop-flowchart-B-1" data-look="classic" transform="translate(346.375, 130.75)"><rect class="basic label-diagram-debug-loop" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-127.5078125" y="-26.25" width="255.015625" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-97.5078125, -11.25)"><rect></rect><foreignObject width="195.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>选择合适对照，比较实际观测</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-debug-loop-flowchart-C-3" data-look="classic" transform="translate(215.08463541666669, 223.25)"><rect class="basic label-diagram-debug-loop" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-127.7265625" y="-26.25" width="255.453125" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-97.7265625, -11.25)"><rect></rect><foreignObject width="195.453125" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>用假设 × 事实矩阵寻找强信号</p></span></div></foreignObject></g></g><g class="node default decision" id="diagram-debug-loop-flowchart-D-5" data-look="classic" transform="translate(289.1276041666667, 390.7578125)"><polygon points="101.2578125,0 202.515625,-101.2578125 101.2578125,-202.515625 0,-101.2578125" class="label-diagram-debug-loop" transform="translate(-100.7578125, 101.2578125)" style="fill:#fff4d7 !important;stroke:#b68b29 !important"></polygon><g class="label" style="color:#202b32 !important" transform="translate(-75.0078125, -11.25)"><rect></rect><foreignObject width="150.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>存在一致的候选机制？</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-debug-loop-flowchart-E-7" data-look="classic" transform="translate(181, 1044.53125)"><rect class="basic label-diagram-debug-loop" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>复核采集；拆分、合并或组合假设</p></span></div></foreignObject></g></g><g class="node default decision" id="diagram-debug-loop-flowchart-F-9" data-look="classic" transform="translate(100.5, 1208.28125)"><polygon points="86.25,0 172.5,-86.25 86.25,-172.5 0,-86.25" class="label-diagram-debug-loop" transform="translate(-85.75, 86.25)" style="fill:#fff4d7 !important;stroke:#b68b29 !important"></polygon><g class="label" style="color:#202b32 !important" transform="translate(-60, -11.25)"><rect></rect><foreignObject width="120" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center; width: 120px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>仍缺区分证据？</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-debug-loop-flowchart-G-11" data-look="classic" transform="translate(339.46223958333337, 1475.78125)"><rect class="basic label-diagram-debug-loop" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-120.0078125" y="-26.25" width="240.015625" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-90.0078125, -11.25)"><rect></rect><foreignObject width="180.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>在授权范围内增加一层观测</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-debug-loop-flowchart-H-17" data-look="classic" transform="translate(376.38932291666674, 620.765625)"><rect class="basic label-diagram-debug-loop" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-127.5078125" y="-26.25" width="255.015625" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-97.5078125, -11.25)"><rect></rect><foreignObject width="195.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>核对全部事实，主动寻找反例</p></span></div></foreignObject></g></g><g class="node default decision" id="diagram-debug-loop-flowchart-I-19" data-look="classic" transform="translate(376.38932291666674, 795.7734375)"><polygon points="108.7578125,0 217.515625,-108.7578125 108.7578125,-217.515625 0,-108.7578125" class="label-diagram-debug-loop" transform="translate(-108.2578125, 108.7578125)" style="fill:#fff4d7 !important;stroke:#b68b29 !important"></polygon><g class="label" style="color:#202b32 !important" transform="translate(-82.5078125, -11.25)"><rect></rect><foreignObject width="165.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>关键事实仍矛盾或未知？</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-debug-loop-flowchart-J-23" data-look="classic" transform="translate(473.5078125, 1044.53125)"><rect class="basic label-diagram-debug-loop" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-112.5078125" y="-26.25" width="225.015625" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-82.5078125, -11.25)"><rect></rect><foreignObject width="165.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>定位相关代码或责任边界</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-debug-loop-flowchart-K-25" data-look="classic" transform="translate(473.5078125, 1208.28125)"><rect class="basic label-diagram-debug-loop" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>验证复现信号；实施获授权的修复</p></span></div></foreignObject></g></g><g class="node default result" id="diagram-debug-loop-flowchart-L-27" data-look="classic" transform="translate(473.5078125, 1372.03125)"><rect class="basic label-diagram-debug-loop" style="fill:#e4f3ed !important;stroke:#31846e !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>验证机制信号与用户行为，报告实际结果</p></span></div></foreignObject></g></g></g></g></g><defs><filter id="diagram-debug-loop-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><defs><filter id="diagram-debug-loop-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><linearGradient id="diagram-debug-loop-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="hsl(40.5882352941, 60%, 83.3333333333%)" stop-opacity="1"></stop><stop offset="100%" stop-color="hsl(-79.4117647059, 60%, 83.3333333333%)" stop-opacity="1"></stop></linearGradient></svg></div>
+        <figcaption>图 1：证据驱动调试三步循环（现场取证 → 对照组找强信号 → 矩阵打靶淘汰）</figcaption>
+      </figure>
+
+      <h3>第二步：构建“假设 × 证据”打靶矩阵</h3>
+      <p class="small">面对复杂的排查，在纸上或文档中列出表格：每一行是一个怀疑的假说，每一列是一条客观证据。判定只填三态：</p>
+      <div class="table-wrap">
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th>候选假说机制</th>
+              <th>证据 1：P99 尾延迟飙升</th>
+              <th>证据 2：DNS 返回 400 个 IP</th>
+              <th>证据 3：TLS 握手耗时无异常</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>假说 A：每次 RPC 都重复加载证书</strong>（AI 最初信誓旦旦的结论）</td>
+              <td class="yes">能解释</td>
+              <td class="unknown">无法解释</td>
+              <td class="no">严重冲突！一票否决淘汰 ❌</td>
+            </tr>
+            <tr>
+              <td><strong>假说 B：客户端路由退化，发给随机 Pod</strong>（最终真相）</td>
+              <td class="yes">能解释</td>
+              <td class="yes">完美解释！</td>
+              <td class="yes">完全吻合，胜出 ✅</td>
+            </tr>
+            <tr>
+              <td><strong>假说 C：服务端事件循环堵塞</strong></td>
+              <td class="yes">能解释</td>
+              <td class="unknown">无法解释</td>
+              <td class="yes">暂无冲突，但缺少强证据支持</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>第三步：当所有假说都被推翻时，如何破局？</h3>
+      <ol>
+        <li><strong>先查采集手抖没有：</strong>是不是机器看错了、时区对不上、监控单位看混了？</li>
+        <li><strong>拆分“捆绑的大概念”：</strong>把“这次发版有问题”拆成具体独立的变更项与功能开关逐个核对；</li>
+        <li><strong>组合两个必要的互补机制：</strong>很多诡异故障是“两个小问题撞在一起”才暴雷（例如单次状态机 + 进程级长缓存，缺一不可）；</li>
+        <li><strong>探针逐层下潜：</strong>当应用日志提供不了信息时，往底层探针下潜（应用日志 → 网络抓包 → 进程内存与堆栈 → 内核连接与 Mach 端口）。一旦抓出能一锤定音的强信号，立刻停止盲目深挖。</li>
+      </ol>
+      <p class="source">对应原文：A Two-Tier Framework；How To Use The Two Tiers；Step 1–3；When Every Hypothesis Falls Short；Progressive Signal Discovery。</p>
+    </section>
+
+    <!-- 04 案例一：延迟回退 -->
+    <section id="latency">
+      <div class="case-heading">
+        <h2><span class="number">04</span>案例一：P99 暴涨与用错客户端</h2>
+        <span class="status">根因确凿 · 1 行代码修复</span>
+      </div>
+      <div class="case-body">
+        <figure>
+          <div class="diagram"><svg id="diagram-latency-case" width="304" xmlns="http://www.w3.org/2000/svg" class="flowchart" height="836.5" viewBox="0 0 304 836.5" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#diagram-latency-case{font-size:15px;fill:#333;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#diagram-latency-case .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#diagram-latency-case .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#diagram-latency-case .error-icon{fill:hsl(220.5882352941, 100%, 98.3333333333%);}#diagram-latency-case .error-text{fill:rgb(8.5000000002, 5.7500000001, 0);stroke:rgb(8.5000000002, 5.7500000001, 0);}#diagram-latency-case .edge-thickness-normal{stroke-width:1px;}#diagram-latency-case .edge-thickness-thick{stroke-width:3.5px;}#diagram-latency-case .edge-pattern-solid{stroke-dasharray:0;}#diagram-latency-case .edge-thickness-invisible{stroke-width:0;fill:none;}#diagram-latency-case .edge-pattern-dashed{stroke-dasharray:3;}#diagram-latency-case .edge-pattern-dotted{stroke-dasharray:2;}#diagram-latency-case .marker{fill:#0b0b0b;stroke:#0b0b0b;}#diagram-latency-case .marker.cross{stroke:#0b0b0b;}#diagram-latency-case svg{font-size:15px;}#diagram-latency-case p{margin:0;}#diagram-latency-case .label{color:#333;}#diagram-latency-case .cluster-label text{fill:rgb(8.5000000002, 5.7500000001, 0);}#diagram-latency-case .cluster-label span{color:rgb(8.5000000002, 5.7500000001, 0);}#diagram-latency-case .cluster-label span p{background-color:transparent;}#diagram-latency-case .label text,#diagram-latency-case span{fill:#333;color:#333;}#diagram-latency-case .node rect,#diagram-latency-case .node circle,#diagram-latency-case .node ellipse,#diagram-latency-case .node polygon,#diagram-latency-case .node path{fill:#fff4dd;stroke:hsl(40.5882352941, 60%, 83.3333333333%);stroke-width:1px;}#diagram-latency-case .rough-node .label text,#diagram-latency-case .node .label text,#diagram-latency-case .image-shape .label,#diagram-latency-case .icon-shape .label{text-anchor:middle;}#diagram-latency-case .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#diagram-latency-case .rough-node .label,#diagram-latency-case .node .label,#diagram-latency-case .image-shape .label,#diagram-latency-case .icon-shape .label{text-align:center;}#diagram-latency-case .node.clickable{cursor:pointer;}#diagram-latency-case .root .anchor path{fill:#0b0b0b!important;stroke-width:0;stroke:#0b0b0b;}#diagram-latency-case .arrowheadPath{fill:#0b0b0b;}#diagram-latency-case .edgePaths .path{stroke:#0b0b0b;stroke-width:1px;}#diagram-latency-case .flowchart-link{stroke:#0b0b0b;fill:none;}#diagram-latency-case .edgeLabel{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);text-align:center;}#diagram-latency-case .edgeLabel p{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);}#diagram-latency-case .edgeLabel rect{opacity:0.5;background-color:hsl(-79.4117647059, 100%, 93.3333333333%);fill:hsl(-79.4117647059, 100%, 93.3333333333%);}#diagram-latency-case .labelBkg{background-color:rgba(243.9999999999, 220.9999999998, 255, 0.5);}#diagram-latency-case .cluster rect{fill:hsl(220.5882352941, 100%, 98.3333333333%);stroke:hsl(220.5882352941, 60%, 88.3333333333%);stroke-width:1px;}#diagram-latency-case .cluster text{fill:rgb(8.5000000002, 5.7500000001, 0);}#diagram-latency-case .cluster span{color:rgb(8.5000000002, 5.7500000001, 0);}#diagram-latency-case .node .collapsed-indicator{fill:hsl(220.5882352941, 60%, 88.3333333333%);stroke:none;opacity:0.6;}#diagram-latency-case .node .collapsed-separator{stroke:hsl(220.5882352941, 60%, 88.3333333333%);stroke-width:0.75px;}#diagram-latency-case div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-size:12px;background:hsl(220.5882352941, 100%, 98.3333333333%);border:1px solid hsl(220.5882352941, 60%, 88.3333333333%);border-radius:2px;pointer-events:none;z-index:100;}#diagram-latency-case .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#diagram-latency-case rect.text{fill:none;stroke-width:0;}#diagram-latency-case .icon-shape,#diagram-latency-case .image-shape{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);text-align:center;}#diagram-latency-case .icon-shape p,#diagram-latency-case .image-shape p{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);padding:2px;}#diagram-latency-case .icon-shape .label rect,#diagram-latency-case .image-shape .label rect{opacity:0.5;background-color:hsl(-79.4117647059, 100%, 93.3333333333%);fill:hsl(-79.4117647059, 100%, 93.3333333333%);}#diagram-latency-case .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#diagram-latency-case .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#diagram-latency-case .node .neo-node{stroke:hsl(40.5882352941, 60%, 83.3333333333%);}#diagram-latency-case [data-look="neo"].node rect,#diagram-latency-case [data-look="neo"].cluster rect,#diagram-latency-case [data-look="neo"].node polygon{stroke:url(#diagram-latency-case-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-latency-case [data-look="neo"].swimlane.cluster rect{filter:none;}#diagram-latency-case [data-look="neo"].node path{stroke:url(#diagram-latency-case-gradient);stroke-width:1px;}#diagram-latency-case [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-latency-case [data-look="neo"].node .neo-line path{stroke:hsl(40.5882352941, 60%, 83.3333333333%);filter:none;}#diagram-latency-case [data-look="neo"].node circle{stroke:url(#diagram-latency-case-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-latency-case [data-look="neo"].node circle .state-start{fill:#000000;}#diagram-latency-case [data-look="neo"].icon-shape .icon{fill:url(#diagram-latency-case-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-latency-case [data-look="neo"].icon-shape .icon-neo path{stroke:url(#diagram-latency-case-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-latency-case :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}#diagram-latency-case .base>*{fill:rgb(245, 247, 248)!important;stroke:rgb(130, 144, 154)!important;color:rgb(32, 43, 50)!important;}#diagram-latency-case .base span{fill:rgb(245, 247, 248)!important;stroke:rgb(130, 144, 154)!important;color:rgb(32, 43, 50)!important;}#diagram-latency-case .base tspan{fill:rgb(32, 43, 50)!important;}#diagram-latency-case .rejected>*{fill:rgb(250, 233, 232)!important;stroke:rgb(188, 105, 99)!important;color:rgb(32, 43, 50)!important;}#diagram-latency-case .rejected span{fill:rgb(250, 233, 232)!important;stroke:rgb(188, 105, 99)!important;color:rgb(32, 43, 50)!important;}#diagram-latency-case .rejected tspan{fill:rgb(32, 43, 50)!important;}#diagram-latency-case .result>*{fill:rgb(228, 243, 237)!important;stroke:rgb(49, 132, 110)!important;color:rgb(32, 43, 50)!important;}#diagram-latency-case .result span{fill:rgb(228, 243, 237)!important;stroke:rgb(49, 132, 110)!important;color:rgb(32, 43, 50)!important;}#diagram-latency-case .result tspan{fill:rgb(32, 43, 50)!important;}</style><g><marker id="diagram-latency-case_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-latency-case_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-latency-case_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-latency-case_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></polygon></marker><marker id="diagram-latency-case_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-latency-case_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-latency-case_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-latency-case_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-latency-case_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-latency-case_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-latency-case_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"></path></marker><marker id="diagram-latency-case_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"></path></marker><g class="root"><g class="clusters"></g><g class="edges edgePaths"><path d="M152,87L152,123" id="diagram-latency-case-L_A_B_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_A_B_0" data-points="W3sieCI6MTUyLCJ5Ijo4N30seyJ4IjoxNTIsInkiOjEyN31d" data-look="classic" marker-end="url(#diagram-latency-case_flowchart-v2-pointEnd)"></path><path d="M152,179.5L152,215.5" id="diagram-latency-case-L_B_C_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_B_C_0" data-points="W3sieCI6MTUyLCJ5IjoxNzkuNX0seyJ4IjoxNTIsInkiOjIxOS41fV0=" data-look="classic" marker-end="url(#diagram-latency-case_flowchart-v2-pointEnd)"></path><path d="M152,294.5L152,330.5" id="diagram-latency-case-L_C_D_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_C_D_0" data-points="W3sieCI6MTUyLCJ5IjoyOTQuNX0seyJ4IjoxNTIsInkiOjMzNC41fV0=" data-look="classic" marker-end="url(#diagram-latency-case_flowchart-v2-pointEnd)"></path><path d="M152,387L152,423" id="diagram-latency-case-L_D_E_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_D_E_0" data-points="W3sieCI6MTUyLCJ5IjozODd9LHsieCI6MTUyLCJ5Ijo0Mjd9XQ==" data-look="classic" marker-end="url(#diagram-latency-case_flowchart-v2-pointEnd)"></path><path d="M152,502L152,538" id="diagram-latency-case-L_E_F_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_E_F_0" data-points="W3sieCI6MTUyLCJ5Ijo1MDJ9LHsieCI6MTUyLCJ5Ijo1NDJ9XQ==" data-look="classic" marker-end="url(#diagram-latency-case_flowchart-v2-pointEnd)"></path><path d="M152,617L152,653" id="diagram-latency-case-L_F_G_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_F_G_0" data-points="W3sieCI6MTUyLCJ5Ijo2MTd9LHsieCI6MTUyLCJ5Ijo2NTd9XQ==" data-look="classic" marker-end="url(#diagram-latency-case_flowchart-v2-pointEnd)"></path><path d="M152,709.5L152,745.5" id="diagram-latency-case-L_G_H_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_G_H_0" data-points="W3sieCI6MTUyLCJ5Ijo3MDkuNX0seyJ4IjoxNTIsInkiOjc0OS41fV0=" data-look="classic" marker-end="url(#diagram-latency-case_flowchart-v2-pointEnd)"></path></g><g class="edgeLabels"></g><g class="nodes"><g class="node default base" id="diagram-latency-case-flowchart-A-0" data-look="classic" transform="translate(152, 49.5)"><rect class="basic label-diagram-latency-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>功能开关启用后，客户端与服务端 P99 上升</p></span></div></foreignObject></g></g><g class="node default rejected" id="diagram-latency-case-flowchart-B-1" data-look="classic" transform="translate(152, 153.25)"><rect class="basic label-diagram-latency-case" style="fill:#fae9e8 !important;stroke:#bc6963 !important" x="-114.578125" y="-26.25" width="229.15625" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-84.578125, -11.25)"><rect></rect><foreignObject width="169.15625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>初诊：每次 RPC 重载证书</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-latency-case-flowchart-C-3" data-look="classic" transform="translate(152, 257)"><rect class="basic label-diagram-latency-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>开关关闭作为对照；抓包并监测进程</p></span></div></foreignObject></g></g><g class="node default rejected" id="diagram-latency-case-flowchart-D-5" data-look="classic" transform="translate(152, 360.75)"><rect class="basic label-diagram-latency-case" style="fill:#fae9e8 !important;stroke:#bc6963 !important" x="-135.0078125" y="-26.25" width="270.015625" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-105.0078125, -11.25)"><rect></rect><foreignObject width="210.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>握手时间相同；证书只加载一次</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-latency-case-flowchart-E-7" data-look="classic" transform="translate(152, 464.5)"><rect class="basic label-diagram-latency-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>否决初诊；DNS 地址数出现显著差异</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-latency-case-flowchart-F-9" data-look="classic" transform="translate(152, 579.5)"><rect class="basic label-diagram-latency-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>检查服务发现与分片路由的 mTLS 路径</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-latency-case-flowchart-G-11" data-look="classic" transform="translate(152, 683.25)"><rect class="basic label-diagram-latency-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-120.0078125" y="-26.25" width="240.015625" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-90.0078125, -11.25)"><rect></rect><foreignObject width="180.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>普通客户端误用于分片后端</p></span></div></foreignObject></g></g><g class="node default result" id="diagram-latency-case-flowchart-H-13" data-look="classic" transform="translate(152, 787)"><rect class="basic label-diagram-latency-case" style="fill:#e4f3ed !important;stroke:#31846e !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>一行改为 ShardedDatabaseClient</p></span></div></foreignObject></g></g></g></g></g><defs><filter id="diagram-latency-case-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><defs><filter id="diagram-latency-case-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><linearGradient id="diagram-latency-case-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="hsl(40.5882352941, 60%, 83.3333333333%)" stop-opacity="1"></stop><stop offset="100%" stop-color="hsl(-79.4117647059, 60%, 83.3333333333%)" stop-opacity="1"></stop></linearGradient></svg></div>
+          <figcaption>图 2：排查方向从“服务端开销”被证据强力扭转到“客户端路由”</figcaption>
+        </figure>
+        <div>
+          <div class="table-wrap">
+            <table class="facts">
+              <thead><tr><th>实战环节</th><th>案发过程与破案证据</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><strong>背景与发版</strong></td>
+                  <td>由 AI 辅助写的新存储特性，跨 2 个代码库、共约 9,000 行代码，拆成 10 个 PR。人工逐行看过了，单测全绿，独立 Agent 审过了，预发布环境测试一切正常。</td>
+                </tr>
+                <tr>
+                  <td><strong>线上灾情</strong></td>
+                  <td>灰度开启 5,000 台客户端，10 分钟内客户端与服务端的 P99 延迟集体飙升。</td>
+                </tr>
+                <tr>
+                  <td><strong>AI 的荒唐误导</strong></td>
+                  <td>Claude 极其笃定地下结论：“新代码在每次 RPC 调用时都从磁盘重新读取加载 TLS 证书导致性能暴跌”。另一个独立子 Agent 评审后全盘接受，大家差点就去优化证书加载了。</td>
+                </tr>
+                <tr>
+                  <td><strong>对照组破局</strong></td>
+                  <td>抓包比对开特性 vs 关特性的客户端，两者的 TCP/TLS 握手耗时完全一致！检查进程发现证书只在会话启动时加载一次，<strong>AI 的假说当场被铁证击碎</strong>。</td>
+                </tr>
+                <tr>
+                  <td><strong>抓到决定性强信号</strong></td>
+                  <td>对比网络层发现：正常客户端 DNS 只返回 <strong>5 个目标 IP</strong>，而故障客户端 DNS 解析出了 <strong>约 400 个 IP</strong>！</td>
+                </tr>
+                <tr>
+                  <td><strong>最终惊人真相</strong></td>
+                  <td>AI 在写 mTLS 连接逻辑时，用错了客户端类：本来该用支持分片哈希路由的 <code>ShardedDatabaseClient</code>，误用成了普通 <code>DatabaseClient</code>！客户端把请求随缘扔到 400 个 Pod 里，被打中的 Pod 没有数据，只能跨 Pod 二次转发，拖垮了整个集群。最终只改了 <strong>1 行代码</strong> 就彻底修复。</td>
+                </tr>
+                <tr>
+                  <td><strong>为什么测试没发现？</strong></td>
+                  <td>预发布环境只有 2 个分片、每片 1 个副本，怎么打都能打中；而线上有 5 个分片、每片 80 个副本。<strong>集群规模掩盖了架构设计缺陷</strong>。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="callout caution">
+        <strong>实战启示：</strong>下游机器延迟高，不代表下游代码写得烂！拿未开特性的机器做对照，看 DNS 解析目标集合，1 分钟就能识破下游背黑锅的假象。
+      </div>
+      <p class="source">来源：The Latency Bug；Step 1–3。</p>
+    </section>
+
+    <!-- 05 案例二：内存泄漏 -->
+    <section id="memory">
+      <div class="case-heading">
+        <h2><span class="number">05</span>案例二：无凭证引发 50GB OOM</h2>
+        <span class="status partial">根因查明 · 双因组合机制</span>
+      </div>
+      <div class="case-body">
+        <figure>
+          <div class="diagram"><svg id="diagram-memory-case" width="544.03125" xmlns="http://www.w3.org/2000/svg" class="flowchart" height="859" viewBox="0 0 544.03125 859" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#diagram-memory-case{font-size:15px;fill:#333;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#diagram-memory-case .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#diagram-memory-case .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#diagram-memory-case .error-icon{fill:hsl(220.5882352941, 100%, 98.3333333333%);}#diagram-memory-case .error-text{fill:rgb(8.5000000002, 5.7500000001, 0);stroke:rgb(8.5000000002, 5.7500000001, 0);}#diagram-memory-case .edge-thickness-normal{stroke-width:1px;}#diagram-memory-case .edge-thickness-thick{stroke-width:3.5px;}#diagram-memory-case .edge-pattern-solid{stroke-dasharray:0;}#diagram-memory-case .edge-thickness-invisible{stroke-width:0;fill:none;}#diagram-memory-case .edge-pattern-dashed{stroke-dasharray:3;}#diagram-memory-case .edge-pattern-dotted{stroke-dasharray:2;}#diagram-memory-case .marker{fill:#0b0b0b;stroke:#0b0b0b;}#diagram-memory-case .marker.cross{stroke:#0b0b0b;}#diagram-memory-case svg{font-size:15px;}#diagram-memory-case p{margin:0;}#diagram-memory-case .label{color:#333;}#diagram-memory-case .cluster-label text{fill:rgb(8.5000000002, 5.7500000001, 0);}#diagram-memory-case .cluster-label span{color:rgb(8.5000000002, 5.7500000001, 0);}#diagram-memory-case .cluster-label span p{background-color:transparent;}#diagram-memory-case .label text,#diagram-memory-case span{fill:#333;color:#333;}#diagram-memory-case .node rect,#diagram-memory-case .node circle,#diagram-memory-case .node ellipse,#diagram-memory-case .node polygon,#diagram-memory-case .node path{fill:#fff4dd;stroke:hsl(40.5882352941, 60%, 83.3333333333%);stroke-width:1px;}#diagram-memory-case .rough-node .label text,#diagram-memory-case .node .label text,#diagram-memory-case .image-shape .label,#diagram-memory-case .icon-shape .label{text-anchor:middle;}#diagram-memory-case .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#diagram-memory-case .rough-node .label,#diagram-memory-case .node .label,#diagram-memory-case .image-shape .label,#diagram-memory-case .icon-shape .label{text-align:center;}#diagram-memory-case .node.clickable{cursor:pointer;}#diagram-memory-case .root .anchor path{fill:#0b0b0b!important;stroke-width:0;stroke:#0b0b0b;}#diagram-memory-case .arrowheadPath{fill:#0b0b0b;}#diagram-memory-case .edgePaths .path{stroke:#0b0b0b;stroke-width:1px;}#diagram-memory-case .flowchart-link{stroke:#0b0b0b;fill:none;}#diagram-memory-case .edgeLabel{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);text-align:center;}#diagram-memory-case .edgeLabel p{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);}#diagram-memory-case .edgeLabel rect{opacity:0.5;background-color:hsl(-79.4117647059, 100%, 93.3333333333%);fill:hsl(-79.4117647059, 100%, 93.3333333333%);}#diagram-memory-case .labelBkg{background-color:rgba(243.9999999999, 220.9999999998, 255, 0.5);}#diagram-memory-case .cluster rect{fill:hsl(220.5882352941, 100%, 98.3333333333%);stroke:hsl(220.5882352941, 60%, 88.3333333333%);stroke-width:1px;}#diagram-memory-case .cluster text{fill:rgb(8.5000000002, 5.7500000001, 0);}#diagram-memory-case .cluster span{color:rgb(8.5000000002, 5.7500000001, 0);}#diagram-memory-case .node .collapsed-indicator{fill:hsl(220.5882352941, 60%, 88.3333333333%);stroke:none;opacity:0.6;}#diagram-memory-case .node .collapsed-separator{stroke:hsl(220.5882352941, 60%, 88.3333333333%);stroke-width:0.75px;}#diagram-memory-case div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-size:12px;background:hsl(220.5882352941, 100%, 98.3333333333%);border:1px solid hsl(220.5882352941, 60%, 88.3333333333%);border-radius:2px;pointer-events:none;z-index:100;}#diagram-memory-case .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#diagram-memory-case rect.text{fill:none;stroke-width:0;}#diagram-memory-case .icon-shape,#diagram-memory-case .image-shape{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);text-align:center;}#diagram-memory-case .icon-shape p,#diagram-memory-case .image-shape p{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);padding:2px;}#diagram-memory-case .icon-shape .label rect,#diagram-memory-case .image-shape .label rect{opacity:0.5;background-color:hsl(-79.4117647059, 100%, 93.3333333333%);fill:hsl(-79.4117647059, 100%, 93.3333333333%);}#diagram-memory-case .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#diagram-memory-case .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#diagram-memory-case .node .neo-node{stroke:hsl(40.5882352941, 60%, 83.3333333333%);}#diagram-memory-case [data-look="neo"].node rect,#diagram-memory-case [data-look="neo"].cluster rect,#diagram-memory-case [data-look="neo"].node polygon{stroke:url(#diagram-memory-case-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-memory-case [data-look="neo"].swimlane.cluster rect{filter:none;}#diagram-memory-case [data-look="neo"].node path{stroke:url(#diagram-memory-case-gradient);stroke-width:1px;}#diagram-memory-case [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-memory-case [data-look="neo"].node .neo-line path{stroke:hsl(40.5882352941, 60%, 83.3333333333%);filter:none;}#diagram-memory-case [data-look="neo"].node circle{stroke:url(#diagram-memory-case-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-memory-case [data-look="neo"].node circle .state-start{fill:#000000;}#diagram-memory-case [data-look="neo"].icon-shape .icon{fill:url(#diagram-memory-case-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-memory-case [data-look="neo"].icon-shape .icon-neo path{stroke:url(#diagram-memory-case-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-memory-case :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}#diagram-memory-case .base>*{fill:rgb(245, 247, 248)!important;stroke:rgb(130, 144, 154)!important;color:rgb(32, 43, 50)!important;}#diagram-memory-case .base span{fill:rgb(245, 247, 248)!important;stroke:rgb(130, 144, 154)!important;color:rgb(32, 43, 50)!important;}#diagram-memory-case .base tspan{fill:rgb(32, 43, 50)!important;}#diagram-memory-case .result>*{fill:rgb(228, 243, 237)!important;stroke:rgb(49, 132, 110)!important;color:rgb(32, 43, 50)!important;}#diagram-memory-case .result span{fill:rgb(228, 243, 237)!important;stroke:rgb(49, 132, 110)!important;color:rgb(32, 43, 50)!important;}#diagram-memory-case .result tspan{fill:rgb(32, 43, 50)!important;}</style><g><marker id="diagram-memory-case_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-memory-case_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-memory-case_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-memory-case_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></polygon></marker><marker id="diagram-memory-case_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-memory-case_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-memory-case_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-memory-case_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-memory-case_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-memory-case_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-memory-case_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"></path></marker><marker id="diagram-memory-case_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"></path></marker><g class="root"><g class="clusters"></g><g class="edges edgePaths"><path d="M257.015625,87L257.015625,123" id="diagram-memory-case-L_A_B_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_A_B_0" data-points="W3sieCI6MjU3LjAxNTYyNSwieSI6ODd9LHsieCI6MjU3LjAxNTYyNSwieSI6MTI3fV0=" data-look="classic" marker-end="url(#diagram-memory-case_flowchart-v2-pointEnd)"></path><path d="M257.015625,202L257.015625,238" id="diagram-memory-case-L_B_C_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_B_C_0" data-points="W3sieCI6MjU3LjAxNTYyNSwieSI6MjAyfSx7IngiOjI1Ny4wMTU2MjUsInkiOjI0Mn1d" data-look="classic" marker-end="url(#diagram-memory-case_flowchart-v2-pointEnd)"></path><path d="M257.015625,317L257.015625,353" id="diagram-memory-case-L_C_D_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_C_D_0" data-points="W3sieCI6MjU3LjAxNTYyNSwieSI6MzE3fSx7IngiOjI1Ny4wMTU2MjUsInkiOjM1N31d" data-look="classic" marker-end="url(#diagram-memory-case_flowchart-v2-pointEnd)"></path><path d="M215.34635416666669,409.5L215.34635416666669,422.4289321881345Q215.34635416666669,429.5 208.2752863548012,429.5L124.07888031186548,429.5Q117.0078125,429.5 117.0078125,436.5710678118655L117.0078125,445.5" id="diagram-memory-case-L_D_E_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_D_E_0" data-points="W3sieCI6MjE1LjM0NjM1NDE2NjY2NjY5LCJ5Ijo0MDkuNX0seyJ4IjoyMTUuMzQ2MzU0MTY2NjY2NjksInkiOjQyOS41fSx7IngiOjExNy4wMDc4MTI1LCJ5Ijo0MjkuNX0seyJ4IjoxMTcuMDA3ODEyNSwieSI6NDQ5LjV9XQ==" data-look="classic" marker-end="url(#diagram-memory-case_flowchart-v2-pointEnd)"></path><path d="M298.6848958333333,409.5L298.6848958333333,422.4289321881345Q298.6848958333333,429.5 305.7559636451988,429.5L389.9523696881345,429.5Q397.0234375,429.5 397.0234375,436.5710678118655L397.0234375,445.5" id="diagram-memory-case-L_D_F_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_D_F_0" data-points="W3sieCI6Mjk4LjY4NDg5NTgzMzMzMzMsInkiOjQwOS41fSx7IngiOjI5OC42ODQ4OTU4MzMzMzMzLCJ5Ijo0MjkuNX0seyJ4IjozOTcuMDIzNDM3NSwieSI6NDI5LjV9LHsieCI6Mzk3LjAyMzQzNzUsInkiOjQ0OS41fV0=" data-look="classic" marker-end="url(#diagram-memory-case_flowchart-v2-pointEnd)"></path><path d="M117.0078125,502L117.0078125,514.9289321881345Q117.0078125,522 124.07888031186548,522L206.61122385480115,522Q213.68229166666663,522 213.68229166666663,529.0710678118655L213.68229166666663,538" id="diagram-memory-case-L_E_G_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_E_G_0" data-points="W3sieCI6MTE3LjAwNzgxMjUsInkiOjUwMn0seyJ4IjoxMTcuMDA3ODEyNSwieSI6NTIyfSx7IngiOjIxMy42ODIyOTE2NjY2NjY2MywieSI6NTIyfSx7IngiOjIxMy42ODIyOTE2NjY2NjY2MywieSI6NTQyfV0=" data-look="classic" marker-end="url(#diagram-memory-case_flowchart-v2-pointEnd)"></path><path d="M397.0234375,502L397.0234375,514.9289321881345Q397.0234375,522 389.9523696881345,522L307.4200261451988,522Q300.3489583333333,522 300.3489583333333,529.0710678118655L300.3489583333333,538" id="diagram-memory-case-L_F_G_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_F_G_0" data-points="W3sieCI6Mzk3LjAyMzQzNzUsInkiOjUwMn0seyJ4IjozOTcuMDIzNDM3NSwieSI6NTIyfSx7IngiOjMwMC4zNDg5NTgzMzMzMzMzLCJ5Ijo1MjJ9LHsieCI6MzAwLjM0ODk1ODMzMzMzMzMsInkiOjU0Mn1d" data-look="classic" marker-end="url(#diagram-memory-case_flowchart-v2-pointEnd)"></path><path d="M257.015625,617L257.015625,653" id="diagram-memory-case-L_G_H_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_G_H_0" data-points="W3sieCI6MjU3LjAxNTYyNSwieSI6NjE3fSx7IngiOjI1Ny4wMTU2MjUsInkiOjY1N31d" data-look="classic" marker-end="url(#diagram-memory-case_flowchart-v2-pointEnd)"></path><path d="M257.015625,732L257.015625,768" id="diagram-memory-case-L_H_I_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_H_I_0" data-points="W3sieCI6MjU3LjAxNTYyNSwieSI6NzMyfSx7IngiOjI1Ny4wMTU2MjUsInkiOjc3Mn1d" data-look="classic" marker-end="url(#diagram-memory-case_flowchart-v2-pointEnd)"></path></g><g class="edgeLabels"></g><g class="nodes"><g class="node default base" id="diagram-memory-case-flowchart-A-0" data-look="classic" transform="translate(257.015625, 49.5)"><rect class="basic label-diagram-memory-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>无有效凭证时 OOM；已有版本、复现与堆分析</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-memory-case-flowchart-B-1" data-look="classic" transform="translate(257.015625, 164.5)"><rect class="basic label-diagram-memory-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>否决不可达状态与默认关闭优化的解释</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-memory-case-flowchart-C-3" data-look="classic" transform="translate(257.015625, 279.5)"><rect class="basic label-diagram-memory-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>区分默认开启缓存与默认关闭 amortization</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-memory-case-flowchart-D-5" data-look="classic" transform="translate(257.015625, 383.25)"><rect class="basic label-diagram-memory-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-135.0078125" y="-26.25" width="270.015625" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-105.0078125, -11.25)"><rect></rect><foreignObject width="210.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>沿无凭证路径核对普通递归堆栈</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-memory-case-flowchart-E-7" data-look="classic" transform="translate(117.0078125, 475.75)"><rect class="basic label-diagram-memory-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-105.0078125" y="-26.25" width="210.015625" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-75.0078125, -11.25)"><rect></rect><foreignObject width="150.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>缓存延长引擎生命周期</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-memory-case-flowchart-F-9" data-look="classic" transform="translate(397.0234375, 475.75)"><rect class="basic label-diagram-memory-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-135.0078125" y="-26.25" width="270.015625" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-105.0078125, -11.25)"><rect></rect><foreignObject width="210.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>一次性状态机被耗尽后再次进入</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-memory-case-flowchart-G-11" data-look="classic" transform="translate(257.015625, 579.5)"><rect class="basic label-diagram-memory-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>两项机制共同导致 async 递归帧累积</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-memory-case-flowchart-H-15" data-look="classic" transform="translate(257.015625, 694.5)"><rect class="basic label-diagram-memory-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>复现与用户堆分析中的关键帧一致</p></span></div></foreignObject></g></g><g class="node default result" id="diagram-memory-case-flowchart-I-17" data-look="classic" transform="translate(257.015625, 809.5)"><rect class="basic label-diagram-memory-case" style="fill:#e4f3ed !important;stroke:#31846e !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>修复选择：停用缓存，或让状态机安全重用</p></span></div></foreignObject></g></g></g></g></g><defs><filter id="diagram-memory-case-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><defs><filter id="diagram-memory-case-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><linearGradient id="diagram-memory-case-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="hsl(40.5882352941, 60%, 83.3333333333%)" stop-opacity="1"></stop><stop offset="100%" stop-color="hsl(-79.4117647059, 60%, 83.3333333333%)" stop-opacity="1"></stop></linearGradient></svg></div>
+          <figcaption>图 3：拆分独立开关，抓出“长周期缓存 + 递归无尾调用”两个必要原因</figcaption>
+        </figure>
+        <div>
+          <div class="table-wrap">
+            <table class="facts">
+              <thead><tr><th>实战环节</th><th>案发过程与破案证据</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><strong>灾情现象</strong></td>
+                  <td>在没有配置有效凭证（Token 失效）时，Docker 容器内存暴涨直到被 OOM 强杀。用户给出了稳定的复现步骤和 heaptrack 报告：OOM 前堆内存分配高达惊人的 50 GB！</td>
+                </tr>
+                <tr>
+                  <td><strong>AI 连续三次瞎猜</strong></td>
+                  <td>
+                    ① Claude 声称“Token 被拒后循环重试了 13.7 万次，内存堆满了 JSON 日志”——作者指出线上逻辑根本不可能进入该状态，纯属编造；<br>
+                    ② Claude 又甩锅给近期的“API 摊销优化与遥测”变更——作者一查配置，该特性默认是关闭的；<br>
+                    ③ Claude 建议对最近 24 个 Commit 挨个二分排查（Bisect）——作者拒绝做这种无脑苦力。
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>证据锁定真实堆栈</strong></td>
+                  <td>看 heaptrack 真实调用堆栈，发现根本没走到优化版入口 <code>dedupedRunStateMachine</code>，走的是普通递归方法 <code>runStateMachine</code>。</td>
+                </tr>
+                <tr>
+                  <td><strong>双因复合机制破案</strong></td>
+                  <td>
+                    原来随同版本发布的改动里，<strong>有一个进程级缓存是默认开启的</strong>！<br>
+                    旧代码中认证状态机是“单次使用、用完即毁”的；新缓存却将其生命周期延长到了和进程一样长。重试时耗尽的状态机被不断重入，而 Swift 的异步递归没有尾调用优化，导致递归调用帧死死堆在内存中，最终吃爆 50GB。
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <h3>为什么必须是“两个原因组合”？</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>独立原因</th><th>能解释什么</th><th>单靠它无法解释什么</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>新加入的进程级缓存</strong></td>
+              <td>解释了为什么过去一直好好的，最近发版才突然暴雷。</td>
+              <td>无法解释为什么内存会无限暴涨到 50GB（缓存本身很小）。</td>
+            </tr>
+            <tr>
+              <td><strong>单次状态机缺乏尾递归优化</strong></td>
+              <td>解释了为什么递归堆栈帧会滞留不放、吃空内存。</td>
+              <td>无法解释为什么过去的代码没出事（过去每次用完就整体 GC 销毁了）。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout info">
+        <strong>实战启示：</strong>不要为了故事圆满而随意堆砌原因，但如果单一原因解释不通全部现象，要敢于将发布变更拆细，寻找两个缺一不可的“必要机制组合”。
+      </div>
+      <p class="source">来源：The Memory Leak；Single vs Multi-Cause Hypothesis；When Every Hypothesis Falls Short。</p>
+    </section>
+
+    <!-- 06 案例三：神秘挂起 -->
+    <section id="hang">
+      <div class="case-heading">
+        <h2><span class="number">06</span>案例三：神秘卡死与内核断案</h2>
+        <span class="status partial">锁定责任边界 · 铁证跨团队移交</span>
+      </div>
+      <div class="case-body">
+        <figure>
+          <div class="diagram"><svg id="diagram-hang-case" width="624" xmlns="http://www.w3.org/2000/svg" class="flowchart" height="881.5" viewBox="0 0 624 881.5" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#diagram-hang-case{font-size:15px;fill:#333;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#diagram-hang-case .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#diagram-hang-case .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#diagram-hang-case .error-icon{fill:hsl(220.5882352941, 100%, 98.3333333333%);}#diagram-hang-case .error-text{fill:rgb(8.5000000002, 5.7500000001, 0);stroke:rgb(8.5000000002, 5.7500000001, 0);}#diagram-hang-case .edge-thickness-normal{stroke-width:1px;}#diagram-hang-case .edge-thickness-thick{stroke-width:3.5px;}#diagram-hang-case .edge-pattern-solid{stroke-dasharray:0;}#diagram-hang-case .edge-thickness-invisible{stroke-width:0;fill:none;}#diagram-hang-case .edge-pattern-dashed{stroke-dasharray:3;}#diagram-hang-case .edge-pattern-dotted{stroke-dasharray:2;}#diagram-hang-case .marker{fill:#0b0b0b;stroke:#0b0b0b;}#diagram-hang-case .marker.cross{stroke:#0b0b0b;}#diagram-hang-case svg{font-size:15px;}#diagram-hang-case p{margin:0;}#diagram-hang-case .label{color:#333;}#diagram-hang-case .cluster-label text{fill:rgb(8.5000000002, 5.7500000001, 0);}#diagram-hang-case .cluster-label span{color:rgb(8.5000000002, 5.7500000001, 0);}#diagram-hang-case .cluster-label span p{background-color:transparent;}#diagram-hang-case .label text,#diagram-hang-case span{fill:#333;color:#333;}#diagram-hang-case .node rect,#diagram-hang-case .node circle,#diagram-hang-case .node ellipse,#diagram-hang-case .node polygon,#diagram-hang-case .node path{fill:#fff4dd;stroke:hsl(40.5882352941, 60%, 83.3333333333%);stroke-width:1px;}#diagram-hang-case .rough-node .label text,#diagram-hang-case .node .label text,#diagram-hang-case .image-shape .label,#diagram-hang-case .icon-shape .label{text-anchor:middle;}#diagram-hang-case .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#diagram-hang-case .rough-node .label,#diagram-hang-case .node .label,#diagram-hang-case .image-shape .label,#diagram-hang-case .icon-shape .label{text-align:center;}#diagram-hang-case .node.clickable{cursor:pointer;}#diagram-hang-case .root .anchor path{fill:#0b0b0b!important;stroke-width:0;stroke:#0b0b0b;}#diagram-hang-case .arrowheadPath{fill:#0b0b0b;}#diagram-hang-case .edgePaths .path{stroke:#0b0b0b;stroke-width:1px;}#diagram-hang-case .flowchart-link{stroke:#0b0b0b;fill:none;}#diagram-hang-case .edgeLabel{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);text-align:center;}#diagram-hang-case .edgeLabel p{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);}#diagram-hang-case .edgeLabel rect{opacity:0.5;background-color:hsl(-79.4117647059, 100%, 93.3333333333%);fill:hsl(-79.4117647059, 100%, 93.3333333333%);}#diagram-hang-case .labelBkg{background-color:rgba(243.9999999999, 220.9999999998, 255, 0.5);}#diagram-hang-case .cluster rect{fill:hsl(220.5882352941, 100%, 98.3333333333%);stroke:hsl(220.5882352941, 60%, 88.3333333333%);stroke-width:1px;}#diagram-hang-case .cluster text{fill:rgb(8.5000000002, 5.7500000001, 0);}#diagram-hang-case .cluster span{color:rgb(8.5000000002, 5.7500000001, 0);}#diagram-hang-case .node .collapsed-indicator{fill:hsl(220.5882352941, 60%, 88.3333333333%);stroke:none;opacity:0.6;}#diagram-hang-case .node .collapsed-separator{stroke:hsl(220.5882352941, 60%, 88.3333333333%);stroke-width:0.75px;}#diagram-hang-case div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-size:12px;background:hsl(220.5882352941, 100%, 98.3333333333%);border:1px solid hsl(220.5882352941, 60%, 88.3333333333%);border-radius:2px;pointer-events:none;z-index:100;}#diagram-hang-case .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#diagram-hang-case rect.text{fill:none;stroke-width:0;}#diagram-hang-case .icon-shape,#diagram-hang-case .image-shape{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);text-align:center;}#diagram-hang-case .icon-shape p,#diagram-hang-case .image-shape p{background-color:hsl(-79.4117647059, 100%, 93.3333333333%);padding:2px;}#diagram-hang-case .icon-shape .label rect,#diagram-hang-case .image-shape .label rect{opacity:0.5;background-color:hsl(-79.4117647059, 100%, 93.3333333333%);fill:hsl(-79.4117647059, 100%, 93.3333333333%);}#diagram-hang-case .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#diagram-hang-case .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#diagram-hang-case .node .neo-node{stroke:hsl(40.5882352941, 60%, 83.3333333333%);}#diagram-hang-case [data-look="neo"].node rect,#diagram-hang-case [data-look="neo"].cluster rect,#diagram-hang-case [data-look="neo"].node polygon{stroke:url(#diagram-hang-case-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-hang-case [data-look="neo"].swimlane.cluster rect{filter:none;}#diagram-hang-case [data-look="neo"].node path{stroke:url(#diagram-hang-case-gradient);stroke-width:1px;}#diagram-hang-case [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-hang-case [data-look="neo"].node .neo-line path{stroke:hsl(40.5882352941, 60%, 83.3333333333%);filter:none;}#diagram-hang-case [data-look="neo"].node circle{stroke:url(#diagram-hang-case-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-hang-case [data-look="neo"].node circle .state-start{fill:#000000;}#diagram-hang-case [data-look="neo"].icon-shape .icon{fill:url(#diagram-hang-case-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-hang-case [data-look="neo"].icon-shape .icon-neo path{stroke:url(#diagram-hang-case-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#diagram-hang-case :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}#diagram-hang-case .base>*{fill:rgb(245, 247, 248)!important;stroke:rgb(130, 144, 154)!important;color:rgb(32, 43, 50)!important;}#diagram-hang-case .base span{fill:rgb(245, 247, 248)!important;stroke:rgb(130, 144, 154)!important;color:rgb(32, 43, 50)!important;}#diagram-hang-case .base tspan{fill:rgb(32, 43, 50)!important;}#diagram-hang-case .rejected>*{fill:rgb(250, 233, 232)!important;stroke:rgb(188, 105, 99)!important;color:rgb(32, 43, 50)!important;}#diagram-hang-case .rejected span{fill:rgb(250, 233, 232)!important;stroke:rgb(188, 105, 99)!important;color:rgb(32, 43, 50)!important;}#diagram-hang-case .rejected tspan{fill:rgb(32, 43, 50)!important;}#diagram-hang-case .result>*{fill:rgb(228, 243, 237)!important;stroke:rgb(49, 132, 110)!important;color:rgb(32, 43, 50)!important;}#diagram-hang-case .result span{fill:rgb(228, 243, 237)!important;stroke:rgb(49, 132, 110)!important;color:rgb(32, 43, 50)!important;}#diagram-hang-case .result tspan{fill:rgb(32, 43, 50)!important;}</style><g><marker id="diagram-hang-case_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-hang-case_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-hang-case_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-hang-case_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></polygon></marker><marker id="diagram-hang-case_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-hang-case_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-hang-case_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-hang-case_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"></circle></marker><marker id="diagram-hang-case_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-hang-case_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="diagram-hang-case_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"></path></marker><marker id="diagram-hang-case_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"></path></marker><g class="root"><g class="clusters"></g><g class="edges edgePaths"><path d="M312,87L312,123" id="diagram-hang-case-L_A_B_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_A_B_0" data-points="W3sieCI6MzEyLCJ5Ijo4N30seyJ4IjozMTIsInkiOjEyN31d" data-look="classic" marker-end="url(#diagram-hang-case_flowchart-v2-pointEnd)"></path><path d="M268.66666666666663,202L268.66666666666663,214.92893218813452Q268.66666666666663,222 261.59559885480115,222L159.07106781186548,222Q152,222 152,229.07106781186548L152,238" id="diagram-hang-case-L_B_C_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_B_C_0" data-points="W3sieCI6MjY4LjY2NjY2NjY2NjY2NjYzLCJ5IjoyMDJ9LHsieCI6MjY4LjY2NjY2NjY2NjY2NjYzLCJ5IjoyMjJ9LHsieCI6MTUyLCJ5IjoyMjJ9LHsieCI6MTUyLCJ5IjoyNDJ9XQ==" data-look="classic" marker-end="url(#diagram-hang-case_flowchart-v2-pointEnd)"></path><path d="M152,317L152,353" id="diagram-hang-case-L_C_D_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_C_D_0" data-points="W3sieCI6MTUyLCJ5IjozMTd9LHsieCI6MTUyLCJ5IjozNTd9XQ==" data-look="classic" marker-end="url(#diagram-hang-case_flowchart-v2-pointEnd)"></path><path d="M152,432L152,468" id="diagram-hang-case-L_D_E_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_D_E_0" data-points="W3sieCI6MTUyLCJ5Ijo0MzJ9LHsieCI6MTUyLCJ5Ijo0NzJ9XQ==" data-look="classic" marker-end="url(#diagram-hang-case_flowchart-v2-pointEnd)"></path><path d="M152,547L152,583" id="diagram-hang-case-L_E_F_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_E_F_0" data-points="W3sieCI6MTUyLCJ5Ijo1NDd9LHsieCI6MTUyLCJ5Ijo1ODd9XQ==" data-look="classic" marker-end="url(#diagram-hang-case_flowchart-v2-pointEnd)"></path><path d="M152,639.5L152,675.5" id="diagram-hang-case-L_F_G_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_F_G_0" data-points="W3sieCI6MTUyLCJ5Ijo2MzkuNX0seyJ4IjoxNTIsInkiOjY3OS41fV0=" data-look="classic" marker-end="url(#diagram-hang-case_flowchart-v2-pointEnd)"></path><path d="M152,754.5L152,790.5" id="diagram-hang-case-L_G_H_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_G_H_0" data-points="W3sieCI6MTUyLCJ5Ijo3NTQuNX0seyJ4IjoxNTIsInkiOjc5NC41fV0=" data-look="classic" marker-end="url(#diagram-hang-case_flowchart-v2-pointEnd)"></path><path d="M355.3333333333333,202L355.3333333333333,214.92893218813452Q355.3333333333333,222 362.4044011451988,222L464.9289321881345,222Q472,222 472,229.07106781186548L472,238" id="diagram-hang-case-L_B_I_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_B_I_0" data-points="W3sieCI6MzU1LjMzMzMzMzMzMzMzMzMsInkiOjIwMn0seyJ4IjozNTUuMzMzMzMzMzMzMzMzMywieSI6MjIyfSx7IngiOjQ3MiwieSI6MjIyfSx7IngiOjQ3MiwieSI6MjQyfV0=" data-look="classic" marker-end="url(#diagram-hang-case_flowchart-v2-pointEnd)"></path><path d="M472,317L472,353" id="diagram-hang-case-L_I_J_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_I_J_0" data-points="W3sieCI6NDcyLCJ5IjozMTd9LHsieCI6NDcyLCJ5IjozNTd9XQ==" data-look="classic" marker-end="url(#diagram-hang-case_flowchart-v2-pointEnd)"></path><path d="M472,432L472,468" id="diagram-hang-case-L_J_K_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_J_K_0" data-points="W3sieCI6NDcyLCJ5Ijo0MzJ9LHsieCI6NDcyLCJ5Ijo0NzJ9XQ==" data-look="classic" marker-end="url(#diagram-hang-case_flowchart-v2-pointEnd)"></path></g><g class="edgeLabels"></g><g class="nodes"><g class="node default base" id="diagram-hang-case-flowchart-A-0" data-look="classic" transform="translate(312, 49.5)"><rect class="basic label-diagram-hang-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>VFS 超时；服务端同期遥测无异常</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-hang-case-flowchart-B-1" data-look="classic" transform="translate(312, 164.5)"><rect class="basic label-diagram-hang-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>TCP 与 WebSocket 成功；之后只有心跳</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-hang-case-flowchart-C-3" data-look="classic" transform="translate(152, 279.5)"><rect class="basic label-diagram-hang-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>定位远端认证之前的本地取 token 阶段</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-hang-case-flowchart-D-5" data-look="classic" transform="translate(152, 394.5)"><rect class="basic label-diagram-hang-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>用明确权限失败的用户报告作对照</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-hang-case-flowchart-E-7" data-look="classic" transform="translate(152, 509.5)"><rect class="basic label-diagram-hang-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>从进程状态进一步查看 lsmp 与内核 IPC</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-hang-case-flowchart-F-9" data-look="classic" transform="translate(152, 613.25)"><rect class="basic label-diagram-hang-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-127.5078125" y="-26.25" width="255.015625" height="52.5"></rect><g class="label" style="color:#202b32 !important" transform="translate(-97.5078125, -11.25)"><rect></rect><foreignObject width="195.015625" height="22.5"><div style="color: rgb(32, 43, 50) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 220px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>认证进程仍持有一次性回复权</p></span></div></foreignObject></g></g><g class="node default base" id="diagram-hang-case-flowchart-G-11" data-look="classic" transform="translate(152, 717)"><rect class="basic label-diagram-hang-case" style="fill:#f5f7f8 !important;stroke:#82909a !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>跨用户重复证据：XPC 请求收到但未回复</p></span></div></foreignObject></g></g><g class="node default result" id="diagram-hang-case-flowchart-H-13" data-look="classic" transform="translate(152, 832)"><rect class="basic label-diagram-hang-case" style="fill:#e4f3ed !important;stroke:#31846e !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>向认证团队提交证据；未报告上线修复</p></span></div></foreignObject></g></g><g class="node default rejected" id="diagram-hang-case-flowchart-I-15" data-look="classic" transform="translate(472, 279.5)"><rect class="basic label-diagram-hang-case" style="fill:#fae9e8 !important;stroke:#bc6963 !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>同事复现：时钟偏差导致 token 被拒</p></span></div></foreignObject></g></g><g class="node default rejected" id="diagram-hang-case-flowchart-J-17" data-look="classic" transform="translate(472, 394.5)"><rect class="basic label-diagram-hang-case" style="fill:#fae9e8 !important;stroke:#bc6963 !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>报文不一致；没有未消费的回复权</p></span></div></foreignObject></g></g><g class="node default rejected" id="diagram-hang-case-flowchart-K-19" data-look="classic" transform="translate(472, 509.5)"><rect class="basic label-diagram-hang-case" style="fill:#fae9e8 !important;stroke:#bc6963 !important" x="-140" y="-37.5" width="280" height="75"></rect><g class="label" style="color:#202b32 !important" transform="translate(-110, -22.5)"><rect></rect><foreignObject width="220" height="45"><div style="color: rgb(32, 43, 50) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 220px; text-align: center; width: 220px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#202b32 !important" class="nodeLabel"><p>属于另一个 Bug，不能解释原故障</p></span></div></foreignObject></g></g></g></g></g><defs><filter id="diagram-hang-case-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><defs><filter id="diagram-hang-case-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"></feDropShadow></filter></defs><linearGradient id="diagram-hang-case-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="hsl(40.5882352941, 60%, 83.3333333333%)" stop-opacity="1"></stop><stop offset="100%" stop-color="hsl(-79.4117647059, 60%, 83.3333333333%)" stop-opacity="1"></stop></linearGradient></svg></div>
+          <figcaption>图 4：探针逐层下潜（日志 → 网络 → 抓包 → 内核 lsmp 转储）锁定悬空端口</figcaption>
+        </figure>
+        <div>
+          <div class="table-wrap">
+            <table class="facts">
+              <thead><tr><th>实战环节</th><th>案发过程与破案证据</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><strong>棘手现象</strong></td>
+                  <td>桌面客户端通过虚拟文件系统（VFS）读取远端文件时，间歇性出现 60 秒超时卡死。偶发极难复现，没有任何崩溃日志，用户重启程序后现场瞬间被抹掉。</td>
+                </tr>
+                <tr>
+                  <td><strong>遭遇扯皮与推诿</strong></td>
+                  <td>服务端指标完全正常；客户端日志毫无异常。负责本地认证模块的团队直接甩锅：“我们后台一条报错日志都没有，说明你们压根没调过我们！”</td>
+                </tr>
+                <tr>
+                  <td><strong>抓包发现端倪</strong></td>
+                  <td>TCP 和 WebSocket 握手完全成功，但之后只有 ping/pong 心跳报文，业务数据迟迟不发。原来必须先从本机认证进程拿到 Token 才能发业务请求，卡点明确在本地 IPC！</td>
+                </tr>
+                <tr>
+                  <td><strong>下潜至内核抓出铁证</strong></td>
+                  <td>
+                    翻阅用户上报的 <code>sysdiagnose</code> 诊断包，用 <code>lsmp</code>（列出 Mach 端口状态）分析内核 IPC 表。<br>
+                    在一个 30 MB 的转储文件里找到了致命一行：<strong>认证进程在收到请求 67 个小时之后，居然死死持有该 XPC 请求的一次性回复权（Reply Right）未作应答！</strong><br>
+                    随后在多个故障用户的诊断包中抓到了完全一致的端口挂起证据。铁证如山：请求绝对送到了，是对方漏掉了回调！
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>识破同事的“伪复现”</strong></td>
+                  <td>一位同事通过修改本机时钟成功构造出了“60 秒超时”，声称自己复现了 Bug。但作者拿抓包和内核状态一比对：同事的场景是远端因时间偏差拒绝 Token 并疯狂重试，内核里根本没有挂起的端口回复权。<strong>这是完全不同的另一个 Bug，差点被带进沟里！</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="callout danger">
+        <strong>实战启示：</strong>“没有错误日志”绝对不等于“没有发送请求”！当应用层没有信息时，往底层的网络与内核端口探针下潜，往往能拿出无可辩驳的铁证打破跨团队扯皮。
+      </div>
+      <p class="source">来源：The Hang；How To Pick The Right Control?；Progressive Signal Discovery。</p>
+    </section>
+
+    <!-- 07 工程化启示 -->
+    <section id="factory">
+      <h2><span class="number">07</span>工程化启示：让系统天生好查</h2>
+      <p>Debug 不是一次性的救火，排查中发现的“强信号”应当固化为工程能力，防止后人掉进同样的坑：</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>架构建设方向</th><th>具体落地方案</th><th>避坑约束与红线</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>把致命强信号做成默认监控</strong></td>
+              <td>在客户端埋点上报“DNS 解析 IP 数量”、“当前连接的服务端 Pod 集合”。一旦解析出几百个 IP 立刻告警，无需等待 P99 飙升。</td>
+              <td>监控采集要有采样率和成本控制，绝不能无脑全量打印大报文，更不能泄露用户隐私。</td>
+            </tr>
+            <tr>
+              <td><strong>CI / CD 门禁增加机制一致性断言</strong></td>
+              <td>集成测试不仅测功能通不通（HTTP 200），更要断言“调用的客户端类是不是分片客户端”、“连接的目标集群是否符合拓扑预期”。</td>
+              <td>预发环境必须有小规模的分片集群拓扑，不能把单节点单分片当成生产环境来测。</td>
+            </tr>
+            <tr>
+              <td><strong>用生产切片做真实验证</strong></td>
+              <td>建立具备真实上下游拓扑的生产灰度切片，在逼真环境下对比对照组。</td>
+              <td>严格遵守安全红线：线上只读探针是默认选项；严禁未经审批在线上执行重启、热更配置或修改线上数据。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="source">对应原文：Retooling the Agentic Factory Floor；The Paradigm Shift；Develop Against Production；Repurpose Debugging Framework。</p>
+    </section>
+
+    <!-- 08 可复用 Skill -->
+    <section id="skill">
+      <h2><span class="number">08</span>可复用 Skill：直接在项目中使用</h2>
+      <p>我们已经将本文的全套方法论沉淀为标准的 Codex / Knot 技能 <code>evidence-driven-debugging</code>。当你在日常开发中遇到陌生的疑难杂症、AI 反复猜想无果、或偶发卡死时，可直接呼叫该技能。</p>
+      
+      <h3>如何直接触发技能</h3>
+      <pre><code>请使用 $evidence-driven-debugging 排查这个故障。
+先严格核对实际版本、配置开关与时间窗口，将客观事实与主观推测严格分开；
+选择一台正常机器作为对照组并提取区分性强信号；
+建立假设-证据打靶矩阵做排除法。若实施修复，必须与原故障底层信号比对，拒绝伪复现。</code></pre>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>技能组件</th><th>核心功能说明</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>SKILL.md</code></td><td>核心工作流定义：事实与推测二分立、三步调查法、防假复现守则、精准汇报格式。</td></tr>
+            <tr>
+              <td><code>templates/investigation.md</code></td><td>结构化调查记录簿：涵盖基本盘、事实账本、对照组选择、假设打靶矩阵、探针下潜记录与最终结论。</td></tr>
+            <tr>
+              <td><code>references/article-cases.md</code></td><td>Cindy Sridharan 三大经典案例的人话精析，随时给排查提供经验参考。</td></tr>
+            <tr>
+              <td><code>agents/openai.yaml</code></td><td>智能体配置与默认触发 Prompt。</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <details>
+        <summary>点击展开：查看完整优化版 SKILL.md 全文（中文人话版）</summary>
+        <pre id="skill-source"><code>---
+name: evidence-driven-debugging
+description: &gt;-
+  基于运行时客观证据、对照组、区分性强信号与可证伪假设，排查陌生代码或 AI 生成系统中的疑难 Bug。适用于延迟回退、内存泄漏、偶发挂起、伪复现诱导或反复猜想无果的场景。严格区分现场诊断与验证修复。
+---
+
+# 证据驱动调试法（Evidence-Driven Debugging）
+
+当系统代码过于庞大、陌生，或由 AI 批量生成而无法靠肉眼阅读心智模型来理解时，**绝不要依赖 AI 的自圆其说和盲目猜想，而要依靠运行时客观证据做排除法**。
+
+本工作流改编自分布式系统专家 Cindy Sridharan 的经典文章《How to effectively debug when you no longer understand the code》（2026-10-10）。
+
+---
+
+## 核心心法：事实与推测严格二八分立
+
+1. **事实层（客观证据）**：
+   - 包含：现场日志、网络抓包（PCAP）、堆转储（Heap Profile）、配置版本、DNS 解析记录、内核连接与端口状态等。
+   - 每条证据必须带上唯一标识（E1, E2...）、来源路径、主机/进程信息、采集时间窗以及局限性。
+   - 保护原生态证据：重启服务前必须先保存易失性现场（如内存 dump、进程端口状态）。如果发现采集方法有误，保留原记录并注明更正原因，严禁为了迎合某种假设而擅自删改或无视“不合脚”的事实。
+2. **推测层（主观假设）**：
+   - 包含：对现象的解释、怀疑的根因代码、对故障机制的归纳。
+   - 必须记录在假设账本中，绝不能将 AI 的推论或未经验证的猜想当成“既定事实”二次输入。
+3. **不要只读代码下断言**：
+   - 静态代码只代表“存在这条执行分支的可能性”，线上到底走了哪条分支必须靠运行时证据证明。
+   - 只有当证据明确指引到某个边界或机制时，再去精确阅读对应代码（优先使用 CodeGraph 快速定位，无索引时再用精准代码检索）。
+
+---
+
+## 三步调查闭环
+
+### 第一步：寻找最贴近的“对照组”（Control）
+- **不要孤立分析故障机器**：寻找一台没有发生同类故障的最相近实例（例如：关闭了新特性的集群、同一版本未启用的实例、健康对等节点、甚至是一个原因明确且报错显著的失败路径）。
+- **核对实际差异**：记录两组在拓扑、流量负载、规模、配置开关和生效时间上的差异。
+- **寻找区分性强信号**：
+  - 故障组特有的指标才是指路的高保真候选信号（如故障机 DNS 解析出 400 个 IP，而正常机只有 5 个）。
+  - 两组共有的现象（如两组的 TCP 握手耗时都一致）通常不能指引方向，但能坚决排除某些错误猜想（如排除“网络握手慢”）。
+
+### 第二步：建立假设-证据打靶矩阵，优先做排除法
+- 针对 2~3 个有事实支撑的核心假说，建立“假说 × 证据”矩阵：
+  - 判定只填三态：`能解释（explains）`、`矛盾/冲突（contradicts）`、`未知/无法解释（unknown）`。
+  - **一票否决制**：只要一个假说与任何一条客观证据冲突（哪怕这个假说听起来再顺理成章），坚决判定为淘汰！
+- **按列看信号区分度**：优先追查能区分不同假说的强信号（例如：单纯“P99 变高”区分度极低；而“请求目的 IP 散开”、“Mach 一次性回复权未释放”区分度极高）。
+- **当所有假说都被推翻时**：
+  1. 重新核验证据采集是否有误（机器、版本、时区、单位）；
+  2. 拆分“捆绑的大假说”：拆成独立的变更项与功能开关；
+  3. 组合两个必要的互补机制（只有当缺一不可、拿掉任意一个都无法解释全部现象时，才允许组合两个原因，禁止为了圆谎随意拼凑）；
+  4. 沿探针阶梯向下一层下潜（应用日志 → 网络报文 → 进程与堆栈 → 内核与系统调用），一旦抓到足够区分候选假说的强信号，立即停止下潜。
+
+### 第三步：全量事实终审与证伪测试
+- 对最有希望的候选假说，拿全部已知事实（包括共有现象、生效时钟、版本历史）做终审，确保没有任何反例。
+- 预测下一个验证动作的结果，执行探针并对照实际结果；主动寻找能够证伪该假说的证据。
+
+---
+
+## 复现与修复守则
+
+1. **严防“假复现”（False Reproduction）**：
+   - 同样表现为超时（Timeout）、同样抛出 500、或同样出现 OOM，底层可能完全是风马牛不相及的两个 Bug。
+   - 复现实验必须与线上原故障的**底层机制强信号**逐项比对（例如抓包特征、堆栈调用帧、IPC 状态）。如果关键信号分叉，说明抓到的是另一个独立问题，绝不能把这个修复当成原故障的解决方案交付。
+2. **最小化精准修复**：
+   - 查清机理后，只做范围最小、改动最克制的精准修复。涉及正确性、性能或职责归属的权衡时，向用户清晰列出选项。
+   - 除非得到明确授权，严禁直接在生产环境执行回滚、部署、改密或强杀重启。
+3. **端到端双重验证**：
+   - 验证既要看底层机制信号是否恢复正常，也要看用户视角的整体功能是否正常。单测通过或 HTTP 200 不等于端到端修复。
+   - 在已授权的代表性环境中验证，同时验证健康对照组是否不受破坏。
+4. **精确报告诊断与验证状态**：
+   - 明确标注状态：`候选诊断`、`证据支持的诊断`、`在&lt;环境&gt;中验证修复` 或 `生产验证完成`。
+   - 排除已知假说不等于证明不存在未知的根因，说话留有客观边界。
+
+---
+
+## 汇报与收敛格式
+
+当排查受阻或需要汇报时，切忌漫无边际地猜想，直接按标准结构精确输出：
+1. **排查结论与置信度**：明确当前认定的故障机理；
+2. **核心证据链**：列出支持该结论的关键证据编号（E1, E2...）与对照组差异；
+3. **被否决的假说及反驳铁证**：清晰写明淘汰了哪些看似合理但与事实冲突的推论；
+4. **复现一致性核对**：说明复现信号与线上真实事故的比对结果；
+5. **已执行的改动与验证结果**：在何种环境中做了何种测试；
+6. **未解疑点或阻塞点**：如果需要进一步下潜但受制于权限、工具或跨团队依赖，明确指出“接下来需要什么具体证据”以及“它能区分什么假说”。
+</code></pre>
+      </details>
+
+      <details>
+        <summary>点击展开：查看标准故障调查记录模板（templates/investigation.md）</summary>
+        <pre><code># 故障调查记录簿：&lt;故障名称/现象简述&gt;
+
+## 1. 调查基本盘
+
+| 关键信息项 | 具体内容记录 |
+|---|---|
+| 预期行为 vs 实际故障表现 | |
+| 受影响版本与实际运行制品 | |
+| 故障环境、主机、进程 PID | |
+| 故障发生时间窗口与时区 | |
+| 生效的配置版本 / 特性开关（Feature Gates） | |
+| 可用诊断制品与访问权限限制 | |
+| 必须优先抢救的易失性现场（内存/端口/临时文件） | |
+| 已获授权的操作范围与验证环境 | |
+
+## 2. 客观证据账本（Evidence Ledger）
+
+&gt; 必须将原故障现场的客观观测与新实验/复现数据严格分立。用户口述未验证时标注为“待核实”。
+
+| 证据编号 | 证据来源 / 精确位置 | 主机、版本、时间窗口、采集方式 | 实际观测到的事实数据 | 局限性与有效状态 |
+|---|---|---|---|---|
+| E1 | | | | |
+| E2 | | | | |
+
+## 3. 对照组选择（Control）
+
+| 对照候选对象 | 为什么它没有发生相同故障 | 已知差异与混淆因素（规模/环境等） | 实际对照证据编号 |
+|---|---|---|---|
+| | | | |
+
+## 4. 假设-证据打靶矩阵（Hypotheses Matrix）
+
+&gt; 判定只填三态：`能解释`、`矛盾/冲突（一票否决）`、`未知/无法解释`，并注明理由与引用的证据编号。
+
+| 候选机制 / 假设 | 证据 E1 | 证据 E2 | 证据 E3 | 当前状态 / 下一步区分性检查 |
+|---|---|---|---|---|
+| H1 | | | | |
+| H2 | | | | |
+
+## 5. 探针下潜与测试记录（Probe Log）
+
+| 待检验的问题 / 竞争性假设 | 预期探针观测结果 | 授权探针工具 / 潜在风险与开销 | 实际观测结果与生成的新证据编号 | 决策结论 |
+|---|---|---|---|---|
+| | | | | |
+
+## 6. 复现实验一致性校验（Reproduction Parity）
+
+&gt; 严防“同病不同因”的假复现，必须核验底层强信号是否与线上真实事故吻合。
+
+| 底层机制信号项 | 线上真实事故观测 | 本地/实验复现观测 | 吻合 / 明显分叉 / 未知 |
+|---|---|---|---|
+| | | | |
+
+## 7. 最终定论与验收报告（Outcome）
+
+- **当前状态与验证环境**：
+- **铁证支持的核心因果机制**：
+- **被推翻的错误解释及其反驳铁证**：
+- **修复方案或跨团队移交说明**：
+- **实际执行的验证检查与度量数据**：
+- **仍未解释的异常观测或遗留阻塞项**：
+- **建议新增的回归防线 / 可观测性盲区补充**：
+</code></pre>
+      </details>
+
+      <div class="tools">
+        <button type="button" id="copy-skill">一键复制 Skill 全文</button>
+        <a class="btn-outline" href="evidence-driven-debugging.zip" download>下载完整 Skill 资源包 (.zip)</a>
+        <span id="copy-status" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <!-- 09 来源出处与整理口径 -->
+    <section id="sources">
+      <h2><span class="number">09</span>来源出处与整理口径</h2>
+      <ol>
+        <li><strong>核心出处：</strong>Cindy Sridharan，<a href="https://copyconstruct.medium.com/how-to-effectively-debug-when-you-no-longer-understand-the-code-bd3dcb2c5f7b" target="_blank" rel="noopener noreferrer">Medium 英文原文《How to effectively debug when you no longer understand the code》</a>（2026-10-10）。本文案例均为作者第一人称经验复盘，未对真实物理生产环境进行二次复现。</li>
+        <li><strong>国内精选参考：</strong>Tony Bai，<a href="https://tonybai.com/2026/10/13/debug-when-you-no-longer-understand-the-code/" target="_blank" rel="noopener noreferrer">《代码看不懂了，Bug 还怎么修？AI 时代的调试心法》</a>（2026-10-13）。</li>
+        <li><strong>重构说明：</strong>四张架构时序与流程图由本次精读统一重绘为高清无依赖矢量 SVG；Skill 是将作者方法论提炼为工程化落地标准的实战成果。</li>
+      </ol>
+      <details>
+        <summary>工程规范与免责说明</summary>
+        <div class="table-wrap">
+          <table class="facts">
+            <tbody>
+              <tr><td>交付范围</td><td>优化版交互式 HTML 文档、高清 SVG 流程图源文件、结构化排查模板与 Codex Skill 资产包。</td></tr>
+              <tr><td>安全红线</td><td>生产排查默认只读，禁止越权执行破坏性操作；跨团队移交时以客观证据为依据。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <footer>
+      基于 Cindy Sridharan 原文的深度人话精读版 · 倡导用客观事实与严谨排除法终结 AI 时代的 Debug 盲区
+    </footer>
+  </main>
+</div>
+
+<script>
+  // 目录滚动监听与高亮
+  const links = [...document.querySelectorAll('nav a')];
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(entries => {
+      const current = entries.filter(entry => entry.isIntersecting).sort((a,b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+      if (!current) return;
+      links.forEach(link => link.classList.toggle('active', link.hash === '#' + current.target.id));
+    }, { rootMargin: '-5% 0px -65% 0px' });
+    document.querySelectorAll('main section').forEach(section => observer.observe(section));
+  }
+
+  // 一键复制技能全文
+  document.getElementById('copy-skill').addEventListener('click', async () => {
+    const text = document.getElementById('skill-source').textContent;
+    const status = document.getElementById('copy-status');
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const field = document.createElement('textarea');
+        field.value = text;
+        field.style.position = 'fixed';
+        field.style.left = '-10000px';
+        document.body.append(field);
+        field.select();
+        const copied = document.execCommand('copy');
+        field.remove();
+        if (!copied) throw new Error('clipboard unavailable');
+      }
+      status.textContent = '已复制';
+    } catch {
+      status.textContent = '剪贴板不可用，可展开全文查看';
+    }
+  });
+</script>
+</body>
+</html>

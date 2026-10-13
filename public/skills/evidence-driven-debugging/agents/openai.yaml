@@ -1,0 +1,4 @@
+interface:
+  display_name: "证据驱动调试 (Evidence-Driven Debugging)"
+  short_description: "使用运行时客观证据、对照组与排除法排查疑难故障"
+  default_prompt: "请使用 $evidence-driven-debugging 调查这个故障。严格将客观事实与主观推测分开，寻找对照组并抓取强信号，列出假设矩阵做排除法，并在验证环境中比对原故障底层信号。"
