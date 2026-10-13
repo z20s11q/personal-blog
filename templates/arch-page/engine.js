@@ -209,7 +209,7 @@
   function initPano(P) {
     const root = $('#pano')
     if (!root || !P?.stories?.length) return
-    const ZONES = P.zones, PNODES = P.nodes, TERMS = P.terms ?? {}
+    const ZONES = P.zones, PNODES = P.nodes, TERMS = P.terms ?? {}, SUB_TAGS = P.subTags ?? {}
     const nodeById = new Map(PNODES.map((n) => [n.id, n]))
     const EDGES = P.edges.map((e) => ({ id: `${e.from}>${e.to}`, ...e }))
     const edgeById = new Map(EDGES.map((e) => [e.id, e]))
@@ -303,7 +303,7 @@
       const placed = []
       for (const p of [...paths].sort((a, b) => RANK[a.cls] - RANK[b.cls])) {
         const el = svg.querySelector(`[data-edge="${CSS.escape(p.e.id)}"]`), len = el.getTotalLength()
-        const raw = p.cls === 'on' && x ? x.t : p.e.label
+        const raw = p.cls === 'on' && x ? `${SUB_TAGS[x.tag] ? `${SUB_TAGS[x.tag][0]} ` : ''}${x.t}` : p.e.label
         const seq = p.cls === 'on' ? (x ? `${shownIdx()}` : seqOf(p.e.id)) : ''
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', `wire-label ${p.cls}`); g.dataset.panoEdge = p.e.id
         g.innerHTML = `<rect rx="4"/><text text-anchor="middle">${seq ? `<tspan class="wire-seq">${esc(seq)}</tspan> ` : ''}${esc(raw.length > 46 ? `${raw.slice(0, 45)}…` : raw)}</text>`
@@ -329,10 +329,33 @@
       $('#pano-steps').innerHTML = `<button type="button" data-pano-step="-1" class="${stepIdx === -1 ? 'on' : ''}">总览</button>${story.steps.map((st, i) => `<button type="button" data-pano-step="${i}" class="${i === stepIdx ? 'on' : ''}"><b>${i + 1}</b>${esc(st.t)}${st.subs.length ? `<small>${st.subs.length} 小步</small>` : ''}</button>`).join('')}`
     }
     const routeText = (x) => x.n.length > 1 ? `${shortName(x.n[0])} → ${shortName(x.n.at(-1))}` : shortName(x.n[0])
-    function subDetail(x) {
-      const path = x.n.length > 1 ? x.n.map(nodeChip).join('<i>→</i>') : `${nodeChip(x.n[0])}<span class="pp-inside">在它内部发生</span>`
-      return `<div class="pp-subdetail"><div class="pp-path">${path}</div>${x.data.map(([label, v]) => dataBox(label, v)).join('')}</div>`
+    const subTag = (x) => { const g = SUB_TAGS[x.tag]; return g ? `<span class="pp-stag" style="--tc:${g[1]}">${esc(g[0])}</span>` : '' }
+    const subTitle = (x) => `${subTag(x)}<code>${esc(x.t)}</code>`
+    function tagLegend(list) {
+      const keys = [...new Set(list.map((x) => x.tag).filter((k) => SUB_TAGS[k]))]
+      return keys.length ? `<dl class="pp-taglegend"><dt>标题怎么读</dt>${keys.map((k) => `<dd>${subTag({ tag: k })}${fmt(SUB_TAGS[k][2])}</dd>`).join('')}</dl>` : ''
     }
+    function subFlow(x) {
+      const edges = x.e.map((id) => edgeById.get(id))
+      const where = (d) => d[2] ?? (edges.length === 1 ? edges[0].id : edges.length ? null : x.n[0])
+      const placed = new Set()
+      const boxes = (at) => x.data.filter((d) => where(d) === at).map((d) => { placed.add(d); return dataBox(d[0], d[1]) }).join('')
+      const seen = new Set()
+      function node(id) {
+        const again = seen.has(id)
+        seen.add(id)
+        const kids = again ? [] : edges.filter((e) => e.from === id)
+        const own = again ? '' : boxes(id)
+        return `<div class="fl-node">${nodeChip(id)}${again ? '<small>同上</small>' : ''}${edges.length ? '' : '<small>在它内部发生</small>'}</div>${own ? `<div class="fl-at">${own}</div>` : ''}${kids.length ? `<div class="fl-kids">${kids.map(hop).join('')}</div>` : ''}`
+      }
+      const hop = (e) => `<div class="fl-hop"><div class="fl-seg"><div class="fl-edge">${esc(e.label)}</div>${boxes(e.id)}</div>${node(e.to)}</div>`
+      const into = new Set(edges.map((e) => e.to))
+      const roots = edges.length ? [...new Set(edges.map((e) => e.from))].filter((id) => !into.has(id)) : [x.n[0]]
+      const tree = (roots.length ? roots : [edges[0].from]).map((id) => `<div class="fl-root">${node(id)}</div>`).join('')
+      const rest = x.data.filter((d) => !placed.has(d)).map(([label, v]) => dataBox(label, v)).join('')
+      return `<div class="pp-flow">${tree}</div>${rest}`
+    }
+    const subDetail = (x) => `<div class="pp-subdetail">${subFlow(x)}</div>`
     function stepHtml(s, list) {
       const path = s.n.length ? `<div class="pp-path">${s.n.map(nodeChip).join('')}</div>` : ''
       const extra = typeof s.extra === 'function' ? s.extra() : s.extra ?? ''
@@ -342,7 +365,8 @@
         ${srcList(s.src)}
         <h4>这一步的 ${list.length} 个小步</h4>
         <p class="pp-note">先通读，再点任一条在下方展开它的数据，同一时间只展开一条。左图线上的数字是经过它的小步序号；鼠标停在某条上，左图只亮这一小步经过的线和组件。</p>
-        <ol class="pp-digest">${list.map((x, i) => `<li class="${i + 1 === subIdx ? 'open' : ''}"><button type="button" data-pano-sub="${i + 1}" aria-expanded="${i + 1 === subIdx}"><span class="pp-digest-h"><b>${i + 1}</b><code>${esc(x.t)}</code><small>${esc(routeText(x))}</small></span><span class="pp-digest-t">${fmt(x.text)}</span></button>${i + 1 === subIdx ? subDetail(x) : ''}</li>`).join('')}</ol>`
+        ${tagLegend(list)}
+        <ol class="pp-digest">${list.map((x, i) => `<li class="${i + 1 === subIdx ? 'open' : ''}"><button type="button" data-pano-sub="${i + 1}" aria-expanded="${i + 1 === subIdx}"><span class="pp-digest-h"><b>${i + 1}</b>${subTitle(x)}<small>${esc(routeText(x))}</small></span><span class="pp-digest-t">${fmt(x.text)}</span></button>${i + 1 === subIdx ? subDetail(x) : ''}</li>`).join('')}</ol>`
     }
     const edgeSubs = (id) => STORIES.flatMap((st) => st.steps.flatMap((s, i) => s.subs.map((x, k) => ({ st, s, i, x, k })).filter((o) => o.x.e.includes(id))))
     let edgeList = []
@@ -354,12 +378,12 @@
         <div class="pp-path">${nodeChip(e.from)}<i>→</i>${nodeChip(e.to)}</div>
         <p class="pp-text">图上写的是“${esc(e.label)}”。${fmt(e.how ?? '')}</p>
         ${edgeList.length ? `<h4>${STORIES.length} 个流程里经过这根线的 ${edgeList.length} 个小步（点开看原文）</h4>
-          ${edgeList.slice(0, 120).map((o, j) => `<details class="pp-edge-msg" data-edge-sub="${j}"><summary><span class="pp-tag">${esc(o.st.title.replace(/（.*$/, ''))}</span><code>${esc(o.x.t)}</code><small>第 ${o.i + 1} 步 · 小步 ${o.k + 1}</small></summary><div class="pp-edge-body"></div></details>`).join('')}${edgeList.length > 120 ? `<p class="pp-note">只列前 120 个。</p>` : ''}`
+          ${edgeList.slice(0, 120).map((o, j) => `<details class="pp-edge-msg" data-edge-sub="${j}"><summary><span class="pp-tag">${esc(o.st.title.replace(/（.*$/, ''))}</span>${subTitle(o.x)}<small>第 ${o.i + 1} 步 · 小步 ${o.k + 1}</small></summary><div class="pp-edge-body"></div></details>`).join('')}${edgeList.length > 120 ? `<p class="pp-note">只列前 120 个。</p>` : ''}`
           : `<p class="pp-note">${fmt(e.empty ?? '经过这根线的小步数为 0。')}</p>`}
         ${steps.length ? `<h4>讲到这根线的大步</h4><ol class="pp-outline">${steps.map((x) => `<li><button type="button" data-pano-jump="${x.st.id}:${x.i}">${esc(x.st.title)} · 第 ${x.i + 1} 步：${esc(x.s.t)}</button></li>`).join('')}</ol>` : ''}`
     }
     function edgeSubBody(o) {
-      return `<p class="pp-text">${fmt(o.x.text)}</p>${o.x.data.map(([label, v]) => dataBox(label, v)).join('')}
+      return `<p class="pp-text">${fmt(o.x.text)}</p>${subFlow(o.x)}
         <p class="pp-note"><button type="button" class="pp-link" data-pano-jump="${o.st.id}:${o.i}:${o.k + 1}">在“${esc(o.st.title)}”第 ${o.i + 1} 步里看这一小步 →</button></p>`
     }
     function renderPanel() {
@@ -374,7 +398,7 @@
         const total = story.steps.reduce((n, x) => n + x.subs.length, 0)
         panel.innerHTML = `${nav}<div class="pp-kicker">${esc(story.title)}</div><h3>怎么看这张图</h3>
           ${story.intro || P.storyIntro ? `<p class="pp-text">${fmt(story.intro ?? P.storyIntro)}</p>` : ''}
-          <p class="pp-text">点“下一步”（或按键盘 →）逐个大步前进。每一大步的说明页先列出这一步全部小步的说明，通读之后点任一条展开：图上亮起这一小步经过的组件，小步下方列出它的数据字段，外层信封和原文折叠在字段表上下。也可以直接点图上任意一根线，列出 ${STORIES.length} 个流程里经过它的全部小步。</p>
+          <p class="pp-text">点“下一步”（或按键盘 →）逐个大步前进。每一大步的说明页先列出这一步全部小步的说明，通读之后点任一条展开：图上亮起这一小步经过的组件；小步下方按流向排开，从哪个组件出发、经哪根线到哪个组件，每份数据挂在它经过的那段线或那个组件下面，原文 JSON 折叠在字段表下方。也可以直接点图上任意一根线，列出 ${STORIES.length} 个流程里经过它的全部小步。</p>
           <h4>这个流程一共 ${story.steps.length} 步、${total} 个小步</h4><ol class="pp-outline">${story.steps.map((x, i) => `<li><button type="button" data-pano-step="${i}">${esc(x.t)}（${x.subs.length}）</button></li>`).join('')}</ol>`
         return
       }
@@ -533,7 +557,11 @@
             if (!x.text) errs.push(`${sub}: text is required`)
             for (const id of x.n ?? []) if (!ids.has(id)) errs.push(`${sub}: unknown node "${id}"`)
             for (const id of x.e ?? []) if (!eids.has(id)) errs.push(`${sub}: unknown edge "${id}"`)
-            for (const [, d] of x.data ?? []) if (d.k && !(P.kinds ?? {})[d.k]) errs.push(`${sub}: data kind "${d.k}" is undefined`)
+            for (const [, d, at] of x.data ?? []) {
+              if (d.k && !(P.kinds ?? {})[d.k]) errs.push(`${sub}: data kind "${d.k}" is undefined`)
+              if (at != null && !(x.e ?? []).includes(at) && !(x.n ?? []).includes(at)) errs.push(`${sub}: data "${at}" is neither an edge nor a node of this sub`)
+            }
+            if (x.tag != null && !(P.subTags ?? {})[x.tag]) errs.push(`${sub}: tag "${x.tag}" is undefined`)
           })
         })
       }

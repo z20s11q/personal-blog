@@ -169,6 +169,26 @@ a.src:hover{text-decoration:none;color:#a43c14;border-color:#e0592a}
 .pp-tag{font-size:10.5px;border-radius:3px;padding:0 5px;background:#e6efec;color:#285b51;white-space:nowrap}
 .pp-link{border:0;background:none;color:#18776b;cursor:pointer;padding:0;font-size:12px}
 .pp-inside{font-size:12px;color:#7b8783;margin-left:6px}
+.pp-stag{display:inline-block;margin-right:6px;padding:0 6px;border:1px solid color-mix(in srgb,var(--tc) 45%,#fff);border-radius:3px;background:color-mix(in srgb,var(--tc) 10%,#fff);color:var(--tc);font:600 11px/18px system-ui,sans-serif;white-space:nowrap;vertical-align:1px}
+.pp-taglegend{margin:4px 0 10px;padding:6px 10px;border:1px dashed #dfe5e3;border-radius:6px;background:#fbfcfc;font-size:12px;line-height:1.6;color:#4b5a55}
+.pp-taglegend dt{font-weight:600;color:#1d2a27}
+.pp-taglegend dd{margin:4px 0 0}
+.pp-flow{margin:6px 0 2px;--fc:#e0592a}
+.fl-root+.fl-root{margin-top:8px}
+.fl-node{position:relative;display:flex;align-items:center;gap:6px}
+.fl-node small{font-size:11px;color:#97a29e}
+.fl-at{margin-left:9px;padding-left:18px}
+.fl-kids{margin-left:9px}
+.fl-hop{position:relative}
+.fl-hop:not(:last-child){border-left:2px solid var(--fc)}
+.fl-hop:last-child>.fl-seg{border-left:2px solid var(--fc)}
+.fl-seg{padding:4px 0 6px 18px}
+.fl-edge{font:12px/1.5 ui-monospace,Consolas,monospace;color:#c2410c}
+.fl-hop>.fl-node{padding-left:20px}
+.fl-hop>.fl-node::before{content:'';position:absolute;left:0;top:50%;width:12px;border-top:2px solid var(--fc)}
+.fl-hop:last-child>.fl-node::before{left:0;top:0;height:50%;border-left:2px solid var(--fc);border-bottom-left-radius:6px;border-top:0;border-bottom:2px solid var(--fc)}
+.fl-hop>.fl-node::after{content:'';position:absolute;left:10px;top:calc(50% - 4px);border:5px solid transparent;border-left:7px solid var(--fc);border-right:0}
+.fl-hop>.fl-at,.fl-hop>.fl-kids{margin-left:29px}
 
 /* architecture + inspector */
 .architecture-layout{display:grid;grid-template-columns:minmax(0,1fr) 460px;gap:18px;align-items:start}
@@ -305,7 +325,7 @@ ol.steps li{margin:4px 0}
 .dbox-fields tr.focus{background:#fff1e3}
 .dbox-fields tr.focus>th{box-shadow:inset 3px 0 #e0592a}
 .dbox-fields tr.inf.box,.dbox-fields tr.inf.ctl{background:#fffaf3}
-.fk-tag{margin-left:6px;padding:0 5px;border-radius:3px;background:#e0592a;color:#fff;font:600 10px/16px system-ui,sans-serif;font-style:normal;vertical-align:1px}
+.fk-tag{margin-left:6px;white-space:nowrap;padding:0 5px;border-radius:3px;background:#e0592a;color:#fff;font:600 10px/16px system-ui,sans-serif;font-style:normal;vertical-align:1px}
 .arr-shape{position:absolute;top:-8px;right:8px;padding:0 5px;background:#fff;font:10.5px/14px system-ui,sans-serif;color:#a3adaa}
 .dbox-type b,.arr-shape b{font:600 11px ui-monospace,Consolas,monospace;color:#5f7a72;margin-right:2px}
 .dbox-fields tr.ctl>td{position:relative;padding:3px 8px 6px 0}
