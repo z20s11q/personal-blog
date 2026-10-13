@@ -141,7 +141,8 @@ a.src:hover{text-decoration:none;color:#a43c14;border-color:#e0592a}
 .wire-label.on text{font-size:11.5px;fill:#8a3410;font-weight:600}
 .wire-hit{fill:none;stroke:transparent;stroke-width:12;pointer-events:stroke;cursor:pointer}
 .wire-hit:hover{stroke:rgba(224,89,42,.14)}
-.wire-label{pointer-events:all;cursor:pointer}
+.wire-label{pointer-events:all;cursor:pointer;transition:opacity .15s}
+.wire-label.peek{opacity:.08;pointer-events:none}
 .wire-label:hover rect{stroke:#e0592a;opacity:1}
 .pano-panel{position:sticky;top:52px;max-height:calc(100vh - 64px);overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px 18px}
 .pp-nav{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:#6b7873}
@@ -1193,7 +1194,8 @@ SOFTWARE.
       <aside class="pano-panel" id="pano-panel" aria-live="polite"></aside></div>`
     const canvas = $('#pano-canvas'), svg = $('#pano-wires'), panel = $('#pano-panel')
     const BRACKET = 15, RANK = { on: 0, story: 1, '': 2, idle: 3 }
-    const LABEL_SPOTS = [0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74, 0.18, 0.82, 0.1, 0.9]
+    const LABEL_SPOTS = Array.from({ length: 21 }, (_, i) => 0.5 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.04)
+    const area = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y))
     const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
     function drawWires() {
       const box = canvas.getBoundingClientRect()
@@ -1242,11 +1244,13 @@ SOFTWARE.
         }
         return { e: p.e, d, at, cls: wireClass(p.e) }
       })
+      const cards = [...canvas.querySelectorAll('.pnode,.pnode-legend')].map((el) => { const r = el.getBoundingClientRect(); return { id: el.dataset.node ?? '', x: r.left - box.left, y: r.top - box.top, w: r.width, h: r.height } })
+      const blocks = cards.map((c) => ({ ...c, x: c.x - 3, y: c.y - 3, w: c.w + 6, h: c.h + 6 }))
       svg.setAttribute('width', box.width); svg.setAttribute('height', box.height); svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`)
-      svg.innerHTML = `<defs>${['base', 'on'].map((k) => `<marker id="pano-arrow-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="${k === 'on' ? 7 : 6}" markerHeight="${k === 'on' ? 7 : 6}" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="${k === 'on' ? '#e0592a' : '#9aa9a4'}"/></marker>`).join('')}</defs>`
-        + paths.map((p) => `<path class="wire ${p.cls}${p.e.dash ? ' dash' : ''}" data-edge="${p.e.id}" d="${p.d}" marker-end="url(#pano-arrow-${p.cls === 'on' ? 'on' : 'base'})"/>`).join('')
+      svg.innerHTML = `<defs>${['base', 'on'].map((k) => `<marker id="pano-arrow-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="${k === 'on' ? 7 : 6}" markerHeight="${k === 'on' ? 7 : 6}" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="${k === 'on' ? '#e0592a' : '#9aa9a4'}"/></marker>`).join('')}
+        <mask id="pano-fade" maskUnits="userSpaceOnUse" x="0" y="0" width="${box.width}" height="${box.height}"><rect width="${box.width}" height="${box.height}" fill="#fff"/>${cards.map((c) => `<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="8" fill="#404040"/>`).join('')}</mask></defs>`
+        + `<g mask="url(#pano-fade)">${paths.map((p) => `<path class="wire ${p.cls}${p.e.dash ? ' dash' : ''}" data-edge="${p.e.id}" d="${p.d}" marker-end="url(#pano-arrow-${p.cls === 'on' ? 'on' : 'base'})"/>`).join('')}</g>`
         + paths.map((p) => `<path class="wire-hit" data-pano-edge="${p.e.id}" d="${p.d}"><title>${esc(p.e.label)}：点击查看这根线上传的消息</title></path>`).join('')
-      const blocks = [...canvas.querySelectorAll('.pnode,.pnode-legend')].map((el) => { const r = el.getBoundingClientRect(); return { x: r.left - box.left - 3, y: r.top - box.top - 3, w: r.width + 6, h: r.height + 6 } })
       const placed = []
       for (const p of [...paths].sort((a, b) => RANK[a.cls] - RANK[b.cls])) {
         const el = svg.querySelector(`[data-edge="${CSS.escape(p.e.id)}"]`), len = el.getTotalLength()
@@ -1258,8 +1262,12 @@ SOFTWARE.
         const text = g.querySelector('text'), bb = text.getBBox(), w = bb.width + 10, h = bb.height + 4
         const spots = [...(p.at ? [p.at] : []), ...LABEL_SPOTS.map((f) => { const q = el.getPointAtLength(len * f); return [q.x, q.y] })]
         const rect = ([cx, cy]) => ({ x: cx - w / 2, y: cy - h / 2, w, h })
-        const best = spots.find((c) => { const r = rect(c); return !placed.some((o) => overlaps(r, o)) && !blocks.some((o) => overlaps(r, o)) }) ?? spots.find((c) => !placed.some((o) => overlaps(rect(c), o))) ?? spots[0]
+        const cover = (c) => blocks.reduce((n, o) => n + area(rect(c), o), 0)
+        const free = spots.filter((c) => !placed.some((o) => overlaps(rect(c), o)))
+        const best = free.find((c) => !cover(c)) ?? free.sort((a, b) => cover(a) - cover(b))[0] ?? spots[0]
         const r = rect(best); placed.push(r)
+        const under = blocks.filter((o) => o.id && overlaps(r, o)).map((o) => o.id)
+        if (under.length) { g.classList.add('over'); g.dataset.over = under.join(' ') }
         text.setAttribute('x', best[0]); text.setAttribute('y', best[1] - bb.y - bb.height / 2)
         const bg = g.querySelector('rect'); bg.setAttribute('x', r.x); bg.setAttribute('y', r.y); bg.setAttribute('width', w); bg.setAttribute('height', h)
       }
@@ -1358,6 +1366,11 @@ SOFTWARE.
       panel.querySelectorAll('.pp-digest li').forEach((li, i) => li.classList.toggle('hover', i + 1 === n))
       renderCards(); drawWires()
     }
+    canvas.addEventListener('mouseover', (ev) => {
+      const id = ev.target.closest?.('.pnode')?.dataset.node
+      svg.querySelectorAll('.wire-label.over').forEach((g) => g.classList.toggle('peek', !!id && g.dataset.over.split(' ').includes(id)))
+    })
+    canvas.addEventListener('mouseleave', () => svg.querySelectorAll('.wire-label.peek').forEach((g) => g.classList.remove('peek')))
     const digestItem = (ev) => ev.target.closest?.('.pp-digest [data-pano-sub]')
     panel.addEventListener('mouseover', (ev) => { const b = digestItem(ev); if (b) preview(Number(b.dataset.panoSub)) })
     panel.addEventListener('focusin', (ev) => { const b = digestItem(ev); if (b) preview(Number(b.dataset.panoSub)) })
